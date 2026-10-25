@@ -2339,6 +2339,10 @@ class _GaragePageState extends State<GaragePage> {
   }
 
   Future<void> editListing(Map<String, dynamic> listing) async {
+    if (listing['status']?.toString() == 'sold') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+      return;
+    }
     final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => EditListingPage(listingId: listing['id'].toString())));
     if (changed == true && mounted) refreshListings();
   }
@@ -2393,7 +2397,7 @@ class _GaragePageState extends State<GaragePage> {
                     if (value == 'delete') deleteListing(listing);
                     if (value == 'publish') setListingStatus(listing, 'published');
                   }, itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar'))),
+                    PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? 'No editable: vendido' : 'Editar'))),
                     PopupMenuItem(value: 'pause', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Pausado: activar'))),
                     const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar'))),
                   ], icon: const Icon(Icons.more_vert, color: gold)),
@@ -2819,7 +2823,12 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      if (row['status']?.toString() == 'sold') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+        if (mounted) Navigator.pop(context, false);
+        return;
+      }
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
@@ -2827,6 +2836,12 @@ class _EditListingPageState extends State<EditListingPage> {
   }
 
   Future<void> save() async {
+    final current = await supabase.from('vehicle_listings').select('status').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).maybeSingle();
+    if (current == null || current['status']?.toString() == 'sold') {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+      if (mounted) Navigator.pop(context, false);
+      return;
+    }
     if (!formKey.currentState!.validate()) return;
     final y = int.tryParse(year.text.trim()), k = int.tryParse(km.text.trim());
     final p = double.tryParse(price.text.trim().replaceAll('.', '').replaceAll(',', '.'));
@@ -4206,6 +4221,18 @@ class _AddCarPageState extends State<AddCarPage> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
+              initialValue: fuel,
+              decoration: const InputDecoration(labelText: 'Combustible'),
+              items: const [
+                DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
+                DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
+                DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
+                DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
+              ],
+              onChanged: (value) { if (value != null) setState(() => fuel = value); },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
               initialValue: bodyType,
               decoration: const InputDecoration(labelText: 'Tipo de carrocería'),
               items: const [
@@ -4231,16 +4258,6 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Consumo combinado (l/100 km)', consumptionL100, requiredField: false),
             buildTextField('Normativa de emisiones (opcional)', emissionsStandard, requiredField: false),
             const SizedBox(height: 8),
-            const Text('Dimensiones y capacidad', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            buildTextField('Longitud (mm)', lengthMm, numeric: true, requiredField: false),
-            buildTextField('Anchura (mm)', widthMm, numeric: true, requiredField: false),
-            buildTextField('Altura (mm)', heightMm, numeric: true, requiredField: false),
-            buildTextField('Distancia entre ejes (mm)', wheelbaseMm, numeric: true, requiredField: false),
-            buildTextField('Peso (kg)', weightKg, numeric: true, requiredField: false),
-            buildTextField('Capacidad del maletero (litros)', trunkLiters, numeric: true, requiredField: false),
-            buildTextField('Capacidad del depósito (litros)', tankLiters, numeric: true, requiredField: false),
-            const SizedBox(height: 8),
             const Text('Equipamiento confirmado', style: TextStyle(fontWeight: FontWeight.bold)),
             ...[
               'Asientos deportivos', 'Asientos calefactables', 'Asientos ventilados',
@@ -4264,20 +4281,6 @@ class _AddCarPageState extends State<AddCarPage> {
             const SizedBox(height: 12),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
             buildTextField('Descripción', description, requiredField: false),
-            DropdownButtonFormField<String>(
-              initialValue: fuel,
-              decoration: const InputDecoration(labelText: 'Combustible'),
-              items: const [
-                DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
-                DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
-                DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
-                DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => fuel = value);
-              },
-            ),
-            const SizedBox(height: 20),
             Text(
               'Fotografías del vehículo (${photos.length}/15)',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -4337,22 +4340,6 @@ class _AddCarPageState extends State<AddCarPage> {
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: gold,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onPressed: publishing ? null : publishCar,
-              child: publishing
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Publicar vehículo'),
-            ),
           ],
         ),
       ),
