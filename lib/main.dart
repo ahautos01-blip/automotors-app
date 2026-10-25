@@ -2262,17 +2262,54 @@ class _GaragePageState extends State<GaragePage> {
   }
 
   Future<void> setListingStatus(Map<String, dynamic> listing, String status) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para gestionar tus anuncios.')),
+      );
+      return;
+    }
+    // Estados admitidos en Supabase: draft, published, reserved y sold.
+    // Pausar se representa como borrador para mantener compatibilidad.
+    final normalizedStatus = status == 'paused' ? 'draft' : status;
+    if (!['draft', 'published', 'reserved', 'sold'].contains(normalizedStatus)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Estado de anuncio no válido.')),
+      );
+      return;
+    }
+
     setState(() => busy = true);
     try {
-      await supabase.from('vehicle_listings').update({'status': status}).eq('id', listing['id'].toString()).eq('owner_id', supabase.auth.currentUser!.id);
+      final updated = await supabase
+          .from('vehicle_listings')
+          .update({'status': normalizedStatus})
+          .eq('id', listing['id'].toString())
+          .eq('owner_id', user.id)
+          .select('id,status')
+          .maybeSingle();
+
+      if (updated == null) {
+        throw Exception('No se actualizó ningún anuncio. Comprueba que sea tuyo y que siga disponible.');
+      }
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-          status == 'reserved' ? 'Anuncio marcado como reservado.' : status == 'sold' ? 'Anuncio marcado como vendido.' : status == 'paused' ? 'Anuncio pausado.' : 'Anuncio activado.'
-        )));
+        final message = normalizedStatus == 'reserved'
+            ? 'Anuncio marcado como reservado.'
+            : normalizedStatus == 'sold'
+                ? 'Anuncio marcado como vendido.'
+                : normalizedStatus == 'draft'
+                    ? 'Anuncio pausado.'
+                    : 'Anuncio activado.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         refreshListings();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar el anuncio. Comprueba los estados permitidos en Supabase. ($e)')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo actualizar el anuncio: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
