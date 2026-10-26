@@ -8,9 +8,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const gold = Color(0xFFD4AF37);
-const black = Color(0xFF101010);
-const panel = Color(0xFF202020);
+const gold = Color(0xFF45D6FF);
+const black = Color(0xFF0A0F1A);
+const panel = Color(0xFF141D2B);
 
 
 class AutomotorsBrandMark extends StatelessWidget {
@@ -24,13 +24,13 @@ class AutomotorsBrandMark extends StatelessWidget {
       borderRadius: BorderRadius.circular(size * .28),
       gradient: const LinearGradient(
         begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFFF5D979), Color(0xFFB88A19)],
+        colors: [Color(0xFF8BEAFF), Color(0xFF248BFF)],
       ),
       boxShadow: const [BoxShadow(color: Color(0x332D2200), blurRadius: 8, offset: Offset(0, 3))],
     ),
     child: Center(child: Icon(
       Icons.directions_car_filled_rounded,
-      color: const Color(0xFF101010),
+      color: const Color(0xFF0A0F1A),
       size: size * .62,
     )),
   );
@@ -656,22 +656,93 @@ class AutomotorsApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: black,
+        canvasColor: black,
         colorScheme: ColorScheme.fromSeed(
           seedColor: gold,
           brightness: Brightness.dark,
+          surface: panel,
+        ).copyWith(
+          primary: gold,
+          secondary: const Color(0xFF8B7CFF),
+          surface: panel,
+          onSurface: const Color(0xFFF1F5FA),
+          outline: const Color(0xFF33445B),
         ),
+        dividerColor: const Color(0xFF26364B),
         appBarTheme: const AppBarTheme(
           backgroundColor: black,
-          foregroundColor: gold,
+          foregroundColor: Color(0xFFF1F5FA),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF121B29),
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+            side: BorderSide(color: Color(0xFF26364B)),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: panel,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+          hintStyle: const TextStyle(color: Color(0xFF91A2B8)),
+          labelStyle: const TextStyle(color: Color(0xFFB7C5D8)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFF2A3A50)),
           ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: gold, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFF6B81)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFF6B81), width: 1.5),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: gold,
+            foregroundColor: const Color(0xFF06111B),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: gold,
+            side: const BorderSide(color: Color(0xFF3C6078)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF101827),
+          indicatorColor: gold.withValues(alpha: .16),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            color: states.contains(WidgetState.selected) ? gold : const Color(0xFF91A2B8),
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
+            fontSize: 12,
+          )),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: const Color(0xFF1C2B40),
+          contentTextStyle: const TextStyle(color: Color(0xFFF1F5FA)),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       home: const HomePage(),
@@ -859,7 +930,7 @@ class _HomePageState extends State<HomePage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF17191E),
+      backgroundColor: const Color(0xFF101827),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1202,7 +1273,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF292D35), Color(0xFF15171B)],
+                  colors: [Color(0xFF1C2B40), Color(0xFF0E1624)],
                 ),
                 border: Border.all(color: Colors.white.withValues(alpha: .08)),
               ),
@@ -1294,7 +1365,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
                         filled: true,
-                        fillColor: const Color(0xFF1B1E24),
+                        fillColor: const Color(0xFF141D2B),
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -1305,7 +1376,7 @@ class _HomePageState extends State<HomePage> {
                     optionsViewBuilder: (context, onSelected, options) => Align(
                       alignment: Alignment.topLeft,
                       child: Material(
-                        color: const Color(0xFF202020),
+                        color: const Color(0xFF172337),
                         elevation: 8,
                         borderRadius: BorderRadius.circular(14),
                         child: ConstrainedBox(
@@ -1421,7 +1492,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF241B0A), Color(0xFF101010)])),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF102A40), Color(0xFF0A0F1A)])),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('¿Tienes un vehículo?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 5),
@@ -1431,7 +1502,7 @@ class _HomePageState extends State<HomePage> {
               ]),
             ),
             const SizedBox(height: 12),
-            Card(color: const Color(0xFF101010), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
+            Card(color: const Color(0xFF0A0F1A), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
               leading: const Icon(Icons.diamond_outlined, color: gold, size: 34),
               title: const Text('Packs y suscripción', style: TextStyle(fontWeight: FontWeight.w900)),
               subtitle: const Text('Destaca tus anuncios y consigue más visibilidad.', style: TextStyle(color: Colors.white70)),
@@ -1443,7 +1514,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF15171B),
+        backgroundColor: const Color(0xFF101827),
         indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -1566,7 +1637,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     final found = results;
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F12),
-      appBar: AppBar(backgroundColor: const Color(0xFF15171B), title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold))]),
+      appBar: AppBar(backgroundColor: const Color(0xFF101827), title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold))]),
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? 'Ocultar filtros' : 'Filtros'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
@@ -4026,7 +4097,7 @@ class _InboxPageState extends State<InboxPage> {
                           child: Container(
                             width: 76,
                             height: 76,
-                            color: const Color(0xFF292D35),
+                            color: const Color(0xFF1C2B40),
                             child: photo is Uint8List
                                 ? Image.memory(photo, fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
@@ -4272,7 +4343,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     width: 42,
                     height: 42,
-                    color: const Color(0xFF292D35),
+                    color: const Color(0xFF1C2B40),
                     child: widget.vehiclePhoto != null
                         ? Image.memory(widget.vehiclePhoto!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
@@ -4546,7 +4617,7 @@ class _PublishPackCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF101010), borderRadius: BorderRadius.circular(19),
+        color: const Color(0xFF0A0F1A), borderRadius: BorderRadius.circular(19),
         border: Border.all(color: data.popular ? gold : const Color(0xFF67532C), width: data.popular ? 2 : 1),
         boxShadow: data.popular ? [BoxShadow(color: gold.withValues(alpha: .14), blurRadius: 16)] : null,
       ),
