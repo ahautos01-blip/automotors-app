@@ -4909,6 +4909,20 @@ class _GaragePageState extends State<GaragePage> {
                         if (suggestions.isNotEmpty) ...[
                           const SizedBox(height: 5),
                           Text(suggestions.join(' · '), style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                          if (!isSold)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: busy ? null : () => editListing(listing),
+                                icon: const Icon(Icons.edit_note_rounded, size: 17),
+                                label: const Text('Completar ficha'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: gold,
+                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            ),
                         ],
                       ]);
                     }),
