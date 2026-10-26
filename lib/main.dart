@@ -1034,6 +1034,22 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Mis favoritos',
+            onPressed: () async {
+              final user = Supabase.instance.client.auth.currentUser;
+              if (user == null) {
+                final loggedIn = await requireAutomotorsLogin(context);
+                if (!loggedIn || !mounted) return;
+              }
+              if (!mounted) return;
+              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedVehiclesPage(
+                cars: List<Car>.from(cars),
+                onOpenCar: openCarDetails,
+              )));
+            },
+            icon: const Icon(Icons.favorite_border_rounded, color: gold),
+          ),
+          IconButton(
             tooltip: 'Actualizar anuncios',
             onPressed: loadCars,
             icon: const Icon(Icons.refresh_rounded),
@@ -1514,7 +1530,84 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   }
 }
 
-class CarDetailsPage extends StatelessWidget {
+class SavedVehiclesPage extends StatefulWidget {
+  final List<Car> cars;
+  final void Function(Car) onOpenCar;
+
+  const SavedVehiclesPage({super.key, required this.cars, required this.onOpenCar});
+
+  @override
+  State<SavedVehiclesPage> createState() => _SavedVehiclesPageState();
+}
+
+class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
+  bool loading = true;
+  String? error;
+  List<Car> savedCars = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadFavorites();
+  }
+
+  Future<void> loadFavorites() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() { loading = false; error = 'Inicia sesión para consultar tus favoritos.'; });
+        return;
+      }
+      final rows = await Supabase.instance.client.from('saved_vehicles')
+          .select('listing_id').eq('user_id', user.id).order('created_at', ascending: false);
+      final ids = List<Map<String, dynamic>>.from(rows)
+          .map((row) => row['listing_id'].toString()).toSet();
+      if (mounted) setState(() {
+        savedCars = widget.cars.where((car) => car.listingId != null && ids.contains(car.listingId)).toList();
+        loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() { loading = false; error = 'No se pudieron cargar los favoritos. Desliza para reintentar.'; });
+    }
+  }
+
+  String _price(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.')} €';
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Mis favoritos')),
+    body: RefreshIndicator(
+      color: gold,
+      onRefresh: loadFavorites,
+      child: loading
+        ? const ListView(children: [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
+        : error != null
+          ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(error!, textAlign: TextAlign.center)))])
+          : savedCars.isEmpty
+            ? ListView(children: const [SizedBox(height: 100), Icon(Icons.favorite_border_rounded, size: 56, color: gold), SizedBox(height: 16), Center(child: Text('Aún no tienes coches favoritos.', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))), SizedBox(height: 8), Center(child: Text('Abre un anuncio y pulsa “Guardar en favoritos”.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)))])
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: savedCars.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final car = savedCars[index];
+                  return Card(color: panel, clipBehavior: Clip.antiAlias, child: ListTile(
+                    onTap: () => widget.onOpenCar(car),
+                    leading: SizedBox(width: 76, height: 62, child: car.photos.isNotEmpty
+                      ? Image.memory(car.photos.first, fit: BoxFit.cover)
+                      : const Icon(Icons.directions_car_rounded, color: gold, size: 38)),
+                    title: Text('${car.brand} ${car.model}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Text('${car.year} · ${car.km} km'),
+                    trailing: Text(_price(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
+                  ));
+                },
+              ),
+    ),
+  );
+}
+
+class CarDetailsPage extends StatefulWidget {
   final Car car;
   final String priceText;
   final VoidCallback onContact;
@@ -1525,6 +1618,76 @@ class CarDetailsPage extends StatelessWidget {
     required this.priceText,
     required this.onContact,
   });
+
+  @override
+  State<CarDetailsPage> createState() => _CarDetailsPageState();
+}
+
+class _CarDetailsPageState extends State<CarDetailsPage> {
+  Car get car => widget.car;
+  String get priceText => widget.priceText;
+  VoidCallback get onContact => widget.onContact;
+  bool isFavorite = false;
+  bool favoriteLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorite();
+  }
+
+  Future<void> _loadFavorite() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final id = car.listingId;
+    if (user == null || id == null || id.isEmpty) return;
+    try {
+      final row = await Supabase.instance.client
+          .from('saved_vehicles')
+          .select('listing_id')
+          .eq('user_id', user.id)
+          .eq('listing_id', id)
+          .maybeSingle();
+      if (mounted) setState(() => isFavorite = row != null);
+    } catch (_) {
+      // La ficha sigue disponible aunque no se pueda consultar favoritos.
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+    }
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final id = car.listingId;
+    if (currentUser == null || id == null || id.isEmpty || favoriteLoading) return;
+    setState(() => favoriteLoading = true);
+    try {
+      final db = Supabase.instance.client;
+      if (isFavorite) {
+        await db.from('saved_vehicles').delete()
+            .eq('user_id', currentUser.id).eq('listing_id', id);
+      } else {
+        await db.from('saved_vehicles').insert({
+          'user_id': currentUser.id,
+          'listing_id': id,
+        });
+      }
+      if (mounted) {
+        setState(() => isFavorite = !isFavorite);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isFavorite ? 'Vehículo guardado en favoritos.' : 'Vehículo eliminado de favoritos.'),
+        ));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo actualizar favoritos. Inténtalo de nuevo.')),
+      );
+    } finally {
+      if (mounted) setState(() => favoriteLoading = false);
+    }
+  }
 
   Future<void> _copyListingSummary(BuildContext context) async {
     final details = <String>[
@@ -1710,6 +1873,21 @@ class CarDetailsPage extends StatelessWidget {
             ),
           )),
         ]),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: favoriteLoading ? null : _toggleFavorite,
+          icon: favoriteLoading
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: isFavorite ? Colors.pinkAccent : gold),
+          label: Text(isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .55)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
         const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
