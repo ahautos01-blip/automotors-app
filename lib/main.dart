@@ -2133,7 +2133,7 @@ final avatar = publicPhotoUrl(
                                 Icon(Icons.verified_rounded, color: Colors.white, size: 13), SizedBox(width: 5),
                                 Text('VENDIDO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .8)),
                               ]),
-                            ),
+                            )),
                           ]))),
                           Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
