@@ -887,7 +887,7 @@ class _HomePageState extends State<HomePage> {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
@@ -953,13 +953,6 @@ class _HomePageState extends State<HomePage> {
           maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
           consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
           emissionsStandard: raw['emissions_standard']?.toString(),
-          lengthMm: (raw['length_mm'] as num?)?.toInt(),
-          widthMm: (raw['width_mm'] as num?)?.toInt(),
-          heightMm: (raw['height_mm'] as num?)?.toInt(),
-          wheelbaseMm: (raw['wheelbase_mm'] as num?)?.toInt(),
-          weightKg: (raw['weight_kg'] as num?)?.toInt(),
-          trunkLiters: (raw['trunk_liters'] as num?)?.toInt(),
-          tankLiters: (raw['tank_liters'] as num?)?.toInt(),
           equipment: raw['equipment'] is List
               ? List<String>.from((raw['equipment'] as List).map((item) => item.toString()))
               : const <String>[],
@@ -3569,16 +3562,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           if (car.seats != null) _technicalRow(Icons.event_seat_outlined, 'Plazas', '${car.seats}'),
           if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, 'Color', car.color!),
         ],
-        if (car.lengthMm != null || car.widthMm != null || car.heightMm != null || car.wheelbaseMm != null || car.weightKg != null || car.trunkLiters != null || car.tankLiters != null) ...[
-          _technicalSectionLabel('Dimensiones y capacidades'),
-          if (car.lengthMm != null) _technicalRow(Icons.straighten, 'Longitud', '${car.lengthMm} mm'),
-          if (car.widthMm != null) _technicalRow(Icons.straighten, 'Anchura', '${car.widthMm} mm'),
-          if (car.heightMm != null) _technicalRow(Icons.height, 'Altura', '${car.heightMm} mm'),
-          if (car.wheelbaseMm != null) _technicalRow(Icons.straighten, 'Distancia entre ejes', '${car.wheelbaseMm} mm'),
-          if (car.weightKg != null) _technicalRow(Icons.scale_outlined, 'Peso', '${car.weightKg} kg'),
-          if (car.trunkLiters != null) _technicalRow(Icons.luggage_outlined, 'Maletero', '${car.trunkLiters} litros'),
-          if (car.tankLiters != null) _technicalRow(Icons.local_gas_station_outlined, 'Depósito', '${car.tankLiters} litros'),
-        ],
         if (car.equipment.isNotEmpty) ...[
           const SizedBox(height: 20),
           const Row(children: [
@@ -6186,13 +6169,6 @@ class _AddCarPageState extends State<AddCarPage> {
   final seats = TextEditingController();
   final color = TextEditingController();
   final emissionsStandard = TextEditingController();
-  final lengthMm = TextEditingController();
-  final widthMm = TextEditingController();
-  final heightMm = TextEditingController();
-  final wheelbaseMm = TextEditingController();
-  final weightKg = TextEditingController();
-  final trunkLiters = TextEditingController();
-  final tankLiters = TextEditingController();
   String transmission = 'Automático';
   String bodyType = 'Berlina';
   final Set<String> selectedEquipment = {};
@@ -6624,13 +6600,6 @@ class _AddCarPageState extends State<AddCarPage> {
         'seats': int.tryParse(seats.text.trim()),
         'color': color.text.trim().isEmpty ? null : color.text.trim(),
         'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(),
-        'length_mm': int.tryParse(lengthMm.text.trim()),
-        'width_mm': int.tryParse(widthMm.text.trim()),
-        'height_mm': int.tryParse(heightMm.text.trim()),
-        'wheelbase_mm': int.tryParse(wheelbaseMm.text.trim()),
-        'weight_kg': int.tryParse(weightKg.text.trim()),
-        'trunk_liters': int.tryParse(trunkLiters.text.trim()),
-        'tank_liters': int.tryParse(tankLiters.text.trim()),
         'equipment': selectedEquipment.toList(),
         'etiqueta_medioambiental': etiquetaMedioambiental,
         // El VIN se guarda, pero no se incluye en la consulta pública de anuncios.
@@ -6749,13 +6718,6 @@ class _AddCarPageState extends State<AddCarPage> {
     seats.dispose();
     color.dispose();
     emissionsStandard.dispose();
-    lengthMm.dispose();
-    widthMm.dispose();
-    heightMm.dispose();
-    wheelbaseMm.dispose();
-    weightKg.dispose();
-    trunkLiters.dispose();
-    tankLiters.dispose();
     super.dispose();
   }
 
