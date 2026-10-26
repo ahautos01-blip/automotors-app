@@ -1662,7 +1662,25 @@ class CarDetailsPage extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 16),
+        if (car.description.trim().isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF24231F), Color(0xFF171717)]),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: gold.withValues(alpha: 0.42)),
+              boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6))],
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [const Icon(Icons.notes_rounded, color: gold, size: 21), const SizedBox(width: 9), const Text('Descripción', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const Spacer(), Container(width: 26, height: 3, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(4)))]),
+              const SizedBox(height: 12),
+              SelectableText(car.description.trim(), style: TextStyle(fontSize: 15, height: 1.65, color: Colors.white.withValues(alpha: 0.92))),
+            ]),
+          ),
+          const SizedBox(height: 20),
+        ],
         Card(
           color: panel,
           margin: EdgeInsets.zero,
@@ -1781,26 +1799,6 @@ class CarDetailsPage extends StatelessWidget {
                 leading: const Icon(Icons.check_circle_outline, color: gold),
                 title: Text(item),
               )).toList(),
-            ),
-          ),
-        ],
-        if (car.description.trim().isNotEmpty) ...[
-          const SizedBox(height: 18),
-          const Text(
-            'Descripción',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: panel,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              car.description,
-              style: TextStyle(height: 1.5, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         ],
@@ -4324,13 +4322,17 @@ class _AddCarPageState extends State<AddCarPage> {
     TextEditingController controller, {
     bool numeric = false,
     bool requiredField = true,
+    bool multiline = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
-        keyboardType: numeric ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(labelText: label),
+        keyboardType: numeric ? TextInputType.number : (multiline ? TextInputType.multiline : TextInputType.text),
+        minLines: multiline ? 4 : 1,
+        maxLines: multiline ? 8 : 1,
+        textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
+        decoration: InputDecoration(labelText: label, alignLabelWithHint: multiline),
         validator: (value) {
           if (requiredField && (value == null || value.trim().isEmpty)) {
             return 'Completa este campo';
@@ -4762,7 +4764,7 @@ class _AddCarPageState extends State<AddCarPage> {
             )),
             const SizedBox(height: 12),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
-            buildTextField('Descripción', description, requiredField: false),
+            buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(
               'Fotografías del vehículo (${photos.length}/15)',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
