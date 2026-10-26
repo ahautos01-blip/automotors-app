@@ -936,7 +936,13 @@ class _HomePageState extends State<HomePage> {
       });
       final sharedListingId = Uri.base.queryParameters['listing'];
       if (sharedListingId != null && sharedListingId.isNotEmpty) {
-        final sharedCar = loadedCars.where((item) => item.listingId == sharedListingId).firstOrNull;
+        Car? sharedCar;
+        for (final item in loadedCars) {
+          if (item.listingId == sharedListingId) {
+            sharedCar = item;
+            break;
+          }
+        }
         if (sharedCar != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) openCarDetails(sharedCar);
