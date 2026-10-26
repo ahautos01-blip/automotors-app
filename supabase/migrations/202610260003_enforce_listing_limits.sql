@@ -32,7 +32,6 @@ declare
   v_active_count integer := 0;
   v_lifetime_count integer := 0;
   v_is_active boolean;
-  v_was_active boolean := false;
 begin
   v_owner := coalesce(new.owner_id, auth.uid());
 
@@ -45,17 +44,13 @@ begin
   if new.owner_id is null then
     new.owner_id := v_owner;
   end if;
+  if auth.uid() is not null and new.owner_id is distinct from auth.uid() then
+    raise exception 'No puedes publicar o modificar anuncios de otra cuenta.'
+      using errcode = '42501';
+  end if;
 
   v_is_active := new.status in ('published', 'reserved');
   if tg_op = 'UPDATE' then
-    v_was_active := old.status in ('published', 'reserved');
-    -- Prevent a client from transferring a listing to another account.
-    if old.owner_id is distinct from new.owner_id
-       and auth.uid() is not null
-       and auth.uid() <> old.owner_id then
-      raise exception 'No puedes cambiar el propietario del anuncio.'
-        using errcode = '42501';
-    end if;
     if new.first_published_at is null then
       new.first_published_at := old.first_published_at;
     end if;
@@ -99,11 +94,14 @@ begin
       and vl.first_published_at is not null
       and vl.id is distinct from new.id;
 
-    if new.first_published_at is not null
-       and (tg_op = 'INSERT' or old.first_published_at is null)
-       and v_lifetime_count >= 5 then
-      raise exception 'Has agotado tus 5 publicaciones gratuitas. Contrata un plan para publicar más anuncios.'
-        using errcode = 'P0001';
+    if new.first_published_at is not null and v_lifetime_count >= 5 then
+      if tg_op = 'INSERT' then
+        raise exception 'Has agotado tus 5 publicaciones gratuitas. Contrata un plan para publicar más anuncios.'
+          using errcode = 'P0001';
+      elsif old.first_published_at is null then
+        raise exception 'Has agotado tus 5 publicaciones gratuitas. Contrata un plan para publicar más anuncios.'
+          using errcode = 'P0001';
+      end if;
     end if;
   end if;
 
