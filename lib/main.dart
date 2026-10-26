@@ -680,7 +680,7 @@ class AutomotorsApp extends StatelessWidget {
           centerTitle: false,
         ),
         cardTheme: CardThemeData(
-          color: const Color(0xFF121B29),
+          color: const Color(0xFF18181B),
           elevation: 0,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
@@ -739,7 +739,7 @@ class AutomotorsApp extends StatelessWidget {
           )),
         ),
         snackBarTheme: SnackBarThemeData(
-          backgroundColor: const Color(0xFF1C2B40),
+          backgroundColor: const Color(0xFF29292D),
           contentTextStyle: const TextStyle(color: Color(0xFFF1F5FA)),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
