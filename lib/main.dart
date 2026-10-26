@@ -5333,6 +5333,15 @@ class _EditListingPageState extends State<EditListingPage> {
   final color = TextEditingController();
   final doors = TextEditingController();
   final seats = TextEditingController();
+  final emissionsStandard = TextEditingController();
+  final lengthMm = TextEditingController();
+  final widthMm = TextEditingController();
+  final heightMm = TextEditingController();
+  final wheelbaseMm = TextEditingController();
+  final weightKg = TextEditingController();
+  final trunkLiters = TextEditingController();
+  final tankLiters = TextEditingController();
+  final Set<String> selectedEquipment = {};
   String fuel = 'Diésel';
   String? label;
   bool loading = true;
@@ -5341,11 +5350,11 @@ class _EditListingPageState extends State<EditListingPage> {
   @override
   void initState() { super.initState(); load(); }
   @override
-  void dispose() { year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); version.dispose(); transmission.dispose(); bodyType.dispose(); color.dispose(); doors.dispose(); seats.dispose(); super.dispose(); }
+  void dispose() { year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); version.dispose(); transmission.dispose(); bodyType.dispose(); color.dispose(); doors.dispose(); seats.dispose(); emissionsStandard.dispose(); lengthMm.dispose(); widthMm.dispose(); heightMm.dispose(); wheelbaseMm.dispose(); weightKg.dispose(); trunkLiters.dispose(); tankLiters.dispose(); super.dispose(); }
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin,version,transmission,body_type,color,doors,seats').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin,version,transmission,body_type,color,doors,seats,emissions_standard,length_mm,width_mm,height_mm,wheelbase_mm,weight_kg,trunk_liters,tank_liters,equipment').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
         if (mounted) Navigator.pop(context, false);
@@ -5353,6 +5362,10 @@ class _EditListingPageState extends State<EditListingPage> {
       }
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
       version.text = '${row['version'] ?? ''}'; transmission.text = '${row['transmission'] ?? ''}'; bodyType.text = '${row['body_type'] ?? ''}'; color.text = '${row['color'] ?? ''}'; doors.text = '${row['doors'] ?? ''}'; seats.text = '${row['seats'] ?? ''}';
+      emissionsStandard.text = '${row['emissions_standard'] ?? ''}'; lengthMm.text = '${row['length_mm'] ?? ''}'; widthMm.text = '${row['width_mm'] ?? ''}'; heightMm.text = '${row['height_mm'] ?? ''}'; wheelbaseMm.text = '${row['wheelbase_mm'] ?? ''}'; weightKg.text = '${row['weight_kg'] ?? ''}'; trunkLiters.text = '${row['trunk_liters'] ?? ''}'; tankLiters.text = '${row['tank_liters'] ?? ''}';
+      selectedEquipment
+        ..clear()
+        ..addAll(row['equipment'] is List ? List<String>.from((row['equipment'] as List).map((item) => item.toString())) : const <String>[]);
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
     finally { if (mounted) setState(() => loading = false); }
@@ -5371,7 +5384,7 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revisa año, kilómetros y precio.'))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim())}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'length_mm': int.tryParse(lengthMm.text.trim()), 'width_mm': int.tryParse(widthMm.text.trim()), 'height_mm': int.tryParse(heightMm.text.trim()), 'wheelbase_mm': int.tryParse(wheelbaseMm.text.trim()), 'weight_kg': int.tryParse(weightKg.text.trim()), 'trunk_liters': int.tryParse(trunkLiters.text.trim()), 'tank_liters': int.tryParse(tankLiters.text.trim()), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio actualizado.'))); Navigator.pop(context, true); }
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo guardar el anuncio: $e'))); }
     finally { if (mounted) setState(() => saving = false); }
@@ -5401,7 +5414,9 @@ class _EditListingPageState extends State<EditListingPage> {
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Editar anuncio')), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
     textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
     DropdownButtonFormField<String>(value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration: const InputDecoration(labelText: 'Combustible'), items: const [DropdownMenuItem(value:'Diésel',child:Text('Diésel')),DropdownMenuItem(value:'Gasolina',child:Text('Gasolina')),DropdownMenuItem(value:'Híbrido',child:Text('Híbrido')),DropdownMenuItem(value:'Eléctrico',child:Text('Eléctrico'))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
-    textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
+    textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Norma de emisiones', emissionsStandard), textField('Longitud (mm)', lengthMm, numeric: true), textField('Anchura (mm)', widthMm, numeric: true), textField('Altura (mm)', heightMm, numeric: true), textField('Distancia entre ejes (mm)', wheelbaseMm, numeric: true), textField('Peso (kg)', weightKg, numeric: true), textField('Maletero (litros)', trunkLiters, numeric: true), textField('Depósito (litros)', tankLiters, numeric: true), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
+    const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Equipamiento', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+    ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(item), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
     DropdownButtonFormField<String>(value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => label = v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? 'Guardando...' : 'Guardar cambios')),
   ])));
