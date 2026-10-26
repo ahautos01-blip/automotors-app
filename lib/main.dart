@@ -2376,12 +2376,38 @@ class _GaragePageState extends State<GaragePage> {
   }
 
   Future<void> editListing(Map<String, dynamic> listing) async {
-    if (listing['status']?.toString() == 'sold') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
-      return;
+    final listingId = listing['id'].toString();
+    try {
+      // Releer el estado desde Supabase para no depender de un estado antiguo
+      // que pudiera seguir en la tarjeta del garaje.
+      final current = await supabase
+          .from('vehicle_listings')
+          .select('status')
+          .eq('id', listingId)
+          .eq('owner_id', supabase.auth.currentUser!.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+      if (current == null || current['status']?.toString() == 'sold') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Un vehículo vendido no se puede editar.')),
+        );
+        refreshListings();
+        return;
+      }
+
+      final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => EditListingPage(listingId: listingId)),
+      );
+      if (changed == true && mounted) refreshListings();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo comprobar el estado del anuncio: $e')),
+        );
+      }
     }
-    final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => EditListingPage(listingId: listing['id'].toString())));
-    if (changed == true && mounted) refreshListings();
   }
 
   @override
