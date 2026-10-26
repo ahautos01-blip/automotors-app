@@ -868,19 +868,22 @@ class _HomePageState extends State<HomePage> {
         photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
             .compareTo((b['position'] as num?)?.toInt() ?? 0));
 
-        final photoBytes = <Uint8List>[];
-        for (final photo in photoRows) {
-          final storagePath = photo['storage_path']?.toString();
-          if (storagePath == null || storagePath.isEmpty) continue;
-          try {
-            final bytes = await supabase.storage
-                .from('vehicle-photos')
-                .download(storagePath);
-            photoBytes.add(bytes);
-          } catch (_) {
-            // Si una foto no está disponible, el anuncio sigue mostrándose.
-          }
-        }
+        // Descargar en paralelo las fotos de cada anuncio, manteniendo el
+        // orden de posición. Una foto fallida no debe ocultar el vehículo.
+        final downloadedPhotos = await Future.wait<Uint8List?>(
+          photoRows.map((photo) async {
+            final storagePath = photo['storage_path']?.toString();
+            if (storagePath == null || storagePath.isEmpty) return null;
+            try {
+              return await supabase.storage
+                  .from('vehicle-photos')
+                  .download(storagePath);
+            } catch (_) {
+              return null;
+            }
+          }),
+        );
+        final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
 
         loadedCars.add(Car(
           brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
