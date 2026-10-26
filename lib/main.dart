@@ -3296,7 +3296,17 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
+        const Text(
+          'DATOS PRINCIPALES',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 11,
+            letterSpacing: 1.15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 9),
         // Resumen visual de los datos clave del vehículo.
         Wrap(
           spacing: 8,
