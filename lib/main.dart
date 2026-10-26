@@ -421,6 +421,33 @@ class Car {
   });
 }
 
+class _CarFeaturePill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _CarFeaturePill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: const Color(0xFF202830),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFF34414B)),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: gold),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+    ]),
+  );
+}
+
+class _PremiumPhotoCountPlaceholder extends StatelessWidget {
+  const _PremiumPhotoCountPlaceholder();
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 class _ReservedRibbon extends StatelessWidget {
   const _ReservedRibbon();
 
@@ -1338,10 +1365,79 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
         ])))),
         Expanded(child: found.isEmpty ? const Center(child: Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color:Colors.white70))) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
-          return GridView.builder(padding: const EdgeInsets.all(16), itemCount: found.length, gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:14,mainAxisSpacing:14,mainAxisExtent:columns==1?340:365), itemBuilder:(context,index) {
-            final car=found[index];
-            return Card(color:const Color(0xFF1B1E24),margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:gold.withValues(alpha:.25))),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>widget.onOpenCar(car),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:SizedBox(width:double.infinity,child:Stack(fit:StackFit.expand,children:[car.photos.isNotEmpty?Image.memory(car.photos.first,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.directions_car,color:gold,size:58))):const Center(child:Icon(Icons.directions_car,color:gold,size:58)),if(car.status=='reserved')const Positioned(left:0,top:14,child:_ReservedRibbon())]))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${car.brand} ${car.model}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:4),Text('${car.year} · ${number(car.km)} km${car.cv==null?'':' · ${car.cv} CV'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:11)),Text(car.fuel,style:const TextStyle(color:Colors.white60,fontSize:11)),const SizedBox(height:5),Text(euros(car.price),style:const TextStyle(color:gold,fontSize:18,fontWeight:FontWeight.w900))]))])));
-          });
+          return GridView.builder(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+            itemCount: found.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 16,
+              mainAxisExtent: columns == 1 ? 390 : 380,
+            ),
+            itemBuilder: (context, index) {
+              final car = found[index];
+              return Card(
+                color: const Color(0xFF11171D),
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: gold.withValues(alpha: .30)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => widget.onOpenCar(car),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Stack(fit: StackFit.expand, children: [
+                          car.photos.isNotEmpty
+                              ? Image.memory(car.photos.first, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, color: gold, size: 64)))
+                              : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
+                          const Positioned(left: 12, bottom: 12, child: _PremiumPhotoCountPlaceholder()),
+                          if (car.status == 'reserved')
+                            const Positioned(left: 0, top: 18, child: _ReservedRibbon()),
+                          Positioned(
+                            right: 12, top: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .72), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white24)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 14),
+                                const SizedBox(width: 5),
+                                Text('${car.photos.length} fotos', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                              ]),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white)),
+                        const SizedBox(height: 9),
+                        Wrap(spacing: 7, runSpacing: 6, children: [
+                          _CarFeaturePill(icon: Icons.calendar_month_outlined, label: '${car.year}'),
+                          _CarFeaturePill(icon: Icons.speed_rounded, label: '${number(car.km)} km'),
+                          if (car.cv != null) _CarFeaturePill(icon: Icons.bolt_rounded, label: '${car.cv} CV'),
+                          _CarFeaturePill(icon: Icons.local_gas_station_outlined, label: car.fuel),
+                        ]),
+                        const SizedBox(height: 12),
+                        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          Expanded(child: Text(euros(car.price), maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.4))),
+                          const Icon(Icons.arrow_forward_rounded, color: gold, size: 22),
+                        ]),
+                      ]),
+                    ),
+                  ]),
+                ),
+              );
+            },
+          );
         })),
       ]),
     );
@@ -1946,15 +2042,15 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       ));
     }
     return LayoutBuilder(builder: (context, constraints) {
-      final columns = constraints.maxWidth < 420 ? 2 : 3;
+      final columns = constraints.maxWidth < 520 ? 1 : constraints.maxWidth < 900 ? 2 : 3;
       return GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         itemCount: rows.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 12,
-          childAspectRatio: .68,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 14,
+          mainAxisExtent: columns == 1 ? 365 : 390,
         ),
         itemBuilder: (context, index) {
           final listing = rows[index];
