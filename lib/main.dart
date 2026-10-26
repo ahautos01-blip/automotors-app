@@ -801,6 +801,8 @@ class _HomePageState extends State<HomePage> {
   double? minPrice;
   double? maxPrice;
   int? minYear;
+  int? maxYear;
+  int? minKm;
   int? maxKm;
   String selectedTransmission = 'Todas', selectedBodyType = 'Todos', selectedLabel = 'Todas', selectedColor = '';
   int? minCv, maxCv, minCc, maxDoors, minSeats;
@@ -1004,6 +1006,8 @@ class _HomePageState extends State<HomePage> {
       final matchesMinPrice = minPrice == null || car.price >= minPrice!;
       final matchesMaxPrice = maxPrice == null || car.price <= maxPrice!;
       final matchesMinYear = minYear == null || car.year >= minYear!;
+      final matchesMaxYear = maxYear == null || car.year <= maxYear!;
+      final matchesMinKm = minKm == null || car.km >= minKm!;
       final matchesMaxKm = maxKm == null || car.km <= maxKm!;
       final matchesTransmission = selectedTransmission == 'Todas' || car.transmission == selectedTransmission;
       final matchesBodyType = selectedBodyType == 'Todos' || car.bodyType == selectedBodyType;
@@ -1021,7 +1025,7 @@ class _HomePageState extends State<HomePage> {
           matchesFuel &&
           matchesMinPrice &&
           matchesMaxPrice &&
-          matchesMinYear && matchesMaxKm && matchesTransmission && matchesBodyType && matchesLabel && matchesColor && matchesMinCv && matchesMaxCv && matchesMinCc && matchesMaxDoors && matchesMinSeats && matchesEquipment;
+          matchesMinYear && matchesMaxYear && matchesMinKm && matchesMaxKm && matchesTransmission && matchesBodyType && matchesLabel && matchesColor && matchesMinCv && matchesMaxCv && matchesMinCc && matchesMaxDoors && matchesMinSeats && matchesEquipment;
     }).toList();
   }
 
@@ -1078,6 +1082,8 @@ class _HomePageState extends State<HomePage> {
           'min_price': minPrice,
           'max_price': maxPrice,
           'min_year': minYear,
+          'max_year': maxYear,
+          'min_km': minKm,
           'max_km': maxKm,
           'transmission': selectedTransmission,
           'body_type': selectedBodyType,
@@ -1111,6 +1117,8 @@ class _HomePageState extends State<HomePage> {
         TextEditingController(text: maxPrice?.toStringAsFixed(0) ?? '');
     final minYearController =
         TextEditingController(text: minYear?.toString() ?? '');
+    final maxYearController = TextEditingController(text: maxYear?.toString() ?? '');
+    final minKmController = TextEditingController(text: minKm?.toString() ?? '');
     final maxKmController =
         TextEditingController(text: maxKm?.toString() ?? '');
     final minCvController = TextEditingController(text: minCv?.toString() ?? '');
@@ -1211,17 +1219,15 @@ class _HomePageState extends State<HomePage> {
                   ]),
                   const SizedBox(height: 12),
                   Row(children: [
-                    Expanded(child: TextField(
-                      controller: minYearController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Año desde'),
-                    )),
+                    Expanded(child: TextField(controller: minYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Año desde'))),
                     const SizedBox(width: 12),
-                    Expanded(child: TextField(
-                      controller: maxKmController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Máximo kilómetros'),
-                    )),
+                    Expanded(child: TextField(controller: maxYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Año hasta'))),
+                  ]),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: TextField(controller: minKmController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Km desde'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextField(controller: maxKmController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Km hasta'))),
                   ]),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(value: transmission, decoration: const InputDecoration(labelText: 'Transmisión'), items: const ['Todas','Manual','Automático','Automático (DSG)'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => transmission = v); }),
@@ -1274,6 +1280,8 @@ class _HomePageState extends State<HomePage> {
                           minPrice = parseDouble(minPriceController.text);
                           maxPrice = parseDouble(maxPriceController.text);
                           minYear = parseInt(minYearController.text);
+                          maxYear = parseInt(maxYearController.text);
+                          minKm = parseInt(minKmController.text);
                           maxKm = parseInt(maxKmController.text);
                           selectedTransmission = transmission; selectedBodyType = bodyType; selectedLabel = label; selectedColor = colorController.text; minCv = parseInt(minCvController.text); maxCv = parseInt(maxCvController.text); minCc = parseInt(minCcController.text); maxDoors = parseInt(doorsController.text); minSeats = parseInt(seatsController.text); selectedEquipmentFilters..clear()..addAll(equipmentFilters);
                         });
@@ -1293,6 +1301,8 @@ class _HomePageState extends State<HomePage> {
     minPriceController.dispose();
     maxPriceController.dispose();
     minYearController.dispose();
+    maxYearController.dispose();
+    minKmController.dispose();
     maxKmController.dispose(); minCvController.dispose(); maxCvController.dispose(); minCcController.dispose(); doorsController.dispose(); seatsController.dispose(); colorController.dispose();
   }
 
