@@ -1961,12 +1961,12 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                             ),
                           ),
                           Positioned(
-                            right: 12, top: 12,
+                            right: 12, bottom: 12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .72), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white24)),
+                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .82), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withValues(alpha: .55))),
                               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 14),
+                                const Icon(Icons.photo_camera_outlined, color: gold, size: 14),
                                 const SizedBox(width: 5),
                                 Text('${car.photos.length} fotos', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                               ]),
@@ -1976,7 +1976,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
+                      padding: const EdgeInsets.fromLTRB(15, 12, 15, 13),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white)),
@@ -1987,12 +1987,26 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                           if (car.cv != null) _CarFeaturePill(icon: Icons.bolt_rounded, label: '${car.cv} CV'),
                           _CarFeaturePill(icon: Icons.local_gas_station_outlined, label: car.fuel),
                         ]),
-                        const SizedBox(height: 12),
-                        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          Expanded(child: Text(euros(car.price), maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.4))),
-                          const Icon(Icons.arrow_forward_rounded, color: gold, size: 22),
-                        ]),
+                        const SizedBox(height: 11),
+                        Container(
+                          padding: const EdgeInsets.only(top: 10),
+                          decoration: BoxDecoration(
+                            border: Border(top: BorderSide(color: gold.withValues(alpha: .22))),
+                          ),
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                            Expanded(child: Text(euros(car.price), maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.4))),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: gold.withValues(alpha: .12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.arrow_forward_rounded, color: gold, size: 19),
+                            ),
+                          ]),
+                        ),
                       ]),
                     ),
                   ]),
