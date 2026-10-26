@@ -8,9 +8,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const gold = Color(0xFF45D6FF);
-const black = Color(0xFF0A0F1A);
-const panel = Color(0xFF141D2B);
+const gold = Color(0xFFD4AF37);
+const black = Color(0xFF0D0D0F);
+const panel = Color(0xFF1A1A1D);
 
 
 class AutomotorsBrandMark extends StatelessWidget {
@@ -24,13 +24,13 @@ class AutomotorsBrandMark extends StatelessWidget {
       borderRadius: BorderRadius.circular(size * .28),
       gradient: const LinearGradient(
         begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFF8BEAFF), Color(0xFF248BFF)],
+        colors: [Color(0xFFF2D477), Color(0xFFB88A19)],
       ),
       boxShadow: const [BoxShadow(color: Color(0x332D2200), blurRadius: 8, offset: Offset(0, 3))],
     ),
     child: Center(child: Icon(
       Icons.directions_car_filled_rounded,
-      color: const Color(0xFF0A0F1A),
+      color: const Color(0xFF0D0D0F),
       size: size * .62,
     )),
   );
@@ -666,12 +666,12 @@ class AutomotorsApp extends StatelessWidget {
           surface: panel,
         ).copyWith(
           primary: gold,
-          secondary: const Color(0xFF8B7CFF),
+          secondary: const Color(0xFFBFA45A),
           surface: panel,
           onSurface: const Color(0xFFF1F5FA),
-          outline: const Color(0xFF33445B),
+          outline: const Color(0xFF4A4130),
         ),
-        dividerColor: const Color(0xFF26364B),
+        dividerColor: const Color(0xFF34312A),
         appBarTheme: const AppBarTheme(
           backgroundColor: black,
           foregroundColor: Color(0xFFF1F5FA),
@@ -685,18 +685,18 @@ class AutomotorsApp extends StatelessWidget {
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(18)),
-            side: BorderSide(color: Color(0xFF26364B)),
+            side: BorderSide(color: Color(0xFF34312A)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: panel,
-          hintStyle: const TextStyle(color: Color(0xFF91A2B8)),
-          labelStyle: const TextStyle(color: Color(0xFFB7C5D8)),
+          hintStyle: const TextStyle(color: Color(0xFFAAA6A0)),
+          labelStyle: const TextStyle(color: Color(0xFFD0CBC2)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF2A3A50)),
+            borderSide: const BorderSide(color: Color(0xFF3B362B)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -723,17 +723,17 @@ class AutomotorsApp extends StatelessWidget {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: gold,
-            side: const BorderSide(color: Color(0xFF3C6078)),
+            side: const BorderSide(color: Color(0xFF6A5728)),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
             textStyle: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
         navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF101827),
+          backgroundColor: const Color(0xFF151518),
           indicatorColor: gold.withValues(alpha: .16),
           labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-            color: states.contains(WidgetState.selected) ? gold : const Color(0xFF91A2B8),
+            color: states.contains(WidgetState.selected) ? gold : const Color(0xFFAAA6A0),
             fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
             fontSize: 12,
           )),
@@ -930,7 +930,7 @@ class _HomePageState extends State<HomePage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF101827),
+      backgroundColor: const Color(0xFF151518),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1273,7 +1273,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF1C2B40), Color(0xFF0E1624)],
+                  colors: [Color(0xFF282319), Color(0xFF0D0D0F)],
                 ),
                 border: Border.all(color: Colors.white.withValues(alpha: .08)),
               ),
@@ -1365,7 +1365,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
                         filled: true,
-                        fillColor: const Color(0xFF141D2B),
+                        fillColor: const Color(0xFF1A1A1D),
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -1376,7 +1376,7 @@ class _HomePageState extends State<HomePage> {
                     optionsViewBuilder: (context, onSelected, options) => Align(
                       alignment: Alignment.topLeft,
                       child: Material(
-                        color: const Color(0xFF172337),
+                        color: const Color(0xFF202024),
                         elevation: 8,
                         borderRadius: BorderRadius.circular(14),
                         child: ConstrainedBox(
@@ -1492,7 +1492,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF102A40), Color(0xFF0A0F1A)])),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF282319), Color(0xFF0D0D0F)])),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('¿Tienes un vehículo?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 5),
@@ -1502,7 +1502,7 @@ class _HomePageState extends State<HomePage> {
               ]),
             ),
             const SizedBox(height: 12),
-            Card(color: const Color(0xFF0A0F1A), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
+            Card(color: const Color(0xFF0D0D0F), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
               leading: const Icon(Icons.diamond_outlined, color: gold, size: 34),
               title: const Text('Packs y suscripción', style: TextStyle(fontWeight: FontWeight.w900)),
               subtitle: const Text('Destaca tus anuncios y consigue más visibilidad.', style: TextStyle(color: Colors.white70)),
@@ -1514,7 +1514,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF101827),
+        backgroundColor: const Color(0xFF151518),
         indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -1637,7 +1637,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     final found = results;
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F12),
-      appBar: AppBar(backgroundColor: const Color(0xFF101827), title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold))]),
+      appBar: AppBar(backgroundColor: const Color(0xFF151518), title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold))]),
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? 'Ocultar filtros' : 'Filtros'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
@@ -4097,7 +4097,7 @@ class _InboxPageState extends State<InboxPage> {
                           child: Container(
                             width: 76,
                             height: 76,
-                            color: const Color(0xFF1C2B40),
+                            color: const Color(0xFF29292D),
                             child: photo is Uint8List
                                 ? Image.memory(photo, fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
@@ -4343,7 +4343,7 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     width: 42,
                     height: 42,
-                    color: const Color(0xFF1C2B40),
+                    color: const Color(0xFF29292D),
                     child: widget.vehiclePhoto != null
                         ? Image.memory(widget.vehiclePhoto!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
@@ -4617,7 +4617,7 @@ class _PublishPackCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0F1A), borderRadius: BorderRadius.circular(19),
+        color: const Color(0xFF0D0D0F), borderRadius: BorderRadius.circular(19),
         border: Border.all(color: data.popular ? gold : const Color(0xFF67532C), width: data.popular ? 2 : 1),
         boxShadow: data.popular ? [BoxShadow(color: gold.withValues(alpha: .14), blurRadius: 16)] : null,
       ),
