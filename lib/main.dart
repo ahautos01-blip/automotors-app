@@ -2053,27 +2053,28 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final digits = validWhatsAppDigits(phone);
         final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
         return Column(children: [
-          SizedBox(
-            height: 178,
-            width: double.infinity,
-            child: Stack(fit: StackFit.expand, children: [
-              if (cover != null)
-                Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: panel))
-              else
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF25211A), Color(0xFF080D11)]),
+          if (isVerifiedBusiness)
+            SizedBox(
+              height: 178,
+              width: double.infinity,
+              child: Stack(fit: StackFit.expand, children: [
+                if (cover != null)
+                  Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: panel))
+                else
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF25211A), Color(0xFF080D11)]),
+                    ),
+                    child: const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 72)),
                   ),
-                  child: const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 72)),
-                ),
-              Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: .12), Colors.black.withValues(alpha: .82)]))),
-              Positioned(left: 18, right: 18, bottom: 18, child: Row(children: [
-                const Icon(Icons.directions_car_filled, color: gold, size: 30),
-                const SizedBox(width: 10),
-                Expanded(child: Text(name.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.1))),
-              ])),
-            ]),
-          ),
+                Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: .12), Colors.black.withValues(alpha: .82)]))),
+                Positioned(left: 18, right: 18, bottom: 18, child: Row(children: [
+                  const Icon(Icons.directions_car_filled, color: gold, size: 30),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(name.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.1))),
+                ])),
+              ]),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
             child: Transform.translate(
