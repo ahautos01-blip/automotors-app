@@ -386,6 +386,7 @@ class Car {
   final String? listingId;
   final String? ownerId;
   final String status;
+  final bool isFeatured;
 
   const Car({
     required this.brand,
@@ -424,6 +425,7 @@ class Car {
     this.listingId,
     this.ownerId,
     this.status = 'published',
+    this.isFeatured = false,
   });
 }
 
@@ -592,6 +594,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
                 Expanded(child: InkWell(
                   onTap: () => widget.onOpenCar(car),
                   child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (car.isFeatured) const Padding(padding: EdgeInsets.only(bottom: 5), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: gold, size: 15), SizedBox(width: 4), Text('DESTACADO', style: TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .7))])),
                     Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     const SizedBox(height: 6),
                     Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
@@ -889,6 +892,16 @@ class _HomePageState extends State<HomePage> {
           .order('created_at', ascending: false);
 
       final loadedCars = <Car>[];
+      final featuredIds = <String>{};
+      try {
+        final promotions = await supabase.from('vehicle_promotions').select('vehicle_id').eq('status', 'active').lte('starts_at', DateTime.now().toUtc().toIso8601String()).gt('ends_at', DateTime.now().toUtc().toIso8601String());
+        for (final promotion in List<Map<String, dynamic>>.from(promotions)) {
+          final id = promotion['vehicle_id']?.toString();
+          if (id != null && id.isNotEmpty) featuredIds.add(id);
+        }
+      } catch (_) {
+        // Si las promociones no están disponibles, mostramos los anuncios con normalidad.
+      }
       for (final raw in List<Map<String, dynamic>>.from(rows)) {
         final brandData = raw['vehicle_brands'];
         final modelData = raw['vehicle_models'];
@@ -954,6 +967,7 @@ class _HomePageState extends State<HomePage> {
           listingId: raw['id']?.toString(),
           ownerId: raw['owner_id']?.toString(),
           status: raw['status']?.toString() ?? 'published',
+          isFeatured: featuredIds.contains(raw['id']?.toString()),
         ));
       }
 
@@ -1026,7 +1040,7 @@ class _HomePageState extends State<HomePage> {
           matchesMinPrice &&
           matchesMaxPrice &&
           matchesMinYear && matchesMaxYear && matchesMinKm && matchesMaxKm && matchesTransmission && matchesBodyType && matchesLabel && matchesColor && matchesMinCv && matchesMaxCv && matchesMinCc && matchesMaxDoors && matchesMinSeats && matchesEquipment;
-    }).toList();
+    }).toList()..sort((a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0));
   }
 
   Future<void> saveCurrentSearch() async {
