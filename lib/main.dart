@@ -2623,6 +2623,20 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _safetyTip(IconData icon, String message) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: gold),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message, style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13, height: 1.4))),
+        ],
+      ),
+    );
+  }
+
   Widget _listingCompletenessCard() {
     final checks = <MapEntry<String, bool>>[
       MapEntry('Fotografías del vehículo', car.photos.isNotEmpty),
@@ -2885,6 +2899,33 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           ),
         ],
+        const SizedBox(height: 22),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF171715),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: gold.withValues(alpha: 0.42)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(children: [
+                Icon(Icons.shield_outlined, color: gold, size: 22),
+                SizedBox(width: 9),
+                Expanded(child: Text('Consejos para comprar con seguridad', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+              ]),
+              const SizedBox(height: 12),
+              _safetyTip(Icons.visibility_outlined, 'Comprueba el vehículo en persona y revisa su estado antes de pagar.'),
+              _safetyTip(Icons.description_outlined, 'Verifica la documentación, el VIN/bastidor y que coincidan con el vehículo.'),
+              _safetyTip(Icons.payments_outlined, 'No envíes anticipos ni claves bancarias si no has comprobado al vendedor y la operación.'),
+              _safetyTip(Icons.handshake_outlined, 'Deja por escrito el precio, las condiciones y los datos de comprador y vendedor.'),
+              const SizedBox(height: 4),
+              Text('AUTOMOTORS recomienda estas precauciones; no constituyen una verificación del vehículo ni del vendedor.', style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 11, height: 1.4)),
+            ],
+          ),
+        ),
         const SizedBox(height: 22),
         if (car.ownerId != null) ...[
           OutlinedButton.icon(
