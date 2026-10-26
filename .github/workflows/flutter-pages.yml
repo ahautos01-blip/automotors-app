@@ -41,8 +41,8 @@ jobs:
 
       - name: Bust cache for each published build
         run: |
-          sed -i "s/main.dart.js\\"/main.dart.js?v=${GITHUB_SHA}\\"/g" build/web/flutter_bootstrap.js
-          sed -i "s/flutter_bootstrap.js\\"/flutter_bootstrap.js?v=${GITHUB_SHA}\\"/g" build/web/index.html
+          sed -i 's|main.dart.js"|main.dart.js?v='${GITHUB_SHA}'"|g' build/web/flutter_bootstrap.js
+          sed -i 's|flutter_bootstrap.js"|flutter_bootstrap.js?v='${GITHUB_SHA}'"|g' build/web/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
