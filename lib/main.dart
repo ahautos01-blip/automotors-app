@@ -161,6 +161,8 @@ String? validWhatsAppDigits(String phone) {
 }
 
 Future<void> openWhatsAppForCar(BuildContext context, Car car) async {
+  final loggedIn = await requireAutomotorsLogin(context);
+  if (!loggedIn || !context.mounted) return;
   final digits = validWhatsAppDigits(car.phone);
   if (digits == null) return;
   final message = 'Hola, estoy interesado en tu ${car.brand} ${car.model} anunciado en AUTOMOTORS.';
@@ -2161,12 +2163,16 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         const SizedBox(height: 22),
         if (car.ownerId != null) ...[
           OutlinedButton.icon(
-            onPressed: () => Navigator.push<void>(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!),
-              ),
-            ),
+            onPressed: () async {
+              final loggedIn = await requireAutomotorsLogin(context);
+              if (!loggedIn || !context.mounted) return;
+              await Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!),
+                ),
+              );
+            },
             icon: const Icon(Icons.account_circle_outlined, color: gold),
             label: const Text('Ver perfil del vendedor'),
             style: OutlinedButton.styleFrom(
