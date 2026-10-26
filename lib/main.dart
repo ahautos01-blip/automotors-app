@@ -1594,7 +1594,7 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .25))),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), if (car.status == 'reserved') const Positioned(left: 0, top: 14, child: _ReservedRibbon())]))),
+                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), if (car.status == 'reserved') const Positioned(left: 0, top: 14, child: _ReservedRibbon()), Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car))]))),
                           Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
@@ -1854,6 +1854,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
                           if (car.status == 'reserved')
                             const Positioned(left: 0, top: 18, child: _ReservedRibbon()),
+                          Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car)),
                           Positioned(
                             left: 10, top: 10,
                             child: Material(
@@ -2080,6 +2081,86 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                     ),
     );
   }
+}
+
+class SaveVehicleButton extends StatefulWidget {
+  final Car car;
+  const SaveVehicleButton({super.key, required this.car});
+
+  @override
+  State<SaveVehicleButton> createState() => _SaveVehicleButtonState();
+}
+
+class _SaveVehicleButtonState extends State<SaveVehicleButton> {
+  bool isSaved = false;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final id = widget.car.listingId;
+    if (user == null || id == null || id.isEmpty) return;
+    try {
+      final row = await Supabase.instance.client.from('saved_vehicles')
+          .select('listing_id').eq('user_id', user.id).eq('listing_id', id).maybeSingle();
+      if (mounted) setState(() => isSaved = row != null);
+    } catch (_) {
+      // El anuncio sigue disponible aunque no se pueda consultar el estado del favorito.
+    }
+  }
+
+  Future<void> _toggle() async {
+    if (loading) return;
+    var user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+      user = Supabase.instance.client.auth.currentUser;
+    }
+    final id = widget.car.listingId;
+    if (user == null || id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este anuncio no se puede guardar ahora mismo.')));
+      return;
+    }
+    setState(() => loading = true);
+    try {
+      final db = Supabase.instance.client;
+      if (isSaved) {
+        await db.from('saved_vehicles').delete().eq('user_id', user.id).eq('listing_id', id);
+      } else {
+        await db.from('saved_vehicles').insert({'user_id': user.id, 'listing_id': id});
+      }
+      if (!mounted) return;
+      setState(() => isSaved = !isSaved);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isSaved ? 'Vehículo guardado en favoritos.' : 'Vehículo eliminado de favoritos.'),
+      ));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo guardar el anuncio. Inténtalo de nuevo.'),
+      ));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.black.withValues(alpha: .68),
+    shape: const CircleBorder(),
+    child: IconButton(
+      tooltip: isSaved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      onPressed: loading ? null : _toggle,
+      icon: loading
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: gold))
+          : Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isSaved ? Colors.redAccent : gold),
+    ),
+  );
 }
 
 class SavedVehiclesPage extends StatefulWidget {
