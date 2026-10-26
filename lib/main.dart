@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:automotors_base/services/store_purchase_service.dart';
 
 const gold = Color(0xFFD4AF37);
 const black = Color(0xFF0D0D0F);
@@ -6139,8 +6141,36 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-class PublishOptionsPage extends StatelessWidget {
+class PublishOptionsPage extends StatefulWidget {
   const PublishOptionsPage({super.key});
+
+  @override
+  State<PublishOptionsPage> createState() => _PublishOptionsPageState();
+}
+
+class _PublishOptionsPageState extends State<PublishOptionsPage> {
+  late final StorePurchaseService _purchaseService;
+  StreamSubscription<String>? _purchaseMessages;
+
+  @override
+  void initState() {
+    super.initState();
+    _purchaseService = StorePurchaseService();
+    _purchaseMessages = _purchaseService.messages.listen((message) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    });
+    _purchaseService.initialize();
+  }
+
+  @override
+  void dispose() {
+    _purchaseMessages?.cancel();
+    _purchaseService.dispose();
+    super.dispose();
+  }
 
   static const Color _gold = Color(0xFFFFC447);
   static const Color _bg = Color(0xFF050505);
@@ -6208,7 +6238,21 @@ class PublishOptionsPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           for (final pack in packs) ...[
-            _PublishPackCard(data: pack),
+            _PublishPackCard(
+              data: pack,
+              onSelect: () {
+                final productId = switch (pack.title) {
+                  'PACK 10' => 'automotors_pack_10',
+                  'PACK 15' => 'automotors_pack_15',
+                  'PACK 20' => 'automotors_pack_20',
+                  'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
+                  _ => '',
+                };
+                if (productId.isNotEmpty) {
+                  _purchaseService.purchaseSubscription(productId);
+                }
+              },
+            ),
             const SizedBox(height: 14),
           ],
           const Text('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', style: TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
@@ -6228,7 +6272,8 @@ class _PublishPackData {
 
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
-  const _PublishPackCard({required this.data});
+  final VoidCallback onSelect;
+  const _PublishPackCard({required this.data, required this.onSelect});
   static const Color gold = Color(0xFFFFC447);
   @override
   Widget build(BuildContext context) {
@@ -6250,7 +6295,7 @@ class _PublishPackCard extends StatelessWidget {
         const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(benefit, style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('La contratación de packs estará disponible cuando se active el sistema de pagos.'))), style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text('Elegir ${data.title}', style: const TextStyle(fontWeight: FontWeight.w900)))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text('Elegir ${data.title}', style: const TextStyle(fontWeight: FontWeight.w900)))),
       ]),
     );
   }
