@@ -2559,6 +2559,76 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _listingCompletenessCard() {
+    final checks = <MapEntry<String, bool>>[
+      MapEntry('Fotografías del vehículo', car.photos.isNotEmpty),
+      MapEntry('Descripción del anuncio', car.description.trim().length >= 40),
+      MapEntry('Año de matriculación', car.year > 0),
+      MapEntry('Kilometraje', car.km >= 0),
+      MapEntry('Combustible', car.fuel.trim().isNotEmpty),
+      MapEntry('Potencia', car.cv != null),
+      MapEntry('Transmisión', car.transmission?.trim().isNotEmpty == true),
+      MapEntry('Carrocería', car.bodyType?.trim().isNotEmpty == true),
+      MapEntry('Color', car.color?.trim().isNotEmpty == true),
+      MapEntry('Equipamiento', car.equipment.isNotEmpty),
+    ];
+    final completed = checks.where((item) => item.value).length;
+    final progress = completed / checks.length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: gold.withValues(alpha: 0.38)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.fact_check_outlined, color: gold, size: 22),
+            const SizedBox(width: 9),
+            const Expanded(child: Text('Calidad de la ficha', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+            Text('\$completed/\${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+            'Datos incluidos en este anuncio. Una ficha más completa ayuda a comparar vehículos.',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.72), height: 1.4, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: Colors.white12,
+              valueColor: const AlwaysStoppedAnimation<Color>(gold),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 7,
+            children: checks.map((item) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+              decoration: BoxDecoration(
+                color: item.value ? gold.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: item.value ? gold.withValues(alpha: 0.35) : Colors.white12),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(item.value ? Icons.check_circle_outline : Icons.radio_button_unchecked, size: 14, color: item.value ? gold : Colors.white54),
+                const SizedBox(width: 5),
+                Text(item.key, style: TextStyle(fontSize: 11, color: item.value ? Colors.white : Colors.white60)),
+              ]),
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _vehicleInformation(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2609,6 +2679,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           )),
         ]),
+        const SizedBox(height: 18),
+        _listingCompletenessCard(),
         const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
