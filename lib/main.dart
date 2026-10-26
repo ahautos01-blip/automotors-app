@@ -442,12 +442,6 @@ class _CarFeaturePill extends StatelessWidget {
   );
 }
 
-class _PremiumPhotoCountPlaceholder extends StatelessWidget {
-  const _PremiumPhotoCountPlaceholder();
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
 class _ReservedRibbon extends StatelessWidget {
   const _ReservedRibbon();
 
@@ -1395,7 +1389,6 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               ? Image.memory(car.photos.first, fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, color: gold, size: 64)))
                               : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
-                          const Positioned(left: 12, bottom: 12, child: _PremiumPhotoCountPlaceholder()),
                           if (car.status == 'reserved')
                             const Positioned(left: 0, top: 18, child: _ReservedRibbon()),
                           Positioned(
