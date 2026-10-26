@@ -379,6 +379,7 @@ class Car {
   final List<Uint8List> photos;
   final String? listingId;
   final String? ownerId;
+  final String status;
 
   const Car({
     required this.brand,
@@ -416,7 +417,28 @@ class Car {
     this.photos = const [],
     this.listingId,
     this.ownerId,
+    this.status = 'published',
   });
+}
+
+class _ReservedRibbon extends StatelessWidget {
+  const _ReservedRibbon();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+    decoration: const BoxDecoration(
+      color: Color(0xFF1976D2),
+      borderRadius: BorderRadius.only(
+        topRight: Radius.circular(8),
+        bottomRight: Radius.circular(8),
+      ),
+    ),
+    child: const Text('RESERVADO', style: TextStyle(
+      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+      letterSpacing: .7,
+    )),
+  );
 }
 
 class AutomotorsApp extends StatelessWidget {
@@ -483,7 +505,7 @@ class _HomePageState extends State<HomePage> {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
@@ -549,6 +571,7 @@ class _HomePageState extends State<HomePage> {
           photos: photoBytes,
           listingId: raw['id']?.toString(),
           ownerId: raw['owner_id']?.toString(),
+          status: raw['status']?.toString() ?? 'published',
         ));
       }
 
@@ -1121,7 +1144,7 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .25))),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)))),
+                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), if (car.status == 'reserved') const Positioned(left: 0, top: 14, child: _ReservedRibbon())]))),
                           Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
@@ -1297,7 +1320,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
           return GridView.builder(padding: const EdgeInsets.all(16), itemCount: found.length, gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:14,mainAxisSpacing:14,mainAxisExtent:columns==1?340:365), itemBuilder:(context,index) {
             final car=found[index];
-            return Card(color:const Color(0xFF1B1E24),margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:gold.withValues(alpha:.25))),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>widget.onOpenCar(car),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:SizedBox(width:double.infinity,child:car.photos.isNotEmpty?Image.memory(car.photos.first,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.directions_car,color:gold,size:58))):const Center(child:Icon(Icons.directions_car,color:gold,size:58)))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${car.brand} ${car.model}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:4),Text('${car.year} · ${number(car.km)} km${car.cv==null?'':' · ${car.cv} CV'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:11)),Text(car.fuel,style:const TextStyle(color:Colors.white60,fontSize:11)),const SizedBox(height:5),Text(euros(car.price),style:const TextStyle(color:gold,fontSize:18,fontWeight:FontWeight.w900))]))])));
+            return Card(color:const Color(0xFF1B1E24),margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:gold.withValues(alpha:.25))),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>widget.onOpenCar(car),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:SizedBox(width:double.infinity,child:Stack(fit:StackFit.expand,children:[car.photos.isNotEmpty?Image.memory(car.photos.first,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.directions_car,color:gold,size:58))):const Center(child:Icon(Icons.directions_car,color:gold,size:58)),if(car.status=='reserved')const Positioned(left:0,top:14,child:_ReservedRibbon())]))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${car.brand} ${car.model}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:4),Text('${car.year} · ${number(car.km)} km${car.cv==null?'':' · ${car.cv} CV'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:11)),Text(car.fuel,style:const TextStyle(color:Colors.white60,fontSize:11)),const SizedBox(height:5),Text(euros(car.price),style:const TextStyle(color:gold,fontSize:18,fontWeight:FontWeight.w900))]))])));
           });
         })),
       ]),
