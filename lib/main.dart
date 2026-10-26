@@ -5651,8 +5651,31 @@ class _AddCarPageState extends State<AddCarPage> {
           if (mounted) setState(() {});
         },
         validator: (value) {
-          if (requiredField && (value == null || value.trim().isEmpty)) {
+          final text = value?.trim() ?? '';
+          if (requiredField && text.isEmpty) {
             return 'Completa este campo';
+          }
+          if (text.isEmpty) return null;
+
+          if (numeric) {
+            if (label.startsWith('Precio')) {
+              final parsedPrice = double.tryParse(
+                text.replaceAll('.', '').replaceAll(',', '.'),
+              );
+              if (parsedPrice == null) return 'Introduce un precio válido';
+              if (parsedPrice <= 0) return 'El precio debe ser mayor que cero';
+            } else {
+              final parsedNumber = int.tryParse(text);
+              if (parsedNumber == null) return 'Introduce un número entero válido';
+              if (parsedNumber < 0) return 'El valor no puede ser negativo';
+            }
+          }
+
+          if (label.startsWith('Teléfono')) {
+            final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
+            if (digits.length < 9 || digits.length > 15) {
+              return 'Introduce un teléfono válido (9–15 cifras)';
+            }
           }
           return null;
         },
