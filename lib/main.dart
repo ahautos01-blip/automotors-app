@@ -1724,7 +1724,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     final listings = await supabase.from('vehicle_listings')
         .select('id, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
-        .eq('status', 'published')
+        .inFilter('status', ['published', 'reserved'])
         .order('created_at', ascending: false);
     final listingRows = List<Map<String, dynamic>>.from(listings);
     for (final listing in listingRows) {
@@ -1780,7 +1780,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           .from('vehicle_listings')
           .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
-          .eq('status', 'published')
+          .inFilter('status', ['published', 'reserved'])
           .maybeSingle();
       if (raw == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
