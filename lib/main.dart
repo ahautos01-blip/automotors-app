@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1525,6 +1526,27 @@ class CarDetailsPage extends StatelessWidget {
     required this.onContact,
   });
 
+  Future<void> _copyListingSummary(BuildContext context) async {
+    final details = <String>[
+      '${car.brand} ${car.model}',
+      if (car.version?.trim().isNotEmpty == true) 'Versión: ${car.version}',
+      'Precio: $priceText',
+      if (car.year > 0) 'Año: ${car.year}',
+      'Kilómetros: ${_formatKm(car.km)} km',
+      if (car.cv != null) 'Potencia: ${car.cv} CV',
+      if (car.transmission?.trim().isNotEmpty == true) 'Transmisión: ${car.transmission}',
+      if (car.fuel.trim().isNotEmpty) 'Combustible: ${car.fuel}',
+      if (car.description.trim().isNotEmpty) '',
+      if (car.description.trim().isNotEmpty) car.description.trim(),
+    ].join('\n');
+    await Clipboard.setData(ClipboardData(text: details));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Datos del anuncio copiados para compartir.')),
+      );
+    }
+  }
+
   void _openFullScreenGallery(BuildContext context, int initialIndex) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -1662,7 +1684,33 @@ class CarDetailsPage extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(
+            onPressed: () => _copyListingSummary(context),
+            icon: const Icon(Icons.ios_share_rounded, size: 18),
+            label: const Text('Compartir anuncio'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: gold,
+              side: BorderSide(color: gold.withValues(alpha: 0.65)),
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: FilledButton.icon(
+            onPressed: onContact,
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+            label: const Text('Consultar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: gold,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          )),
+        ]),
+        const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
             width: double.infinity,
