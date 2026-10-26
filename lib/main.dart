@@ -3363,6 +3363,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     return LayoutBuilder(builder: (context, constraints) {
       final columns = constraints.maxWidth < 520 ? 1 : constraints.maxWidth < 900 ? 2 : 3;
       return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         itemCount: rows.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -3479,7 +3481,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final phone = profile?['phone']?.toString() ?? '';
         final digits = validWhatsAppDigits(phone);
         final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
-        return Column(children: [
+        return SingleChildScrollView(child: Column(children: [
           if (isVerifiedBusiness)
             SizedBox(
               height: 178,
@@ -3637,7 +3639,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
               _profileTabButton('Valoraciones', 3),
             ]),
           ),
-          Expanded(child: IndexedStack(
+          IndexedStack(
             index: selectedProfileTab,
             children: [
               Column(children: [
@@ -3648,7 +3650,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   Text('${listings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
                 ])),
                 const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Anuncios publicados y reservados actualmente', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                Expanded(child: profileVehicleGrid(listings, sold: false)),
+                profileVehicleGrid(listings, sold: false),
               ]),
               Column(children: [
                 Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [
@@ -3658,9 +3660,9 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   Text('${soldListings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
                 ])),
                 const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Historial de vehículos vendidos por este vendedor', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                Expanded(child: profileVehicleGrid(soldListings, sold: true)),
+                profileVehicleGrid(soldListings, sold: true),
               ]),
-              ListView(padding: const EdgeInsets.all(20), children: [
+              ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
                 const Text('Sobre nosotros', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
                 const SizedBox(height: 12),
                 Text('$displayType', style: const TextStyle(color: Colors.white70, fontSize: 16)),
@@ -3676,8 +3678,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Text('Las valoraciones aparecerán aquí cuando estén disponibles.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
               ]))),
             ],
-          )),
-        ]);
+          ),
+        ])));
       },
     ),
   );
