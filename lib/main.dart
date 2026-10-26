@@ -2012,13 +2012,41 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                         ]),
                         const SizedBox(height: 11),
                         Container(
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
                           decoration: BoxDecoration(
-                            border: Border(top: BorderSide(color: gold.withValues(alpha: .22))),
+                            color: gold.withValues(alpha: .07),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: gold.withValues(alpha: .24)),
                           ),
                           child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                            Expanded(child: Text(euros(car.price), maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: gold, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -.4))),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'PRECIO',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: .62),
+                                      fontSize: 10,
+                                      letterSpacing: 1.1,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    euros(car.price),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: gold,
+                                      fontSize: 23,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.all(7),
