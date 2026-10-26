@@ -14,18 +14,20 @@ Los cuatro productos son suscripciones auto-renovables mensuales que se compran 
 
 ## Arquitectura prevista
 
-- Flutter: dependencia oficial `in_app_purchase` añadida y servicio inicial `lib/services/store_purchase_service.dart` para consultar productos y escuchar resultados. El checkout está bloqueado deliberadamente (`checkoutEnabled = false`) hasta desplegar y probar el verificador real de servidor.
+- Flutter: dependencia `in_app_purchase` y servicio `lib/services/store_purchase_service.dart` añadidos; las tarjetas de planes están conectadas al servicio, pero las compras siguen bloqueadas deliberadamente (`checkoutEnabled = false`).
 - iOS: StoreKit/App Store mediante el plugin Flutter de compras dentro de la aplicación.
 - Android: Google Play Billing mediante el plugin Flutter de compras dentro de la aplicación.
 - Supabase Edge Functions: verificación de transacciones contra las APIs oficiales de Apple y Google; recepción de notificaciones de servidor.
-- PostgreSQL/Supabase: estado de suscripción por usuario, tienda y producto; registro idempotente de eventos; control de límites de publicación.
+- PostgreSQL/Supabase: estado de suscripción por usuario, tienda y producto; registro idempotente de eventos de tienda; control de límites de publicación.
 - El cliente nunca decide que una compra está pagada. Solo el servidor activa, renueva, suspende o revoca permisos tras validar la fuente oficial.
 
 ## Estado actual
 
-Los botones de compra siguen desactivados y no se procesan cobros reales. La migración `supabase/migrations/202610230001_ad_pack_payments.sql` define la base para el estado de suscripciones nativas y el registro de eventos de tienda. Revisar y aplicar primero en un entorno de pruebas; no ejecutar a ciegas en producción.
+Los botones de compra siguen bloqueados y no se procesan cobros reales. La migración `supabase/migrations/202610230001_ad_pack_payments.sql` define las tablas de suscripciones nativas y eventos de tienda. La migración `supabase/migrations/202610260003_enforce_listing_limits.sql` añade una propuesta de límite de publicaciones del lado del servidor y depende de la primera migración.
 
-La aplicación todavía necesita conectar el servicio de compras a la interfaz, implementar y desplegar `verify-store-purchase` con credenciales oficiales de Apple/Google, procesar notificaciones de renovación/cancelación/reembolso, aplicar el límite de anuncios activos en el servidor y completar las pruebas en sandbox. No se deben habilitar compras reales hasta terminar esos pasos.
+**Ninguna de estas dos migraciones nuevas se ha aplicado a la base de datos de producción.** Deben revisarse y probarse primero en un proyecto de pruebas. No ejecutar a ciegas en producción.
+
+Pendiente: implementar y desplegar `verify-store-purchase` con credenciales oficiales de Apple/Google, procesar notificaciones de renovación/cancelación/reembolso, probar los límites en servidor y completar las pruebas en sandbox. No se deben habilitar compras reales hasta terminar esos pasos.
 
 ## Reglas de acceso que debe aplicar el servidor
 
@@ -36,6 +38,7 @@ La aplicación todavía necesita conectar el servicio de compras a la interfaz, 
 5. Compras pendientes no habilitan el plan. Reembolsos, revocaciones y expiraciones actualizan el acceso.
 6. El límite debe comprobarse y aplicarse en el servidor al publicar, para evitar publicaciones simultáneas que excedan el plan.
 7. Las transacciones y notificaciones se procesan idempotentemente para evitar conceder permisos dos veces.
+8. Si una suscripción expira y el usuario tiene más anuncios activos que el nuevo límite, el sistema debe aplicar una política de transición explícita; no borrar anuncios automáticamente sin una decisión de producto.
 
 ## Configuración pendiente de las tiendas
 
