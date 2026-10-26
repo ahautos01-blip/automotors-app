@@ -426,18 +426,33 @@ class _ReservedRibbon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-    decoration: const BoxDecoration(
-      color: Color(0xFF1976D2),
-      borderRadius: BorderRadius.only(
-        topRight: Radius.circular(8),
-        bottomRight: Radius.circular(8),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF168BFF), Color(0xFF063B96)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
       ),
+      border: const Border(
+        top: BorderSide(color: Color(0xFF83D8FF), width: 1),
+        bottom: BorderSide(color: Color(0xFF041D52), width: 1),
+      ),
+      borderRadius: const BorderRadius.only(
+        topRight: Radius.circular(10),
+        bottomRight: Radius.circular(10),
+      ),
+      boxShadow: [
+        BoxShadow(color: const Color(0xFF168BFF).withValues(alpha: .45), blurRadius: 12, offset: const Offset(0, 3)),
+      ],
     ),
-    child: const Text('RESERVADO', style: TextStyle(
-      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
-      letterSpacing: .7,
-    )),
+    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.lock_rounded, size: 13, color: Colors.white),
+      SizedBox(width: 6),
+      Text('RESERVADO', style: TextStyle(
+        color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+        letterSpacing: 1.1, shadows: [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1))],
+      )),
+    ]),
   );
 }
 
@@ -2463,10 +2478,34 @@ class _GaragePageState extends State<GaragePage> {
               return Card(color: panel, clipBehavior: Clip.antiAlias, margin: const EdgeInsets.only(bottom: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 InkWell(onTap: () => openDetails(listing), child: Stack(children: [
                   SizedBox(height: 205, child: GarageListingPhoto(path: photoRows.isEmpty ? null : photoRows.first['storage_path']?.toString())),
-                  if (isReserved || isSold) Positioned(top: 14, right: 0, child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(color: isReserved ? const Color(0xFF1976D2) : const Color(0xFF238636), borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomLeft: Radius.circular(8))),
-                    child: Text(isReserved ? 'RESERVADO' : 'VENDIDO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: .8)),
+                  if (isReserved || isSold) Positioned(top: 16, right: 0, child: Container(
+                    padding: const EdgeInsets.fromLTRB(13, 9, 16, 9),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isReserved
+                            ? const [Color(0xFF168BFF), Color(0xFF063B96)]
+                            : const [Color(0xFFFF424A), Color(0xFF970B18)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      border: Border(
+                        top: BorderSide(color: isReserved ? const Color(0xFF83D8FF) : const Color(0xFFFFA4A8), width: 1),
+                        bottom: BorderSide(color: isReserved ? const Color(0xFF041D52) : const Color(0xFF5D0610), width: 1),
+                        left: BorderSide(color: Colors.white.withValues(alpha: .7), width: 1),
+                      ),
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
+                      boxShadow: [
+                        BoxShadow(color: (isReserved ? const Color(0xFF168BFF) : const Color(0xFFFF2435)).withValues(alpha: .38), blurRadius: 14, offset: const Offset(0, 3)),
+                      ],
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(isReserved ? Icons.lock_rounded : Icons.verified_rounded, size: 15, color: Colors.white),
+                      const SizedBox(width: 7),
+                      Text(isReserved ? 'RESERVADO' : 'VENDIDO', style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1,
+                        shadows: [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1))],
+                      )),
+                    ]),
                   )),
                 ])),
                 Padding(padding: const EdgeInsets.fromLTRB(16, 13, 8, 0), child: Row(children: [
