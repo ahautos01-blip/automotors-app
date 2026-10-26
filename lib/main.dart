@@ -1920,6 +1920,31 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     dataFuture = loadSeller();
   }
 
+  bool get isOwnProfile => supabase.auth.currentUser?.id == widget.ownerId;
+
+  Future<void> refreshSeller() async {
+    setState(() => dataFuture = loadSeller());
+  }
+
+  Future<void> updateProfileListingStatus(Map<String, dynamic> listing, String status) async {
+    if (!isOwnProfile) return;
+    try {
+      await supabase.from('vehicle_listings').update({'status': status})
+        .eq('id', listing['id'].toString()).eq('owner_id', widget.ownerId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'sold' ? 'Anuncio marcado como vendido.' : status == 'reserved' ? 'Anuncio marcado como reservado.' : 'Reserva retirada.')));
+      await refreshSeller();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar el anuncio: $e')));
+    }
+  }
+
+  Future<void> editProfileListing(Map<String, dynamic> listing) async {
+    if (!isOwnProfile || listing['status']?.toString() == 'sold') return;
+    final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => EditListingPage(listingId: listing['id'].toString())));
+    if (changed == true && mounted) await refreshSeller();
+  }
+
   Future<Map<String, dynamic>> loadSeller() async {
     final profile = await supabase.from('user_profiles')
         .select('id, full_name, account_type, city, province, business_name, phone, profile_photo_path, cover_photo_path, estado_verificacion')
@@ -2191,6 +2216,16 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 11)),
                     const SizedBox(height: 7),
                     Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w900)),
+                    if (isOwnProfile && !sold) ...[
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('Editar'), style: OutlinedButton.styleFrom(foregroundColor: gold, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        const SizedBox(width: 6),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? 'Quitar reserva' : 'Reservar', maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF64B5F6), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        const SizedBox(width: 6),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline, size: 16), label: const Text('Vendido'), style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                      ]),
+                    ],
                   ]),
                 ),
               ]),
