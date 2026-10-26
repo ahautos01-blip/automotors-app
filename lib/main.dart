@@ -1219,8 +1219,13 @@ class _HomePageState extends State<HomePage> {
               if (!loggedIn || !context.mounted) return;
             }
             if (!context.mounted) return;
+            final currentUser = Supabase.instance.client.auth.currentUser;
+            if (currentUser == null || !context.mounted) return;
             await Navigator.push<void>(context,
-              MaterialPageRoute(builder: (_) => const PersonalAreaPage()));
+              MaterialPageRoute(
+                builder: (_) => PublicSellerProfilePage(ownerId: currentUser.id),
+              ),
+            );
             if (mounted) loadCars();
           }
         },
