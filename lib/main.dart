@@ -478,41 +478,171 @@ class _ReservedRibbon extends StatelessWidget {
   );
 }
 
-class VehicleSearchResultsPage extends StatelessWidget {
+class VehicleSearchResultsPage extends StatefulWidget {
   final List<Car> cars;
   final void Function(Car) onOpenCar;
   const VehicleSearchResultsPage({super.key, required this.cars, required this.onOpenCar});
 
-  String priceText(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.')} €';
+  @override
+  State<VehicleSearchResultsPage> createState() => _VehicleSearchResultsPageState();
+}
+
+class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
+  final List<Car> _selectedForComparison = [];
+
+  String priceText(double value) =>
+      '\${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+
+  void _toggleComparison(Car car) {
+    setState(() {
+      if (_selectedForComparison.contains(car)) {
+        _selectedForComparison.remove(car);
+      } else if (_selectedForComparison.length < 3) {
+        _selectedForComparison.add(car);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Puedes comparar un máximo de 3 coches.')),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Resultados de búsqueda')),
-    body: cars.isEmpty
+    appBar: AppBar(
+      title: const Text('Resultados de búsqueda'),
+      actions: [
+        if (_selectedForComparison.isNotEmpty)
+          Center(child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Text('\${_selectedForComparison.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+          )),
+      ],
+    ),
+    bottomNavigationBar: _selectedForComparison.length >= 2
+      ? SafeArea(child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison)),
+            )),
+            icon: const Icon(Icons.compare_arrows_rounded),
+            label: Text('Comparar \${_selectedForComparison.length} coches'),
+          ),
+        ))
+      : null,
+    body: widget.cars.isEmpty
       ? const Center(child: Padding(padding: EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.search_off_rounded, size: 54, color: gold), SizedBox(height: 14),
           Text('No hay vehículos con estos filtros', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
           SizedBox(height: 8), Text('Cambia o limpia alguno de los filtros e inténtalo de nuevo.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)),
         ])))
       : Column(children: [
-          Padding(padding: const EdgeInsets.all(16), child: Align(alignment: Alignment.centerLeft, child: Text('${cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Row(children: [
+              Expanded(child: Text('\${widget.cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))),
+              const Icon(Icons.compare_arrows_rounded, color: gold, size: 18),
+              const SizedBox(width: 6),
+              const Flexible(child: Text('Selecciona hasta 3 para comparar', style: TextStyle(color: gold, fontSize: 12))),
+            ]),
+          ),
           Expanded(child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), itemCount: cars.length,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            itemCount: widget.cars.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final car = cars[index];
-              return Card(color: panel, clipBehavior: Clip.antiAlias, child: InkWell(onTap: () => onOpenCar(car), child: Row(children: [
-                SizedBox(width: 128, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFF292929), child: const Icon(Icons.directions_car, size: 42, color: gold))),
-                Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                  const SizedBox(height: 6), Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
-                  const SizedBox(height: 6), Text('${car.year} · ${car.km} km · ${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
-                ]))),
-              ])));
+              final car = widget.cars[index];
+              final isSelected = _selectedForComparison.contains(car);
+              return Card(color: panel, clipBehavior: Clip.antiAlias, child: Row(children: [
+                SizedBox(width: 112, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFF292929), child: const Icon(Icons.directions_car, size: 42, color: gold))),
+                Expanded(child: InkWell(
+                  onTap: () => widget.onOpenCar(car),
+                  child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('\${car.brand} \${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 6),
+                    Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
+                    const SizedBox(height: 6),
+                    Text('\${car.year} · \${car.km} km · \${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ])),
+                )),
+                Checkbox(value: isSelected, activeColor: gold, checkColor: black, onChanged: (_) => _toggleComparison(car)),
+              ]));
             },
           )),
         ]),
   );
+}
+
+class VehicleComparisonPage extends StatelessWidget {
+  final List<Car> cars;
+  const VehicleComparisonPage({super.key, required this.cars});
+
+  String _price(double value) =>
+      '\${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+  String _value(Object? value, [String suffix = '']) =>
+      value == null || value.toString().trim().isEmpty ? 'No indicado' : '\$value\$suffix';
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <List<String>>[
+      ['Precio', ...cars.map((c) => _price(c.price))],
+      ['Año', ...cars.map((c) => _value(c.year == 0 ? null : c.year))],
+      ['Kilometraje', ...cars.map((c) => '\${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
+      ['Combustible', ...cars.map((c) => _value(c.fuel))],
+      ['Potencia', ...cars.map((c) => _value(c.cv, ' CV'))],
+      ['Cilindrada', ...cars.map((c) => c.cilindradaCc == null ? 'No indicado' : '\${c.cilindradaCc} cc')],
+      ['Cambio', ...cars.map((c) => _value(c.transmission))],
+      ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
+      ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
+      ['Color', ...cars.map((c) => _value(c.color))],
+      ['Puertas', ...cars.map((c) => _value(c.doors))],
+      ['Plazas', ...cars.map((c) => _value(c.seats))],
+      ['Equipamiento', ...cars.map((c) => c.equipment.isEmpty ? 'No indicado' : c.equipment.join(', '))],
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Comparar vehículos')),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: Text('Compara los datos publicados de \${cars.length} vehículos. Los campos sin información aparecen como “No indicado”.',
+            style: const TextStyle(color: Colors.white70)),
+        ),
+        Expanded(child: SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(const Color(0xFF242B32)),
+              dataRowMinHeight: 48,
+              dataRowMaxHeight: 110,
+              columns: [
+                const DataColumn(label: Text('Característica', style: TextStyle(color: gold, fontWeight: FontWeight.w800))),
+                ...cars.map((car) => DataColumn(label: SizedBox(
+                  width: 165,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                    if (car.photos.isNotEmpty) ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(car.photos.first, width: 145, height: 78, fit: BoxFit.cover),
+                    ) else const Icon(Icons.directions_car, size: 40, color: gold),
+                    const SizedBox(height: 5),
+                    Text('\${car.brand} \${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text('\${car.year}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  ]),
+                ))),
+              ],
+              rows: rows.map((row) => DataRow(cells: [
+                DataCell(SizedBox(width: 115, child: Text(row[0], style: const TextStyle(fontWeight: FontWeight.w700)))),
+                ...row.skip(1).map((value) => DataCell(SizedBox(width: 165, child: Text(value, softWrap: true)))),
+              ])).toList(),
+            ),
+          ),
+        )),
+      ]),
+    );
+  }
 }
 
 class AutomotorsApp extends StatelessWidget {
