@@ -363,6 +363,8 @@ class Car {
   final int? cilindradaCc;
   final String? etiquetaMedioambiental;
   final String? vin;
+  final bool showMatriculaPublicly;
+  final bool showVinPublicly;
   final String? version;
   final String? transmission;
   final String? bodyType;
@@ -402,6 +404,8 @@ class Car {
     this.cilindradaCc,
     this.etiquetaMedioambiental,
     this.vin,
+    this.showMatriculaPublicly = false,
+    this.showVinPublicly = false,
     this.version,
     this.transmission,
     this.bodyType,
@@ -3547,6 +3551,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           ),
         ],
+        if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true || car.showVinPublicly && car.vin?.trim().isNotEmpty == true) ...[
+          _technicalSectionLabel('Identificación del vehículo'),
+          if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true)
+            _technicalRow(Icons.confirmation_number_outlined, 'Matrícula', car.matricula!),
+          if (car.showVinPublicly && car.vin?.trim().isNotEmpty == true)
+            _technicalRow(Icons.qr_code_2_outlined, 'Número VIN / bastidor', car.vin!),
+        ],
         if (car.emissionsStandard?.trim().isNotEmpty == true)
           _technicalRow(Icons.eco_outlined, 'Normativa de emisiones', car.emissionsStandard!),
         if (car.bodyType?.trim().isNotEmpty == true || car.doors != null || car.seats != null || car.color?.trim().isNotEmpty == true) ...[
@@ -3883,7 +3894,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .inFilter('status', ['published', 'reserved', 'sold'])
           .maybeSingle();
@@ -3924,6 +3935,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         fuel: raw['fuel']?.toString() ?? '',
         description: raw['description']?.toString() ?? '',
         phone: raw['phone']?.toString() ?? '',
+        matricula: raw['matricula']?.toString(),
+        vin: raw['vin']?.toString(),
+        showMatriculaPublicly: raw['show_matricula_publicly'] == true,
+        showVinPublicly: raw['show_vin_publicly'] == true,
         cv: (raw['cv'] as num?)?.toInt(),
         cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
         etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
@@ -5303,6 +5318,8 @@ class _EditListingPageState extends State<EditListingPage> {
   final seats = TextEditingController();
   final emissionsStandard = TextEditingController();
   final Set<String> selectedEquipment = {};
+  bool showMatriculaPublicly = false;
+  bool showVinPublicly = false;
   String fuel = 'Diésel';
   String? label;
   bool loading = true;
@@ -5315,7 +5332,7 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin,version,transmission,body_type,color,doors,seats,emissions_standard,equipment').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
         if (mounted) Navigator.pop(context, false);
@@ -5327,6 +5344,8 @@ class _EditListingPageState extends State<EditListingPage> {
       selectedEquipment
         ..clear()
         ..addAll(row['equipment'] is List ? List<String>.from((row['equipment'] as List).map((item) => item.toString())) : const <String>[]);
+      showMatriculaPublicly = row['show_matricula_publicly'] == true;
+      showVinPublicly = row['show_vin_publicly'] == true;
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
     finally { if (mounted) setState(() => loading = false); }
@@ -5345,7 +5364,7 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revisa año, kilómetros y precio.'))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio actualizado.'))); Navigator.pop(context, true); }
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo guardar el anuncio: $e'))); }
     finally { if (mounted) setState(() => saving = false); }
@@ -5376,6 +5395,8 @@ class _EditListingPageState extends State<EditListingPage> {
     textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
     DropdownButtonFormField<String>(value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration: const InputDecoration(labelText: 'Combustible'), items: const [DropdownMenuItem(value:'Diésel',child:Text('Diésel')),DropdownMenuItem(value:'Gasolina',child:Text('Gasolina')),DropdownMenuItem(value:'Híbrido',child:Text('Híbrido')),DropdownMenuItem(value:'Eléctrico',child:Text('Eléctrico'))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
     textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Norma de emisiones', emissionsStandard), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
+    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar matrícula en el anuncio público'), subtitle: const Text('Si lo desactivas, solo se conservará para la gestión del anuncio.'), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
+    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar VIN / bastidor en el anuncio público'), subtitle: const Text('Es opcional; por privacidad se mantiene oculto si no lo activas.'), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
     const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Equipamiento', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
     ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(item), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
     DropdownButtonFormField<String>(value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => label = v)),
@@ -6157,6 +6178,8 @@ class _AddCarPageState extends State<AddCarPage> {
   String transmission = 'Automático';
   String bodyType = 'Berlina';
   final Set<String> selectedEquipment = {};
+  bool showMatriculaPublicly = false;
+  bool showVinPublicly = false;
 
   final ImagePicker imagePicker = ImagePicker();
   final List<XFile> photos = [];
@@ -6576,6 +6599,8 @@ class _AddCarPageState extends State<AddCarPage> {
         'fuel': fuel,
         'phone': phoneValue,
         'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(),
+        'show_matricula_publicly': showMatriculaPublicly,
+        'show_vin_publicly': showVinPublicly,
         'cv': int.tryParse(cv.text.trim()),
         'cilindrada_cc': int.tryParse(cilindradaCc.text.trim()),
         'version': version.text.trim().isEmpty ? null : version.text.trim(),
@@ -6819,6 +6844,8 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Precio en euros', price, numeric: true),
             buildTextField('Matrícula (opcional)', matricula, requiredField: false),
             buildTextField('VIN / número de bastidor (opcional)', vin, requiredField: false),
+            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar matrícula en el anuncio público'), subtitle: const Text('Si no lo marcas, la matrícula quedará oculta a los visitantes.'), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
+            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar VIN / bastidor en el anuncio público'), subtitle: const Text('Opcional. Por privacidad, estará oculto si no lo activas.'), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
             buildTextField('Potencia en CV (opcional)', cv, numeric: true, requiredField: false),
             buildTextField('Cilindrada en cc (opcional)', cilindradaCc, numeric: true, requiredField: false),
             DropdownButtonFormField<String>(
