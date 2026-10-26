@@ -1606,6 +1606,22 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   int minKm = 0, maxKm = 300000, minCv = 0, maxCv = 1000;
   int minYear = 1990, maxYear = DateTime.now().year + 1;
   bool showFilters = false;
+  final Set<String> _comparisonIds = <String>{};
+
+  void _toggleCompare(Car car) {
+    final id = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
+    setState(() {
+      if (_comparisonIds.contains(id)) {
+        _comparisonIds.remove(id);
+      } else if (_comparisonIds.length < 3) {
+        _comparisonIds.add(id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Puedes comparar hasta 3 vehículos.')),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() { search.dispose(); super.dispose(); }
@@ -1637,7 +1653,34 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     final found = results;
     return Scaffold(
       backgroundColor: const Color(0xFF0D0F12),
-      appBar: AppBar(backgroundColor: const Color(0xFF151518), title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)), actions: [IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold))]),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF151518),
+        title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)),
+        actions: [
+          if (_comparisonIds.isNotEmpty)
+            Center(child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+            )),
+          IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold)),
+        ],
+      ),
+      bottomNavigationBar: _comparisonIds.length >= 2
+        ? SafeArea(child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+              onPressed: () {
+                final selected = results.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
+                if (selected.length >= 2) {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected)));
+                }
+              },
+              icon: const Icon(Icons.compare_arrows_rounded),
+              label: Text('Comparar ${_comparisonIds.length} vehículos'),
+            ),
+          ))
+        : null,
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? 'Ocultar filtros' : 'Filtros'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
@@ -1666,6 +1709,8 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             ),
             itemBuilder: (context, index) {
               final car = found[index];
+              final compareId = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
+              final isCompared = _comparisonIds.contains(compareId);
               return Card(
                 color: const Color(0xFF11171D),
                 margin: EdgeInsets.zero,
@@ -1687,6 +1732,25 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
                           if (car.status == 'reserved')
                             const Positioned(left: 0, top: 18, child: _ReservedRibbon()),
+                          Positioned(
+                            left: 10, top: 10,
+                            child: Material(
+                              color: Colors.black.withValues(alpha: .72),
+                              borderRadius: BorderRadius.circular(10),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () => _toggleCompare(car),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined, color: gold, size: 18),
+                                    const SizedBox(width: 5),
+                                    Text(isCompared ? 'Comparar' : 'Añadir', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ),
                           Positioned(
                             right: 12, top: 12,
                             child: Container(
