@@ -2762,61 +2762,68 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Compartir anuncio'),
-          content: const Text('Elige cómo quieres compartir la ficha completa.'),
-          actions: [
-            TextButton.icon(
-              onPressed: () async {
-                final uri = Uri.parse(
-                  'https://wa.me/?text=${Uri.encodeComponent(summary)}',
-                );
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              },
-              icon: const Icon(Icons.chat_rounded),
-              label: const Text('WhatsApp'),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                final uri = Uri.parse(
-                  'https://t.me/share/url?url=${Uri.encodeComponent(shareUri.toString())}&text=${Uri.encodeComponent(title)}',
-                );
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              },
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Telegram'),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                final uri = Uri(
-                  scheme: 'mailto',
-                  queryParameters: <String, String>{
-                    'subject': 'Anuncio AUTOMOTORS: $title',
-                    'body': summary,
-                  },
-                );
-                await launchUrl(uri);
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-              },
-              icon: const Icon(Icons.email_outlined),
-              label: const Text('Correo'),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: summary));
-                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Enlace y datos del anuncio copiados.')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.chat_rounded),
+                title: const Text('WhatsApp'),
+                onTap: () async {
+                  final uri = Uri.parse(
+                    'https://wa.me/?text=${Uri.encodeComponent(summary)}',
                   );
-                }
-              },
-              icon: const Icon(Icons.copy_rounded),
-              label: const Text('Copiar enlace'),
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.send_rounded),
+                title: const Text('Telegram'),
+                onTap: () async {
+                  final uri = Uri.parse(
+                    'https://t.me/share/url?url=${Uri.encodeComponent(shareUri.toString())}&text=${Uri.encodeComponent(title)}',
+                  );
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.email_outlined),
+                title: const Text('Correo electrónico'),
+                onTap: () async {
+                  final uri = Uri(
+                    scheme: 'mailto',
+                    queryParameters: <String, String>{
+                      'subject': 'Anuncio AUTOMOTORS: $title',
+                      'body': summary,
+                    },
+                  );
+                  await launchUrl(uri);
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Copiar enlace'),
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: summary));
+                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Enlace y datos del anuncio copiados.')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
             ),
           ],
-        ),
-      );
+        ),;
       return;
     }
 
