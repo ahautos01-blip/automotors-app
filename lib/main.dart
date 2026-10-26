@@ -809,61 +809,42 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
+      // Consultar todos los mensajes pendientes en una sola petición y contar
+      // los conversation_id distintos: varios mensajes en un chat cuentan como 1.
       final rows = await supabase
-          .from('chat_conversations')
-          .select('id')
-          .or('buyer_id.eq.${user.id},seller_id.eq.${user.id}');
-      var count = 0;
-      for (final conversation in List<Map<String, dynamic>>.from(rows)) {
-        final conversationId = conversation['id']?.toString();
-        if (conversationId == null || conversationId.isEmpty) continue;
-        final unread = await supabase
-            .from('chat_messages')
-            .select('id')
-            .eq('conversation_id', conversationId)
-            .neq('sender_id', user.id)
-            .isFilter('read_at', null)
-            .limit(1);
-        if ((unread as List).isNotEmpty) count++;
+          .from('chat_messages')
+          .select('conversation_id')
+          .neq('sender_id', user.id)
+          .isFilter('read_at', null);
+      final unreadConversationIds = List<Map<String, dynamic>>.from(rows)
+          .map((message) => message['conversation_id']?.toString())
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      if (mounted && unreadConversationIds.length != unreadChatsCount) {
+        setState(() => unreadChatsCount = unreadConversationIds.length);
       }
-      if (mounted && count != unreadChatsCount) {
-        setState(() => unreadChatsCount = count);
-      }
-    } catch (_) {
-      // No interrumpir la página principal si el contador no se puede consultar.
+    } catch (error) {
+      // Mantener el contador visible con su último valor si falla la consulta.
+      debugPrint('No se pudo actualizar el contador de chats no leídos: $error');
     }
   }
 
   Widget _chatNavigationIcon(IconData icon) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(icon),
-        if (unreadChatsCount > 0)
-          Positioned(
-            right: -10,
-            top: -7,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE53935),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF151518), width: 1.5),
-              ),
-              child: Text(
-                unreadChatsCount > 99 ? '99+' : '$unreadChatsCount',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  height: 1.35,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ),
-      ],
+    return Badge(
+      isLabelVisible: unreadChatsCount > 0,
+      alignment: AlignmentDirectional.topEnd,
+      offset: const Offset(5, -5),
+      backgroundColor: const Color(0xFFE53935),
+      label: Text(
+        unreadChatsCount > 99 ? '99+' : '$unreadChatsCount',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      child: Icon(icon),
     );
   }
 
