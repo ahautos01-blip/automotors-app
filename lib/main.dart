@@ -6178,6 +6178,7 @@ class PublishOptionsPage extends StatefulWidget {
 class _PublishOptionsPageState extends State<PublishOptionsPage> {
   late final StorePurchaseService _purchaseService;
   StreamSubscription<String>? _purchaseMessages;
+  StreamSubscription<void>? _purchaseChanges;
 
   @override
   void initState() {
@@ -6189,12 +6190,16 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
         SnackBar(content: Text(message)),
       );
     });
+    _purchaseChanges = _purchaseService.changes.listen((_) {
+      if (mounted) setState(() {});
+    });
     _purchaseService.initialize();
   }
 
   @override
   void dispose() {
     _purchaseMessages?.cancel();
+    _purchaseChanges?.cancel();
     _purchaseService.dispose();
     super.dispose();
   }
@@ -6203,26 +6208,33 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
   static const Color _bg = Color(0xFF050505);
   static const Color _panel = Color(0xFF111111);
 
+  String _storePrice(String productId) {
+    for (final product in _purchaseService.products) {
+      if (product.id == productId) return product.price;
+    }
+    return 'Consultar tienda';
+  }
+
   @override
   Widget build(BuildContext context) {
     final packs = <_PublishPackData>[
       _PublishPackData(
-        title: 'PACK 10', price: '59 €/mes', icon: Icons.diamond_outlined,
+        title: 'PACK 10', price: _storePrice('automotors_pack_10'), icon: Icons.diamond_outlined,
         subtitle: 'Todo lo necesario para empezar', cars: '10 anuncios · 3 destacados',
         benefits: const ['Publica hasta 10 vehículos', 'Hasta 3 anuncios destacados', 'Visible en búsquedas', 'Gestión desde tu perfil'],
       ),
       _PublishPackData(
-        title: 'PACK 15', price: '75 €/mes', icon: Icons.diamond_outlined,
+        title: 'PACK 15', price: _storePrice('automotors_pack_15'), icon: Icons.diamond_outlined,
         subtitle: 'Más visibilidad para tu negocio', cars: '15 anuncios · 5 destacados', popular: true,
         benefits: const ['Publica hasta 15 vehículos', 'Hasta 5 anuncios destacados', 'Etiquetas destacadas', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
-        title: 'PACK 20', price: '99 €/mes', icon: Icons.diamond_outlined,
+        title: 'PACK 20', price: _storePrice('automotors_pack_20'), icon: Icons.diamond_outlined,
         subtitle: 'Para concesionarios con más stock', cars: '20 anuncios · 8 destacados',
         benefits: const ['Publica hasta 20 vehículos', 'Hasta 8 anuncios destacados', 'Mayor visibilidad', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
-        title: 'AUTOMOTORS PRO', price: '199 €/mes', icon: Icons.workspace_premium_rounded,
+        title: 'AUTOMOTORS PRO', price: _storePrice('automotors_pro_monthly_199'), icon: Icons.workspace_premium_rounded,
         subtitle: 'Para una venta profesional sin límites', cars: 'Anuncios ilimitados',
         benefits: const ['Anuncios ilimitados mientras esté activa', 'Máxima visibilidad', 'Prioridad en búsquedas', 'Estadísticas avanzadas', 'Soporte prioritario'],
       ),
@@ -6267,7 +6279,15 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
           for (final pack in packs) ...[
             _PublishPackCard(
               data: pack,
-              onSelect: () {
+              onSelect: StorePurchaseService.checkoutEnabled &&
+                      _purchaseService.products.any((product) => product.id == switch (pack.title) {
+                        'PACK 10' => 'automotors_pack_10',
+                        'PACK 15' => 'automotors_pack_15',
+                        'PACK 20' => 'automotors_pack_20',
+                        'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
+                        _ => '',
+                      })
+                  ? () {
                 final productId = switch (pack.title) {
                   'PACK 10' => 'automotors_pack_10',
                   'PACK 15' => 'automotors_pack_15',
@@ -6278,10 +6298,16 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
                 if (productId.isNotEmpty) {
                   _purchaseService.purchaseSubscription(productId);
                 }
-              },
+              }
+                  : null,
             ),
             const SizedBox(height: 14),
           ],
+          TextButton.icon(
+            onPressed: _purchaseService.restorePurchases,
+            icon: const Icon(Icons.restore_rounded),
+            label: const Text('Restaurar compras'),
+          ),
           const Text('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', style: TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
         ],
       ),
@@ -6299,7 +6325,7 @@ class _PublishPackData {
 
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
-  final VoidCallback onSelect;
+  final VoidCallback? onSelect;
   const _PublishPackCard({required this.data, required this.onSelect});
   static const Color gold = Color(0xFFFFC447);
   @override

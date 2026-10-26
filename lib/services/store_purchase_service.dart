@@ -25,10 +25,12 @@ class StorePurchaseService {
   final InAppPurchase _store;
   final Map<String, ProductDetails> _products = {};
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+  final StreamController<void> _changes = StreamController<void>.broadcast();
   final StreamController<String> _messages =
       StreamController<String>.broadcast();
 
   Stream<String> get messages => _messages.stream;
+  Stream<void> get changes => _changes.stream;
   List<ProductDetails> get products => List.unmodifiable(_products.values);
   bool get isSupportedPlatform =>
       !kIsWeb &&
@@ -62,6 +64,7 @@ class StorePurchaseService {
       ..clear()
       ..addEntries(response.productDetails.map((product) =>
           MapEntry(product.id, product)));
+    _changes.add(null);
 
     if (response.notFoundIDs.isNotEmpty) {
       _messages.add(
@@ -185,6 +188,7 @@ class StorePurchaseService {
 
   Future<void> dispose() async {
     await _purchaseSubscription?.cancel();
+    await _changes.close();
     await _messages.close();
   }
 }

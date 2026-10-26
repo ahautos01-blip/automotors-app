@@ -1,0 +1,6 @@
+[functions.verify-store-purchase]
+verify_jwt = true
+
+[functions.app-store-server-notifications]
+# Apple signs and sends the payload; this endpoint validates that JWS itself.
+verify_jwt = false
