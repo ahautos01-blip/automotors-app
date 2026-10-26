@@ -2547,6 +2547,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   VoidCallback get onContact => widget.onContact;
   bool isFavorite = false;
   bool favoriteLoading = false;
+  int currentPhotoIndex = 0;
 
   @override
   void initState() {
@@ -2800,6 +2801,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               children: [
                 PageView.builder(
                   itemCount: car.photos.length,
+                  onPageChanged: (index) {
+                    if (mounted && currentPhotoIndex != index) {
+                      setState(() => currentPhotoIndex = index);
+                    }
+                  },
                   itemBuilder: (context, index) => InkWell(
                     onTap: () => _openFullScreenGallery(context, index),
                     child: Padding(
@@ -2818,19 +2824,34 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   Positioned(
                     right: 12,
                     bottom: 12,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.72),
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.82),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        child: Text(
-                          '${car.photos.length} fotografías · desliza para ver más',
-                          style: const TextStyle(fontSize: 12),
+                        onTap: () => _openFullScreenGallery(context, currentPhotoIndex),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: gold.withValues(alpha: 0.65)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.photo_library_outlined, color: gold, size: 16),
+                              const SizedBox(width: 7),
+                              Text(
+                                '${currentPhotoIndex + 1} / ${car.photos.length} fotos',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.open_in_full, color: Colors.white70, size: 13),
+                            ],
+                          ),
                         ),
                       ),
                     ),
