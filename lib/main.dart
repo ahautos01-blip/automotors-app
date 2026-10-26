@@ -3263,12 +3263,37 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ),
         _listingStatusChip(),
         const SizedBox(height: 12),
-        Text(
-          priceText,
-          style: const TextStyle(
-            color: gold,
-            fontSize: 30,
-            fontWeight: FontWeight.w900,
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: gold.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: gold.withValues(alpha: 0.38)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'PRECIO ANUNCIADO',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.68),
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                priceText,
+                style: const TextStyle(
+                  color: gold,
+                  fontSize: 30,
+                  height: 1.1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 14),
