@@ -2426,16 +2426,16 @@ class _GaragePageState extends State<GaragePage> {
                     const SizedBox(height: 5),
                     Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km · ${euros(price)}', style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 5),
-                    Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: 'Opciones del anuncio', onSelected: (value) {
                     if (value == 'edit') editListing(listing);
-                    if (value == 'pause') setListingStatus(listing, status == 'published' ? 'paused' : 'published');
+                    if (value == 'pause' && status != 'reserved' && status != 'sold') setListingStatus(listing, status == 'published' ? 'paused' : 'published');
                     if (value == 'delete') deleteListing(listing);
                     if (value == 'publish') setListingStatus(listing, 'published');
                   }, itemBuilder: (_) => [
                     PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? 'No editable: vendido' : 'Editar'))),
-                    PopupMenuItem(value: 'pause', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Pausado: activar'))),
+                    PopupMenuItem(value: 'pause', enabled: status != 'reserved' && status != 'sold', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Activar'))),
                     const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar'))),
                   ], icon: const Icon(Icons.more_vert, color: gold)),
                 ])),
