@@ -2302,10 +2302,16 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   }
 
   Future<Map<String, dynamic>> loadSeller() async {
-    final profile = await supabase.from('public_seller_profiles')
-        .select('id, full_name, account_type, city, province, business_name, phone, profile_photo_path, cover_photo_path, estado_verificacion')
-        .eq('id', widget.ownerId)
-        .maybeSingle();
+    Map<String, dynamic>? profile;
+    try {
+      profile = await supabase.from('public_seller_profiles')
+          .select('id, full_name, account_type, city, province, business_name, phone, profile_photo_path, cover_photo_path, estado_verificacion')
+          .eq('id', widget.ownerId)
+          .maybeSingle();
+    } catch (_) {
+      // Un fallo al cargar datos públicos del perfil no debe ocultar sus anuncios.
+      profile = null;
+    }
     final listings = await supabase.from('vehicle_listings')
         .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
