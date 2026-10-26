@@ -1702,7 +1702,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
     }
   }
 
-  String _price(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.')} €';
+  String _price(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
 
   @override
   Widget build(BuildContext context) => Scaffold(
