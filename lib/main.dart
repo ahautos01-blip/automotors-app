@@ -779,11 +779,92 @@ class _HomePageState extends State<HomePage> {
 
   final List<Car> cars = [];
   bool loadingCars = true;
+  int unreadChatsCount = 0;
+  RealtimeChannel? _chatUnreadChannel;
 
   @override
   void initState() {
     super.initState();
     loadCars();
+    loadUnreadChatsCount();
+    _chatUnreadChannel = Supabase.instance.client
+        .channel('home-unread-chats-${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'chat_messages',
+          callback: (_) => loadUnreadChatsCount(),
+        )
+        .subscribe();
+  }
+
+  Future<void> loadUnreadChatsCount() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      if (mounted && unreadChatsCount != 0) {
+        setState(() => unreadChatsCount = 0);
+      }
+      return;
+    }
+
+    try {
+      final rows = await supabase
+          .from('chat_conversations')
+          .select('id')
+          .or('buyer_id.eq.${user.id},seller_id.eq.${user.id}');
+      var count = 0;
+      for (final conversation in List<Map<String, dynamic>>.from(rows)) {
+        final conversationId = conversation['id']?.toString();
+        if (conversationId == null || conversationId.isEmpty) continue;
+        final unread = await supabase
+            .from('chat_messages')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .neq('sender_id', user.id)
+            .isFilter('read_at', null)
+            .limit(1);
+        if ((unread as List).isNotEmpty) count++;
+      }
+      if (mounted && count != unreadChatsCount) {
+        setState(() => unreadChatsCount = count);
+      }
+    } catch (_) {
+      // No interrumpir la página principal si el contador no se puede consultar.
+    }
+  }
+
+  Widget _chatNavigationIcon(IconData icon) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        if (unreadChatsCount > 0)
+          Positioned(
+            right: -10,
+            top: -7,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE53935),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF151518), width: 1.5),
+              ),
+              child: Text(
+                unreadChatsCount > 99 ? '99+' : '$unreadChatsCount',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  height: 1.35,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Future<void> loadCars() async {
@@ -1275,6 +1356,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _chatUnreadChannel?.unsubscribe();
     searchController.dispose();
     searchFocusNode.dispose();
     super.dispose();
@@ -1665,6 +1747,7 @@ class _HomePageState extends State<HomePage> {
             if (!context.mounted) return;
             await Navigator.push<void>(context,
               MaterialPageRoute(builder: (_) => const InboxPage()));
+            if (mounted) await loadUnreadChatsCount();
           } else if (index == 2) {
             await openAddCar();
           } else if (index == 3) {
@@ -1683,11 +1766,11 @@ class _HomePageState extends State<HomePage> {
             if (mounted) loadCars();
           }
         },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Chats'),
-          NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'Publicar'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+        destinations: [
+          const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
+          NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: 'Chats'),
+          const NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'Publicar'),
+          const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );
