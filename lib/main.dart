@@ -435,6 +435,46 @@ class Car {
   });
 }
 
+Future<Map<String, dynamic>> getOrCreateConversation({
+  required SupabaseClient supabase,
+  required String listingId,
+  required String buyerId,
+  required String sellerId,
+}) async {
+  Future<Map<String, dynamic>?> findConversation() async {
+    final row = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('buyer_id', buyerId)
+        .eq('seller_id', sellerId)
+        .maybeSingle();
+    return row == null ? null : Map<String, dynamic>.from(row);
+  }
+
+  final existing = await findConversation();
+  if (existing != null) return existing;
+
+  try {
+    final inserted = await supabase
+        .from('chat_conversations')
+        .insert({
+          'listing_id': listingId,
+          'buyer_id': buyerId,
+          'seller_id': sellerId,
+        })
+        .select('id')
+        .single();
+    return Map<String, dynamic>.from(inserted);
+  } on PostgrestException catch (error) {
+    // Reuse the row created by a simultaneous request for the same listing.
+    if (error.code != '23505') rethrow;
+    final concurrentInsert = await findConversation();
+    if (concurrentInsert != null) return concurrentInsert;
+    rethrow;
+  }
+}
+
 class _CarFeaturePill extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1348,22 +1388,12 @@ class _HomePageState extends State<HomePage> {
     }
     try {
       final supabase = Supabase.instance.client;
-      final existing = await supabase
-          .from('chat_conversations')
-          .select('id')
-          .eq('listing_id', car.listingId!)
-          .eq('buyer_id', user.id)
-          .eq('seller_id', car.ownerId!)
-          .maybeSingle();
-      final conversation = existing ?? await supabase
-          .from('chat_conversations')
-          .insert({
-            'listing_id': car.listingId,
-            'buyer_id': user.id,
-            'seller_id': car.ownerId,
-          })
-          .select('id')
-          .single();
+      final conversation = await getOrCreateConversation(
+        supabase: supabase,
+        listingId: car.listingId!,
+        buyerId: user.id,
+        sellerId: car.ownerId!,
+      );
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => ChatPage(
@@ -3991,16 +4021,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       return;
     }
     try {
-      final existing = await supabase.from('chat_conversations').select('id')
-          .eq('listing_id', car.listingId!)
-          .eq('buyer_id', currentUser.id)
-          .eq('seller_id', car.ownerId!)
-          .maybeSingle();
-      final conversation = existing ?? await supabase.from('chat_conversations').insert({
-        'listing_id': car.listingId,
-        'buyer_id': currentUser.id,
-        'seller_id': car.ownerId,
-      }).select('id').single();
+      final conversation = await getOrCreateConversation(
+        supabase: supabase,
+        listingId: car.listingId!,
+        buyerId: currentUser.id,
+        sellerId: car.ownerId!,
+      );
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => ChatPage(
         conversationId: conversation['id'].toString(),
@@ -4295,11 +4321,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                           return;
                         }
                         final listingId = rows.first['id'].toString();
-                        final existing = await supabase.from('chat_conversations').select('id')
-                          .eq('listing_id', listingId).eq('buyer_id', currentUser.id).eq('seller_id', widget.ownerId).maybeSingle();
-                        final conversation = existing ?? await supabase.from('chat_conversations').insert({
-                          'listing_id': listingId, 'buyer_id': currentUser.id, 'seller_id': widget.ownerId,
-                        }).select('id').single();
+                        final conversation = await getOrCreateConversation(
+                          supabase: supabase,
+                          listingId: listingId,
+                          buyerId: currentUser.id,
+                          sellerId: widget.ownerId,
+                        );
                         if (!context.mounted) return;
                         await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => ChatPage(
                           conversationId: conversation['id'].toString(), title: name,
@@ -6342,8 +6369,6 @@ class _AddCarPageState extends State<AddCarPage> {
   bool loadingBrands = true;
   bool loadingModels = false;
   bool publishing = false;
-  int publishedCount = 0;
-  bool loadingPublishedCount = true;
   bool vehicleLookupBusy = false;
   bool loadingVehicleLookupAccess = true;
   bool canLookupVehicle = false;
@@ -6352,35 +6377,7 @@ class _AddCarPageState extends State<AddCarPage> {
   void initState() {
     super.initState();
     loadBrands();
-    loadPublishedCount();
     loadVehicleLookupAccess();
-  }
-
-  Future<void> loadPublishedCount() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => loadingPublishedCount = false);
-      return;
-    }
-    try {
-      final rows = await supabase
-          .from('vehicle_listings')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('status', 'published');
-      if (!mounted) return;
-      setState(() {
-        publishedCount = (rows as List).length;
-        loadingPublishedCount = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => loadingPublishedCount = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo comprobar el límite de anuncios: $error')),
-      );
-    }
   }
 
   Future<void> loadVehicleLookupAccess() async {
@@ -6896,28 +6893,6 @@ class _AddCarPageState extends State<AddCarPage> {
       return;
     }
 
-    // Las primeras cinco publicaciones son gratuitas. Los pagos y créditos
-    // todavía no están activos: no se permite publicar más sin validación de tienda.
-    try {
-      final rows = await supabase
-          .from('vehicle_listings')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('status', 'published');
-      publishedCount = (rows as List).length;
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo verificar el límite gratuito: $error')),
-      );
-      return;
-    }
-
-    if (publishedCount >= 5) {
-      await showPackages();
-      return;
-    }
-
     final selectedBrand = brands.firstWhere(
       (row) => (row['id'] as num).toInt() == brandId,
     );
@@ -7041,6 +7016,13 @@ class _AddCarPageState extends State<AddCarPage> {
         }
       }
       if (!mounted) return;
+      if (error is PostgrestException && error.code == 'P0001') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Has alcanzado el límite de publicaciones de tu plan.')),
+        );
+        await showPackages();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No se pudo publicar el anuncio: $error'),
