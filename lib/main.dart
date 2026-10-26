@@ -3405,16 +3405,20 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           : <Map<String, dynamic>>[];
       photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
           .compareTo((b['position'] as num?)?.toInt() ?? 0));
-      final photoBytes = <Uint8List>[];
-      for (final photo in photoRows) {
-        final path = photo['storage_path']?.toString();
-        if (path == null || path.isEmpty) continue;
-        try {
-          photoBytes.add(await supabase.storage.from('vehicle-photos').download(path));
-        } catch (_) {
-          // El anuncio puede abrirse aunque una fotografía no esté disponible.
-        }
-      }
+      // Descargar fotos en paralelo y conservar el orden de posición.
+      final downloadedPhotos = await Future.wait<Uint8List?>(
+        photoRows.map((photo) async {
+          final path = photo['storage_path']?.toString();
+          if (path == null || path.isEmpty) return null;
+          try {
+            return await supabase.storage.from('vehicle-photos').download(path);
+          } catch (_) {
+            // El anuncio puede abrirse aunque una foto no esté disponible.
+            return null;
+          }
+        }),
+      );
+      final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
       final car = Car(
         brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
         model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
@@ -4171,12 +4175,19 @@ class _GaragePageState extends State<GaragePage> {
       final rawPhotos = listing['vehicle_photos'];
       final photoRows = rawPhotos is List ? List<Map<String, dynamic>>.from(rawPhotos) : <Map<String, dynamic>>[];
       photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0).compareTo((b['position'] as num?)?.toInt() ?? 0));
-      final photos = <Uint8List>[];
-      for (final photo in photoRows) {
-        final path = photo['storage_path']?.toString();
-        if (path == null || path.isEmpty) continue;
-        try { photos.add(await supabase.storage.from('vehicle-photos').download(path)); } catch (_) { }
-      }
+      // Las fotos se descargan en paralelo; Future.wait mantiene el orden.
+      final downloadedPhotos = await Future.wait<Uint8List?>(
+        photoRows.map((photo) async {
+          final path = photo['storage_path']?.toString();
+          if (path == null || path.isEmpty) return null;
+          try {
+            return await supabase.storage.from('vehicle-photos').download(path);
+          } catch (_) {
+            return null;
+          }
+        }),
+      );
+      final photos = downloadedPhotos.whereType<Uint8List>().toList();
       final brand = listing['vehicle_brands'];
       final model = listing['vehicle_models'];
       final car = Car(
@@ -5183,16 +5194,20 @@ class _ChatPageState extends State<ChatPage> {
           : <Map<String, dynamic>>[];
       photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
           .compareTo((b['position'] as num?)?.toInt() ?? 0));
-      final photoBytes = <Uint8List>[];
-      for (final photo in photoRows) {
-        final path = photo['storage_path']?.toString();
-        if (path == null || path.isEmpty) continue;
-        try {
-          photoBytes.add(await supabase.storage.from('vehicle-photos').download(path));
-        } catch (_) {
-          // La ficha puede abrirse aunque alguna foto no esté disponible.
-        }
-      }
+      // Descargar las imágenes en paralelo sin perder su orden.
+      final downloadedPhotos = await Future.wait<Uint8List?>(
+        photoRows.map((photo) async {
+          final path = photo['storage_path']?.toString();
+          if (path == null || path.isEmpty) return null;
+          try {
+            return await supabase.storage.from('vehicle-photos').download(path);
+          } catch (_) {
+            // La ficha puede abrirse aunque alguna foto no esté disponible.
+            return null;
+          }
+        }),
+      );
+      final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
       final car = Car(
         brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
         model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
