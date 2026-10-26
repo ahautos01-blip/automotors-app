@@ -2709,7 +2709,25 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${car.brand} ${car.model}')),
+      appBar: AppBar(
+        title: Text('${car.brand} ${car.model}'),
+        actions: [
+          IconButton(
+            tooltip: isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
+            onPressed: favoriteLoading ? null : _toggleFavorite,
+            icon: favoriteLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+                  )
+                : Icon(
+                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isFavorite ? Colors.redAccent : gold,
+                  ),
+          ),
+        ],
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 850;
