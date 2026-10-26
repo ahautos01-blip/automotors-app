@@ -1645,6 +1645,8 @@ class CarDetailsPage extends StatelessWidget {
             'Matrícula',
             car.matricula!,
           ),
+        if (car.vin?.trim().isNotEmpty == true)
+          _technicalRow(Icons.qr_code_2_outlined, 'Número VIN / bastidor', car.vin!),
         if (car.cv != null)
           _technicalRow(Icons.speed, 'Potencia', '${car.cv} CV'),
         if (car.cilindradaCc != null)
@@ -1916,7 +1918,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, year, km, price, fuel, description, phone, matricula, vin, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .inFilter('status', ['published', 'reserved', 'sold'])
           .maybeSingle();
@@ -1954,12 +1956,33 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         description: raw['description']?.toString() ?? '',
         phone: raw['phone']?.toString() ?? '',
         matricula: raw['matricula']?.toString(),
+        vin: raw['vin']?.toString(),
         cv: (raw['cv'] as num?)?.toInt(),
         cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
         etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
+        version: raw['version']?.toString(),
+        transmission: raw['transmission']?.toString(),
+        bodyType: raw['body_type']?.toString(),
+        doors: (raw['doors'] as num?)?.toInt(),
+        seats: (raw['seats'] as num?)?.toInt(),
+        color: raw['color']?.toString(),
+        torqueNm: (raw['torque_nm'] as num?)?.toInt(),
+        acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
+        maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
+        consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
+        emissionsStandard: raw['emissions_standard']?.toString(),
+        lengthMm: (raw['length_mm'] as num?)?.toInt(),
+        widthMm: (raw['width_mm'] as num?)?.toInt(),
+        heightMm: (raw['height_mm'] as num?)?.toInt(),
+        wheelbaseMm: (raw['wheelbase_mm'] as num?)?.toInt(),
+        weightKg: (raw['weight_kg'] as num?)?.toInt(),
+        trunkLiters: (raw['trunk_liters'] as num?)?.toInt(),
+        tankLiters: (raw['tank_liters'] as num?)?.toInt(),
+        equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
         photos: photoBytes,
         listingId: raw['id']?.toString(),
         ownerId: raw['owner_id']?.toString(),
+        status: raw['status']?.toString() ?? 'published',
       );
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
