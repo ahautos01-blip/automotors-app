@@ -448,6 +448,33 @@ class _CarFeaturePill extends StatelessWidget {
   );
 }
 
+class _VehicleStatusBadge extends StatelessWidget {
+  final String status;
+  const _VehicleStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final reserved = status.trim().toLowerCase() == 'reserved';
+    final color = reserved ? const Color(0xFF168BFF) : const Color(0xFF238B57);
+    final label = reserved ? 'RESERVADO' : 'DISPONIBLE';
+    final icon = reserved ? Icons.lock_outline_rounded : Icons.check_circle_outline_rounded;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .94),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: Colors.white.withValues(alpha: .55)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .28), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: Colors.white),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .5)),
+      ]),
+    );
+  }
+}
+
 class _ReservedRibbon extends StatelessWidget {
   const _ReservedRibbon();
 
@@ -1702,7 +1729,7 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .25))),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), if (car.status == 'reserved') const Positioned(left: 0, top: 14, child: _ReservedRibbon()), Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car))]))),
+                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), Positioned(left: 8, bottom: 8, child: _VehicleStatusBadge(status: car.status)), Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car))]))),
                           Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
@@ -1961,8 +1988,6 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               ? Image.memory(car.photos.first, fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, color: gold, size: 64)))
                               : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
-                          if (car.status == 'reserved')
-                            const Positioned(left: 0, top: 18, child: _ReservedRibbon()),
                           Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car)),
                           Positioned(
                             left: 10, top: 10,
@@ -1982,6 +2007,10 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                                 ),
                               ),
                             ),
+                          ),
+                          Positioned(
+                            left: 10, bottom: 12,
+                            child: _VehicleStatusBadge(status: car.status),
                           ),
                           Positioned(
                             right: 12, bottom: 12,
