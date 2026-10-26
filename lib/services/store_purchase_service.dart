@@ -6,14 +6,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Native subscription catalog and purchase listener for AUTOMOTORS.
 ///
-/// Checkout intentionally remains disabled until the server-side store
-/// verifier is deployed, configured with Apple/Google credentials, and tested.
-/// A successful local store callback never grants entitlements by itself.
+/// Checkout stays disabled in ordinary builds. A dedicated sandbox build can
+/// opt in with `--dart-define=AUTOMOTORS_ENABLE_STORE_CHECKOUT=true` after its
+/// backend has been configured. A successful local store callback never grants
+/// entitlements by itself.
 class StorePurchaseService {
   StorePurchaseService({InAppPurchase? store})
       : _store = store ?? InAppPurchase.instance;
 
-  static const bool checkoutEnabled = false;
+  static const bool checkoutEnabled = bool.fromEnvironment(
+    'AUTOMOTORS_ENABLE_STORE_CHECKOUT',
+    defaultValue: false,
+  );
 
   static const Map<String, String> productNames = {
     'automotors_pack_10': 'PACK 10',
