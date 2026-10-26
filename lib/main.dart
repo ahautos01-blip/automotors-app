@@ -2464,6 +2464,44 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       ),
     );
     if (reason == null || !mounted) return;
+
+    // Optional context helps the review team understand the report.
+    final detailsController = TextEditingController();
+    final details = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: panel,
+        title: const Text('Añadir detalles (opcional)'),
+        content: TextField(
+          controller: detailsController,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 5,
+          maxLength: 1000,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Describe brevemente qué has observado…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, ''),
+            child: const Text('Omitir'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              detailsController.text.trim(),
+            ),
+            child: const Text('Enviar reporte'),
+          ),
+        ],
+      ),
+    );
+    detailsController.dispose();
+    if (details == null || !mounted) return;
+
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
@@ -2471,6 +2509,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         'reporter_id': user.id,
         'listing_id': listingId,
         'reason': reason,
+        'details': details,
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
