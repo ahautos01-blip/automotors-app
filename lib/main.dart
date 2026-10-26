@@ -1685,10 +1685,6 @@ class CarDetailsPage extends StatelessWidget {
         if (car.doors != null) _technicalRow(Icons.door_front_door_outlined, 'Puertas', '${car.doors}'),
         if (car.seats != null) _technicalRow(Icons.event_seat_outlined, 'Plazas', '${car.seats}'),
         if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, 'Color', car.color!),
-        if (car.torqueNm != null) _technicalRow(Icons.bolt_outlined, 'Par máximo', '${car.torqueNm} Nm'),
-        if (car.acceleration0100 != null) _technicalRow(Icons.speed, '0–100 km/h', '${car.acceleration0100} s'),
-        if (car.maxSpeedKmh != null) _technicalRow(Icons.speed, 'Velocidad máxima', '${car.maxSpeedKmh} km/h'),
-        if (car.consumptionL100 != null) _technicalRow(Icons.local_gas_station_outlined, 'Consumo combinado', '${car.consumptionL100} l/100 km'),
         if (car.emissionsStandard?.trim().isNotEmpty == true) _technicalRow(Icons.eco_outlined, 'Normativa de emisiones', car.emissionsStandard!),
         if (car.lengthMm != null) _technicalRow(Icons.straighten, 'Longitud', '${car.lengthMm} mm'),
         if (car.widthMm != null) _technicalRow(Icons.straighten, 'Anchura', '${car.widthMm} mm'),
@@ -4051,10 +4047,6 @@ class _AddCarPageState extends State<AddCarPage> {
   final doors = TextEditingController();
   final seats = TextEditingController();
   final color = TextEditingController();
-  final torqueNm = TextEditingController();
-  final acceleration0100 = TextEditingController();
-  final maxSpeedKmh = TextEditingController();
-  final consumptionL100 = TextEditingController();
   final emissionsStandard = TextEditingController();
   final lengthMm = TextEditingController();
   final widthMm = TextEditingController();
@@ -4370,10 +4362,6 @@ class _AddCarPageState extends State<AddCarPage> {
         'doors': int.tryParse(doors.text.trim()),
         'seats': int.tryParse(seats.text.trim()),
         'color': color.text.trim().isEmpty ? null : color.text.trim(),
-        'torque_nm': int.tryParse(torqueNm.text.trim()),
-        'acceleration_0_100': double.tryParse(acceleration0100.text.trim().replaceAll(',', '.')),
-        'max_speed_kmh': int.tryParse(maxSpeedKmh.text.trim()),
-        'consumption_l_100': double.tryParse(consumptionL100.text.trim().replaceAll(',', '.')),
         'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(),
         'length_mm': int.tryParse(lengthMm.text.trim()),
         'width_mm': int.tryParse(widthMm.text.trim()),
@@ -4671,10 +4659,6 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Puertas', doors, numeric: true, requiredField: false),
             buildTextField('Plazas', seats, numeric: true, requiredField: false),
             buildTextField('Color exterior', color, requiredField: false),
-            buildTextField('Par máximo (Nm)', torqueNm, numeric: true, requiredField: false),
-            buildTextField('Aceleración 0–100 km/h (s)', acceleration0100, requiredField: false),
-            buildTextField('Velocidad máxima (km/h)', maxSpeedKmh, numeric: true, requiredField: false),
-            buildTextField('Consumo combinado (l/100 km)', consumptionL100, requiredField: false),
             buildTextField('Normativa de emisiones (opcional)', emissionsStandard, requiredField: false),
             const SizedBox(height: 8),
             const Text('Equipamiento confirmado', style: TextStyle(fontWeight: FontWeight.bold)),
