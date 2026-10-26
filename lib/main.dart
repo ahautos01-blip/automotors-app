@@ -1760,12 +1760,18 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         .eq('id', widget.ownerId)
         .maybeSingle();
     final listings = await supabase.from('vehicle_listings')
-        .select('id, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+        .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
         .inFilter('status', ['published', 'reserved'])
         .order('created_at', ascending: false);
+    final soldListings = await supabase.from('vehicle_listings')
+        .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+        .eq('owner_id', widget.ownerId)
+        .eq('status', 'sold')
+        .order('created_at', ascending: false);
     final listingRows = List<Map<String, dynamic>>.from(listings);
-    for (final listing in listingRows) {
+    final soldRows = List<Map<String, dynamic>>.from(soldListings);
+    for (final listing in [...listingRows, ...soldRows]) {
       final rawPhotos = listing['vehicle_photos'];
       final photoRows = rawPhotos is List
           ? List<Map<String, dynamic>>.from(rawPhotos)
@@ -1783,7 +1789,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       }
       listing['_firstPhotoBytes'] = firstPhoto;
     }
-    return {'profile': profile, 'listings': listingRows};
+    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows};
   }
 
   String? publicPhotoUrl(dynamic path) {
@@ -1818,7 +1824,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           .from('vehicle_listings')
           .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
-          .inFilter('status', ['published', 'reserved'])
+          .inFilter('status', ['published', 'reserved', 'sold'])
           .maybeSingle();
       if (raw == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -1931,6 +1937,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final result = snapshot.data ?? {};
         final profile = result['profile'] as Map<String, dynamic>?;
         final listings = List<Map<String, dynamic>>.from(result['listings'] ?? []);
+        final soldListings = List<Map<String, dynamic>>.from(result['soldListings'] ?? []);
         final name = displayName(profile);
         final type = (profile?['account_type'] ?? 'particular').toString().toLowerCase();
         final verified = (profile?['estado_verificacion'] ?? '').toString().toLowerCase() == 'aprobada';
@@ -2005,7 +2012,7 @@ final avatar = publicPhotoUrl(
             )),
           ])),
           Padding(padding: const EdgeInsets.fromLTRB(16, 24, 16, 8), child: Text(
-            'Anuncios publicados (${listings.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            'Vehículos disponibles (${listings.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           )),
           if (listings.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Este usuario no tiene anuncios publicados.')),
           if (listings.isNotEmpty)
@@ -2072,6 +2079,71 @@ final avatar = publicPhotoUrl(
                             ),
                           ],
                         ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          Padding(padding: const EdgeInsets.fromLTRB(16, 26, 16, 8), child: Row(children: [
+            const Icon(Icons.verified_rounded, color: Color(0xFFFF555F), size: 22),
+            const SizedBox(width: 8),
+            Text('Vehículos vendidos (${soldListings.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ])),
+          if (soldListings.isEmpty)
+            const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 12), child: Text('Este vendedor todavía no tiene vehículos vendidos.')),
+          if (soldListings.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LayoutBuilder(builder: (context, constraints) {
+                final columns = constraints.maxWidth < 420 ? 2 : 3;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: soldListings.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.76,
+                  ),
+                  itemBuilder: (context, index) {
+                    final listing = soldListings[index];
+                    final brand = listing['vehicle_brands'];
+                    final model = listing['vehicle_models'];
+                    final title = '${brand is Map ? brand['name'] ?? 'Marca' : 'Marca'} ${model is Map ? model['name'] ?? 'Modelo' : 'Modelo'}';
+                    final photo = listing['_firstPhotoBytes'];
+                    final price = (listing['price'] as num?)?.toDouble() ?? 0;
+                    return Card(
+                      color: panel, clipBehavior: Clip.antiAlias, margin: EdgeInsets.zero,
+                      child: InkWell(
+                        onTap: () => openListingDetails(listing),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [
+                            photo is Uint8List ? Image.memory(photo, fit: BoxFit.cover) : const Center(child: Icon(Icons.directions_car, color: gold, size: 42)),
+                            Positioned.fill(child: Container(color: Colors.black.withValues(alpha: .20))),
+                            Positioned(top: 10, right: 0, child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFFFF424A), Color(0xFF970B18)]),
+                                borderRadius: const BorderRadius.only(topLeft: Radius.circular(8), bottomLeft: Radius.circular(8)),
+                                boxShadow: [BoxShadow(color: const Color(0xFFFF2435).withValues(alpha: .35), blurRadius: 10)],
+                              ),
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.verified_rounded, color: Colors.white, size: 13), SizedBox(width: 5),
+                                Text('VENDIDO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .8)),
+                              ]),
+                            ),
+                          ]))),
+                          Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                            const SizedBox(height: 4),
+                            Text('${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.')} €',
+                              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w900)),
+                          ])),
+                        ]),
                       ),
                     );
                   },
