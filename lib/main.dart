@@ -2739,8 +2739,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       await _copyListingSummary(context);
       return;
     }
-    final base = Uri.base;
-    final shareUri = base.replace(queryParameters: <String, String>{'listing': listingId});
+    final shareUri = Uri.base.replace(
+      queryParameters: <String, String>{'listing': listingId},
+    );
     final title = '${car.brand} ${car.model}';
     final summary = <String>[
       title,
@@ -2751,13 +2752,85 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       '',
       'Ver ficha completa en AUTOMOTORS: $shareUri',
     ].join('\n');
+
+    // En Flutter Web algunos navegadores integrados no permiten navigator.share
+    // y share_plus copia directamente. Mostrar opciones explícitas evita ese falso
+    // resultado y permite compartir por WhatsApp, Telegram o correo.
+    if (kIsWeb) {
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Compartir anuncio'),
+          content: const Text('Elige cómo quieres compartir la ficha completa.'),
+          actions: [
+            TextButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse(
+                  'https://wa.me/?text=${Uri.encodeComponent(summary)}',
+                );
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              },
+              icon: const Icon(Icons.chat_rounded),
+              label: const Text('WhatsApp'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse(
+                  'https://t.me/share/url?url=${Uri.encodeComponent(shareUri.toString())}&text=${Uri.encodeComponent(title)}',
+                );
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              },
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Telegram'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                final uri = Uri(
+                  scheme: 'mailto',
+                  queryParameters: <String, String>{
+                    'subject': 'Anuncio AUTOMOTORS: $title',
+                    'body': summary,
+                  },
+                );
+                await launchUrl(uri);
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+              },
+              icon: const Icon(Icons.email_outlined),
+              label: const Text('Correo'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: summary));
+                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Enlace y datos del anuncio copiados.')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('Copiar enlace'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     try {
-      await SharePlus.instance.share(ShareParams(title: title, text: summary, uri: shareUri));
+      await SharePlus.instance.share(
+        ShareParams(title: title, text: summary, uri: shareUri),
+      );
     } catch (_) {
       await Clipboard.setData(ClipboardData(text: summary));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enlace del anuncio copiado. Ya puedes pegarlo para compartir la ficha.')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enlace del anuncio copiado. Ya puedes pegarlo para compartir la ficha.')),
+        );
+      }
     }
   }
 
