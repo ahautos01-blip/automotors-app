@@ -2422,6 +2422,70 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     }
   }
 
+  Future<void> _reportListing() async {
+    final listingId = car.listingId;
+    if (listingId == null || listingId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este anuncio no se puede reportar desde esta ficha.')),
+      );
+      return;
+    }
+    final loggedIn = await requireAutomotorsLogin(context);
+    if (!loggedIn || !mounted) return;
+    final reasons = <String>[
+      'Información falsa',
+      'Precio sospechoso',
+      'Anuncio duplicado',
+      'Posible fraude',
+      'Contenido inapropiado',
+      'Otro',
+    ];
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: panel,
+        title: const Text('Reportar anuncio'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('¿Qué problema has detectado?'),
+            ),
+            const SizedBox(height: 10),
+            ...reasons.map((item) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.flag_outlined, color: gold),
+              title: Text(item),
+              onTap: () => Navigator.pop(dialogContext, item),
+            )),
+          ],
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      await Supabase.instance.client.from('vehicle_listing_reports').insert({
+        'reporter_id': user.id,
+        'listing_id': listingId,
+        'reason': reason,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gracias. Hemos recibido tu reporte para revisión.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo enviar. Es posible que ya hayas reportado este anuncio.')),
+        );
+      }
+    }
+  }
+
   Future<void> _copyListingSummary(BuildContext context) async {
     final details = <String>[
       '${car.brand} ${car.model}',
@@ -2884,6 +2948,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       appBar: AppBar(
         title: Text('${car.brand} ${car.model}'),
         actions: [
+          IconButton(
+            tooltip: 'Reportar anuncio',
+            onPressed: _reportListing,
+            icon: const Icon(Icons.flag_outlined, color: gold),
+          ),
           IconButton(
             tooltip: isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
             onPressed: favoriteLoading ? null : _toggleFavorite,
