@@ -491,7 +491,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
   final List<Car> _selectedForComparison = [];
 
   String priceText(double value) =>
-      '\${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+      '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
 
   void _toggleComparison(Car car) {
     setState(() {
@@ -515,7 +515,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
         if (_selectedForComparison.isNotEmpty)
           Center(child: Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Text('\${_selectedForComparison.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+            child: Text('${_selectedForComparison.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
           )),
       ],
     ),
@@ -528,7 +528,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
               builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison)),
             )),
             icon: const Icon(Icons.compare_arrows_rounded),
-            label: Text('Comparar \${_selectedForComparison.length} coches'),
+            label: Text('Comparar ${_selectedForComparison.length} coches'),
           ),
         ))
       : null,
@@ -542,7 +542,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(children: [
-              Expanded(child: Text('\${widget.cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))),
+              Expanded(child: Text('${widget.cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))),
               const Icon(Icons.compare_arrows_rounded, color: gold, size: 18),
               const SizedBox(width: 6),
               const Flexible(child: Text('Selecciona hasta 3 para comparar', style: TextStyle(color: gold, fontSize: 12))),
@@ -560,11 +560,11 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
                 Expanded(child: InkWell(
                   onTap: () => widget.onOpenCar(car),
                   child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('\${car.brand} \${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     const SizedBox(height: 6),
                     Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
                     const SizedBox(height: 6),
-                    Text('\${car.year} · \${car.km} km · \${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text('${car.year} · ${car.km} km · ${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ])),
                 )),
                 Checkbox(value: isSelected, activeColor: gold, checkColor: black, onChanged: (_) => _toggleComparison(car)),
@@ -580,7 +580,7 @@ class VehicleComparisonPage extends StatelessWidget {
   const VehicleComparisonPage({super.key, required this.cars});
 
   String _price(double value) =>
-      '\${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+      '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
   String _value(Object? value, [String suffix = '']) =>
       value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
 
@@ -589,10 +589,10 @@ class VehicleComparisonPage extends StatelessWidget {
     final rows = <List<String>>[
       ['Precio', ...cars.map((c) => _price(c.price))],
       ['Año', ...cars.map((c) => _value(c.year == 0 ? null : c.year))],
-      ['Kilometraje', ...cars.map((c) => '\${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
+      ['Kilometraje', ...cars.map((c) => '${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
       ['Combustible', ...cars.map((c) => _value(c.fuel))],
       ['Potencia', ...cars.map((c) => _value(c.cv, ' CV'))],
-      ['Cilindrada', ...cars.map((c) => c.cilindradaCc == null ? 'No indicado' : '\${c.cilindradaCc} cc')],
+      ['Cilindrada', ...cars.map((c) => c.cilindradaCc == null ? 'No indicado' : '${c.cilindradaCc} cc')],
       ['Cambio', ...cars.map((c) => _value(c.transmission))],
       ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
       ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
@@ -607,7 +607,7 @@ class VehicleComparisonPage extends StatelessWidget {
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text('Compara los datos publicados de \${cars.length} vehículos. Los campos sin información aparecen como “No indicado”.',
+          child: Text('Compara los datos publicados de ${cars.length} vehículos. Los campos sin información aparecen como “No indicado”.',
             style: const TextStyle(color: Colors.white70)),
         ),
         Expanded(child: SingleChildScrollView(
@@ -628,8 +628,8 @@ class VehicleComparisonPage extends StatelessWidget {
                       child: Image.memory(car.photos.first, width: 145, height: 78, fit: BoxFit.cover),
                     ) else const Icon(Icons.directions_car, size: 40, color: gold),
                     const SizedBox(height: 5),
-                    Text('\${car.brand} \${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    Text('\${car.year}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text('${car.year}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
                   ]),
                 ))),
               ],
