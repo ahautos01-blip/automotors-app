@@ -379,6 +379,7 @@ class Car {
   final List<Uint8List> photos;
   final String? listingId;
   final String? ownerId;
+  final String status;
 
   const Car({
     required this.brand,
@@ -416,7 +417,28 @@ class Car {
     this.photos = const [],
     this.listingId,
     this.ownerId,
+    this.status = 'published',
   });
+}
+
+class _ReservedRibbon extends StatelessWidget {
+  const _ReservedRibbon();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+    decoration: const BoxDecoration(
+      color: Color(0xFF1976D2),
+      borderRadius: BorderRadius.only(
+        topRight: Radius.circular(8),
+        bottomRight: Radius.circular(8),
+      ),
+    ),
+    child: const Text('RESERVADO', style: TextStyle(
+      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+      letterSpacing: .7,
+    )),
+  );
 }
 
 class AutomotorsApp extends StatelessWidget {
@@ -483,8 +505,8 @@ class _HomePageState extends State<HomePage> {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
-          .eq('status', 'published')
+          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
       final loadedCars = <Car>[];
@@ -549,6 +571,7 @@ class _HomePageState extends State<HomePage> {
           photos: photoBytes,
           listingId: raw['id']?.toString(),
           ownerId: raw['owner_id']?.toString(),
+          status: raw['status']?.toString() ?? 'published',
         ));
       }
 
@@ -1121,7 +1144,7 @@ class _HomePageState extends State<HomePage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .25))),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)))),
+                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), if (car.status == 'reserved') const Positioned(left: 0, top: 14, child: _ReservedRibbon())]))),
                           Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
@@ -1297,7 +1320,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
           return GridView.builder(padding: const EdgeInsets.all(16), itemCount: found.length, gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:columns,crossAxisSpacing:14,mainAxisSpacing:14,mainAxisExtent:columns==1?340:365), itemBuilder:(context,index) {
             final car=found[index];
-            return Card(color:const Color(0xFF1B1E24),margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:gold.withValues(alpha:.25))),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>widget.onOpenCar(car),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:SizedBox(width:double.infinity,child:car.photos.isNotEmpty?Image.memory(car.photos.first,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.directions_car,color:gold,size:58))):const Center(child:Icon(Icons.directions_car,color:gold,size:58)))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${car.brand} ${car.model}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:4),Text('${car.year} · ${number(car.km)} km${car.cv==null?'':' · ${car.cv} CV'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:11)),Text(car.fuel,style:const TextStyle(color:Colors.white60,fontSize:11)),const SizedBox(height:5),Text(euros(car.price),style:const TextStyle(color:gold,fontSize:18,fontWeight:FontWeight.w900))]))])));
+            return Card(color:const Color(0xFF1B1E24),margin:EdgeInsets.zero,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),side:BorderSide(color:gold.withValues(alpha:.25))),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()=>widget.onOpenCar(car),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:SizedBox(width:double.infinity,child:Stack(fit:StackFit.expand,children:[car.photos.isNotEmpty?Image.memory(car.photos.first,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Center(child:Icon(Icons.directions_car,color:gold,size:58))):const Center(child:Icon(Icons.directions_car,color:gold,size:58)),if(car.status=='reserved')const Positioned(left:0,top:14,child:_ReservedRibbon())]))),Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${car.brand} ${car.model}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:4),Text('${car.year} · ${number(car.km)} km${car.cv==null?'':' · ${car.cv} CV'}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white60,fontSize:11)),Text(car.fuel,style:const TextStyle(color:Colors.white60,fontSize:11)),const SizedBox(height:5),Text(euros(car.price),style:const TextStyle(color:gold,fontSize:18,fontWeight:FontWeight.w900))]))])));
           });
         })),
       ]),
@@ -1724,7 +1747,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     final listings = await supabase.from('vehicle_listings')
         .select('id, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
-        .eq('status', 'published')
+        .inFilter('status', ['published', 'reserved'])
         .order('created_at', ascending: false);
     final listingRows = List<Map<String, dynamic>>.from(listings);
     for (final listing in listingRows) {
@@ -1780,7 +1803,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           .from('vehicle_listings')
           .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
-          .eq('status', 'published')
+          .inFilter('status', ['published', 'reserved'])
           .maybeSingle();
       if (raw == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -1945,7 +1968,7 @@ final avatar = publicPhotoUrl(
                 }
                 try {
                   final rows = await supabase.from('vehicle_listings').select('id')
-                    .eq('owner_id', widget.ownerId).eq('status', 'published').order('created_at', ascending: false).limit(1);
+                    .eq('owner_id', widget.ownerId).inFilter('status', ['published', 'reserved']).order('created_at', ascending: false).limit(1);
                   if (rows.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este vendedor no tiene anuncios publicados para iniciar un chat.')));
                     return;
@@ -2262,17 +2285,54 @@ class _GaragePageState extends State<GaragePage> {
   }
 
   Future<void> setListingStatus(Map<String, dynamic> listing, String status) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión para gestionar tus anuncios.')),
+      );
+      return;
+    }
+    // Estados admitidos en Supabase: draft, published, reserved y sold.
+    // Pausar se representa como borrador para mantener compatibilidad.
+    final normalizedStatus = status == 'paused' ? 'draft' : status;
+    if (!['draft', 'published', 'reserved', 'sold'].contains(normalizedStatus)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Estado de anuncio no válido.')),
+      );
+      return;
+    }
+
     setState(() => busy = true);
     try {
-      await supabase.from('vehicle_listings').update({'status': status}).eq('id', listing['id'].toString()).eq('owner_id', supabase.auth.currentUser!.id);
+      final updated = await supabase
+          .from('vehicle_listings')
+          .update({'status': normalizedStatus})
+          .eq('id', listing['id'].toString())
+          .eq('owner_id', user.id)
+          .select('id,status')
+          .maybeSingle();
+
+      if (updated == null) {
+        throw Exception('No se actualizó ningún anuncio. Comprueba que sea tuyo y que siga disponible.');
+      }
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-          status == 'reserved' ? 'Anuncio marcado como reservado.' : status == 'sold' ? 'Anuncio marcado como vendido.' : status == 'paused' ? 'Anuncio pausado.' : 'Anuncio activado.'
-        )));
+        final message = normalizedStatus == 'reserved'
+            ? 'Anuncio marcado como reservado.'
+            : normalizedStatus == 'sold'
+                ? 'Anuncio marcado como vendido.'
+                : normalizedStatus == 'draft'
+                    ? 'Anuncio pausado.'
+                    : 'Anuncio activado.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         refreshListings();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar el anuncio. Comprueba los estados permitidos en Supabase. ($e)')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo actualizar el anuncio: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -2339,8 +2399,38 @@ class _GaragePageState extends State<GaragePage> {
   }
 
   Future<void> editListing(Map<String, dynamic> listing) async {
-    final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => EditListingPage(listingId: listing['id'].toString())));
-    if (changed == true && mounted) refreshListings();
+    final listingId = listing['id'].toString();
+    try {
+      // Releer el estado desde Supabase para no depender de un estado antiguo
+      // que pudiera seguir en la tarjeta del garaje.
+      final current = await supabase
+          .from('vehicle_listings')
+          .select('status')
+          .eq('id', listingId)
+          .eq('owner_id', supabase.auth.currentUser!.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+      if (current == null || current['status']?.toString() == 'sold') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Un vehículo vendido no se puede editar.')),
+        );
+        refreshListings();
+        return;
+      }
+
+      final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => EditListingPage(listingId: listingId)),
+      );
+      if (changed == true && mounted) refreshListings();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo comprobar el estado del anuncio: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -2385,16 +2475,16 @@ class _GaragePageState extends State<GaragePage> {
                     const SizedBox(height: 5),
                     Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km · ${euros(price)}', style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 5),
-                    Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: 'Opciones del anuncio', onSelected: (value) {
                     if (value == 'edit') editListing(listing);
-                    if (value == 'pause') setListingStatus(listing, status == 'published' ? 'paused' : 'published');
+                    if (value == 'pause' && status != 'reserved' && status != 'sold') setListingStatus(listing, status == 'published' ? 'paused' : 'published');
                     if (value == 'delete') deleteListing(listing);
                     if (value == 'publish') setListingStatus(listing, 'published');
                   }, itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar'))),
-                    PopupMenuItem(value: 'pause', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Pausado: activar'))),
+                    PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? 'No editable: vendido' : 'Editar'))),
+                    PopupMenuItem(value: 'pause', enabled: status != 'reserved' && status != 'sold', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Activar'))),
                     const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar'))),
                   ], icon: const Icon(Icons.more_vert, color: gold)),
                 ])),
@@ -2819,7 +2909,12 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      if (row['status']?.toString() == 'sold') {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+        if (mounted) Navigator.pop(context, false);
+        return;
+      }
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
@@ -2827,6 +2922,12 @@ class _EditListingPageState extends State<EditListingPage> {
   }
 
   Future<void> save() async {
+    final current = await supabase.from('vehicle_listings').select('status').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).maybeSingle();
+    if (current == null || current['status']?.toString() == 'sold') {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+      if (mounted) Navigator.pop(context, false);
+      return;
+    }
     if (!formKey.currentState!.validate()) return;
     final y = int.tryParse(year.text.trim()), k = int.tryParse(km.text.trim());
     final p = double.tryParse(price.text.trim().replaceAll('.', '').replaceAll(',', '.'));
@@ -4206,6 +4307,18 @@ class _AddCarPageState extends State<AddCarPage> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
+              initialValue: fuel,
+              decoration: const InputDecoration(labelText: 'Combustible'),
+              items: const [
+                DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
+                DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
+                DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
+                DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
+              ],
+              onChanged: (value) { if (value != null) setState(() => fuel = value); },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
               initialValue: bodyType,
               decoration: const InputDecoration(labelText: 'Tipo de carrocería'),
               items: const [
@@ -4231,16 +4344,6 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Consumo combinado (l/100 km)', consumptionL100, requiredField: false),
             buildTextField('Normativa de emisiones (opcional)', emissionsStandard, requiredField: false),
             const SizedBox(height: 8),
-            const Text('Dimensiones y capacidad', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            buildTextField('Longitud (mm)', lengthMm, numeric: true, requiredField: false),
-            buildTextField('Anchura (mm)', widthMm, numeric: true, requiredField: false),
-            buildTextField('Altura (mm)', heightMm, numeric: true, requiredField: false),
-            buildTextField('Distancia entre ejes (mm)', wheelbaseMm, numeric: true, requiredField: false),
-            buildTextField('Peso (kg)', weightKg, numeric: true, requiredField: false),
-            buildTextField('Capacidad del maletero (litros)', trunkLiters, numeric: true, requiredField: false),
-            buildTextField('Capacidad del depósito (litros)', tankLiters, numeric: true, requiredField: false),
-            const SizedBox(height: 8),
             const Text('Equipamiento confirmado', style: TextStyle(fontWeight: FontWeight.bold)),
             ...[
               'Asientos deportivos', 'Asientos calefactables', 'Asientos ventilados',
@@ -4264,20 +4367,6 @@ class _AddCarPageState extends State<AddCarPage> {
             const SizedBox(height: 12),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
             buildTextField('Descripción', description, requiredField: false),
-            DropdownButtonFormField<String>(
-              initialValue: fuel,
-              decoration: const InputDecoration(labelText: 'Combustible'),
-              items: const [
-                DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
-                DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
-                DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
-                DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => fuel = value);
-              },
-            ),
-            const SizedBox(height: 20),
             Text(
               'Fotografías del vehículo (${photos.length}/15)',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -4337,22 +4426,6 @@ class _AddCarPageState extends State<AddCarPage> {
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: gold,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              onPressed: publishing ? null : publishCar,
-              child: publishing
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Publicar vehículo'),
-            ),
           ],
         ),
       ),
