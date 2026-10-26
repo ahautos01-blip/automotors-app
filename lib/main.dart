@@ -2311,14 +2311,28 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant SaveVehicleButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.car.listingId != widget.car.listingId) {
+      isSaved = false;
+      _load();
+    }
+  }
+
   Future<void> _load() async {
     final user = Supabase.instance.client.auth.currentUser;
     final id = widget.car.listingId;
-    if (user == null || id == null || id.isEmpty) return;
+    if (user == null || id == null || id.isEmpty) {
+      if (mounted) setState(() => isSaved = false);
+      return;
+    }
     try {
       final row = await Supabase.instance.client.from('saved_vehicles')
           .select('listing_id').eq('user_id', user.id).eq('listing_id', id).maybeSingle();
-      if (mounted) setState(() => isSaved = row != null);
+      if (mounted && widget.car.listingId == id) {
+        setState(() => isSaved = row != null);
+      }
     } catch (_) {
       // El anuncio sigue disponible aunque no se pueda consultar el estado del favorito.
     }
@@ -2391,10 +2405,22 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant SaveListingIdButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listingId != widget.listingId) {
+      isSaved = false;
+      _load();
+    }
+  }
+
   Future<void> _load() async {
     final user = Supabase.instance.client.auth.currentUser;
     final id = widget.listingId;
-    if (user == null || id == null || id.isEmpty) return;
+    if (user == null || id == null || id.isEmpty) {
+      if (mounted) setState(() => isSaved = false);
+      return;
+    }
     try {
       final row = await Supabase.instance.client
           .from('saved_vehicles')
@@ -2402,7 +2428,9 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
           .eq('user_id', user.id)
           .eq('listing_id', id)
           .maybeSingle();
-      if (mounted) setState(() => isSaved = row != null);
+      if (mounted && widget.listingId == id) {
+        setState(() => isSaved = row != null);
+      }
     } catch (_) {
       // El perfil sigue funcionando si favoritos no está disponible.
     }
