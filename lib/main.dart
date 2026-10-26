@@ -2616,7 +2616,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         }
         if (snapshot.hasError) {
           return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(
-            'No se pudo cargar el perfil público. Comprueba las políticas de lectura de user_profiles en Supabase.\\n${snapshot.error}',
+            'No se pudo cargar este perfil ahora mismo. Recarga la página e inténtalo de nuevo.',
             textAlign: TextAlign.center,
           )));
         }
