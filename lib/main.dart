@@ -2950,6 +2950,42 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _listingStatusChip() {
+    final status = car.status.toLowerCase().trim();
+    if (status != 'reserved' && status != 'sold') {
+      return const SizedBox.shrink();
+    }
+    final isSold = status == 'sold';
+    final color = isSold ? const Color(0xFFE57373) : const Color(0xFF64B5F6);
+    final label = isSold ? 'VEHÍCULO VENDIDO' : 'VEHÍCULO RESERVADO';
+    final icon = isSold ? Icons.check_circle_outline : Icons.lock_outline;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.65)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 17),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _vehicleInformation(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2962,6 +2998,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             fontWeight: FontWeight.w800,
           ),
         ),
+        _listingStatusChip(),
         const SizedBox(height: 12),
         Text(
           priceText,
@@ -3213,17 +3250,28 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           width: double.infinity,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: gold,
-              foregroundColor: Colors.black,
+              backgroundColor: car.status.toLowerCase() == 'sold'
+                  ? Colors.white24
+                  : gold,
+              foregroundColor: car.status.toLowerCase() == 'sold'
+                  ? Colors.white70
+                  : Colors.black,
               minimumSize: const Size.fromHeight(50),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            onPressed: onContact,
-            icon: const Icon(Icons.chat),
-            label: const Text('Enviar mensaje al vendedor'),
+            onPressed: car.status.toLowerCase() == 'sold' ? null : onContact,
+            icon: Icon(car.status.toLowerCase() == 'sold'
+                ? Icons.check_circle_outline
+                : Icons.chat),
+            label: Text(car.status.toLowerCase() == 'sold'
+                ? 'Vehículo vendido'
+                : car.status.toLowerCase() == 'reserved'
+                    ? 'Consultar disponibilidad'
+                    : 'Enviar mensaje al vendedor'),
           ),
         ),
-        if (validWhatsAppDigits(car.phone) != null) ...[
+        if (car.status.toLowerCase() != 'sold' &&
+            validWhatsAppDigits(car.phone) != null) ...[
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
