@@ -5327,6 +5327,12 @@ class _EditListingPageState extends State<EditListingPage> {
   final cv = TextEditingController();
   final cilindrada = TextEditingController();
   final vin = TextEditingController();
+  final version = TextEditingController();
+  final transmission = TextEditingController();
+  final bodyType = TextEditingController();
+  final color = TextEditingController();
+  final doors = TextEditingController();
+  final seats = TextEditingController();
   String fuel = 'Diésel';
   String? label;
   bool loading = true;
@@ -5335,17 +5341,18 @@ class _EditListingPageState extends State<EditListingPage> {
   @override
   void initState() { super.initState(); load(); }
   @override
-  void dispose() { year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); super.dispose(); }
+  void dispose() { year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); version.dispose(); transmission.dispose(); bodyType.dispose(); color.dispose(); doors.dispose(); seats.dispose(); super.dispose(); }
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,cv,cilindrada_cc,etiqueta_medioambiental,vin,version,transmission,body_type,color,doors,seats').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
         if (mounted) Navigator.pop(context, false);
         return;
       }
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
+      version.text = '${row['version'] ?? ''}'; transmission.text = '${row['transmission'] ?? ''}'; bodyType.text = '${row['body_type'] ?? ''}'; color.text = '${row['color'] ?? ''}'; doors.text = '${row['doors'] ?? ''}'; seats.text = '${row['seats'] ?? ''}';
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
     finally { if (mounted) setState(() => loading = false); }
@@ -5364,7 +5371,7 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revisa año, kilómetros y precio.'))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim())}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio actualizado.'))); Navigator.pop(context, true); }
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo guardar el anuncio: $e'))); }
     finally { if (mounted) setState(() => saving = false); }
@@ -5394,7 +5401,7 @@ class _EditListingPageState extends State<EditListingPage> {
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Editar anuncio')), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
     textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
     DropdownButtonFormField<String>(value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration: const InputDecoration(labelText: 'Combustible'), items: const [DropdownMenuItem(value:'Diésel',child:Text('Diésel')),DropdownMenuItem(value:'Gasolina',child:Text('Gasolina')),DropdownMenuItem(value:'Híbrido',child:Text('Híbrido')),DropdownMenuItem(value:'Eléctrico',child:Text('Eléctrico'))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
-    textField('Teléfono de contacto', phone), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
+    textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
     DropdownButtonFormField<String>(value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => label = v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? 'Guardando...' : 'Guardar cambios')),
   ])));
