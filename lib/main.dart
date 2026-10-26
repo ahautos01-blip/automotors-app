@@ -1581,7 +1581,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
       color: gold,
       onRefresh: loadFavorites,
       child: loading
-        ? const ListView(children: [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
+        ? ListView(children: const [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
         : error != null
           ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(error!, textAlign: TextAlign.center)))])
           : savedCars.isEmpty
