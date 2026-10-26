@@ -1,29 +1,36 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:automotors_base/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const AutomotorsApp());
+  group('validWhatsAppDigits', () {
+    test('convierte un móvil español de nueve cifras a formato internacional', () {
+      expect(validWhatsAppDigits('612 345 678'), '34612345678');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('conserva un número español con prefijo 34', () {
+      expect(validWhatsAppDigits('+34 612 345 678'), '34612345678');
+    });
 
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('acepta el prefijo internacional 0034', () {
+      expect(validWhatsAppDigits('0034 612 345 678'), '34612345678');
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('rechaza números demasiado cortos o con formato español inválido', () {
+      expect(validWhatsAppDigits('123'), isNull);
+      expect(validWhatsAppDigits('3412345678'), isNull);
+    });
+  });
+
+  group('etiquetas medioambientales', () {
+    test('devuelve los iconos esperados para etiquetas reconocidas', () {
+      expect(environmentalLabelIcon('CERO'), Icons.electric_car);
+      expect(environmentalLabelIcon('ECO'), Icons.eco);
+      expect(environmentalLabelIcon('C'), Icons.verified);
+      expect(environmentalLabelIcon('B'), Icons.local_taxi);
+    });
+
+    test('usa el icono por defecto para una etiqueta desconocida', () {
+      expect(environmentalLabelIcon('desconocida'), Icons.block);
+    });
   });
 }
