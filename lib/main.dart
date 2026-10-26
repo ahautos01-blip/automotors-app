@@ -3187,6 +3187,21 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _technicalSectionLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: gold,
+          fontSize: 11,
+          letterSpacing: 1.05,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
   Widget _quickSpec(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -3420,33 +3435,33 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Ficha técnica',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        if (car.matricula != null && car.matricula!.trim().isNotEmpty)
-          _technicalRow(
-            Icons.confirmation_number_outlined,
-            'Matrícula',
-            car.matricula!,
-          ),
+        const Row(children: [
+          Icon(Icons.tune_rounded, color: gold, size: 22),
+          SizedBox(width: 9),
+          Text('Ficha técnica', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 14),
+        if (car.matricula != null && car.matricula!.trim().isNotEmpty) ...[
+          _technicalSectionLabel('Identificación'),
+          _technicalRow(Icons.confirmation_number_outlined, 'Matrícula', car.matricula!),
+        ],
         if (car.vin?.trim().isNotEmpty == true)
           _technicalRow(Icons.qr_code_2_outlined, 'Número VIN / bastidor', car.vin!),
-        if (car.cv != null)
-          _technicalRow(Icons.speed, 'Potencia', '${car.cv} CV'),
-        if (car.cilindradaCc != null)
-          _technicalRow(Icons.settings, 'Cilindrada', '${car.cilindradaCc} cc'),
-        if (car.etiquetaMedioambiental != null &&
-            car.etiquetaMedioambiental!.trim().isNotEmpty)
+        if (car.version?.trim().isNotEmpty == true)
+          _technicalRow(Icons.badge_outlined, 'Versión', car.version!),
+        if (car.cv != null || car.cilindradaCc != null || car.transmission?.trim().isNotEmpty == true) ...[
+          _technicalSectionLabel('Motor y transmisión'),
+          if (car.cv != null) _technicalRow(Icons.speed, 'Potencia', '${car.cv} CV'),
+          if (car.cilindradaCc != null) _technicalRow(Icons.settings, 'Cilindrada', '${car.cilindradaCc} cc'),
+          if (car.transmission?.trim().isNotEmpty == true) _technicalRow(Icons.settings_outlined, 'Transmisión', car.transmission!),
+        ],
+        if (car.etiquetaMedioambiental != null && car.etiquetaMedioambiental!.trim().isNotEmpty) ...[
+          _technicalSectionLabel('Emisiones'),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                EnvironmentalSticker(
-                  label: car.etiquetaMedioambiental,
-                  size: 54,
-                ),
+                EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 54),
                 const SizedBox(width: 12),
                 const Text('Etiqueta medioambiental'),
                 const SizedBox(width: 8),
@@ -3455,9 +3470,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     car.etiquetaMedioambiental!,
                     textAlign: TextAlign.end,
                     style: TextStyle(
-                      color: environmentalLabelColor(
-                        car.etiquetaMedioambiental,
-                      ),
+                      color: environmentalLabelColor(car.etiquetaMedioambiental),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -3465,20 +3478,26 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ],
             ),
           ),
-        if (car.version?.trim().isNotEmpty == true) _technicalRow(Icons.badge_outlined, 'Versión', car.version!),
-        if (car.transmission?.trim().isNotEmpty == true) _technicalRow(Icons.settings_outlined, 'Transmisión', car.transmission!),
-        if (car.bodyType?.trim().isNotEmpty == true) _technicalRow(Icons.directions_car_outlined, 'Carrocería', car.bodyType!),
-        if (car.doors != null) _technicalRow(Icons.door_front_door_outlined, 'Puertas', '${car.doors}'),
-        if (car.seats != null) _technicalRow(Icons.event_seat_outlined, 'Plazas', '${car.seats}'),
-        if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, 'Color', car.color!),
-        if (car.emissionsStandard?.trim().isNotEmpty == true) _technicalRow(Icons.eco_outlined, 'Normativa de emisiones', car.emissionsStandard!),
-        if (car.lengthMm != null) _technicalRow(Icons.straighten, 'Longitud', '${car.lengthMm} mm'),
-        if (car.widthMm != null) _technicalRow(Icons.straighten, 'Anchura', '${car.widthMm} mm'),
-        if (car.heightMm != null) _technicalRow(Icons.height, 'Altura', '${car.heightMm} mm'),
-        if (car.wheelbaseMm != null) _technicalRow(Icons.straighten, 'Distancia entre ejes', '${car.wheelbaseMm} mm'),
-        if (car.weightKg != null) _technicalRow(Icons.scale_outlined, 'Peso', '${car.weightKg} kg'),
-        if (car.trunkLiters != null) _technicalRow(Icons.luggage_outlined, 'Maletero', '${car.trunkLiters} litros'),
-        if (car.tankLiters != null) _technicalRow(Icons.local_gas_station_outlined, 'Depósito', '${car.tankLiters} litros'),
+        ],
+        if (car.emissionsStandard?.trim().isNotEmpty == true)
+          _technicalRow(Icons.eco_outlined, 'Normativa de emisiones', car.emissionsStandard!),
+        if (car.bodyType?.trim().isNotEmpty == true || car.doors != null || car.seats != null || car.color?.trim().isNotEmpty == true) ...[
+          _technicalSectionLabel('Carrocería y habitáculo'),
+          if (car.bodyType?.trim().isNotEmpty == true) _technicalRow(Icons.directions_car_outlined, 'Carrocería', car.bodyType!),
+          if (car.doors != null) _technicalRow(Icons.door_front_door_outlined, 'Puertas', '${car.doors}'),
+          if (car.seats != null) _technicalRow(Icons.event_seat_outlined, 'Plazas', '${car.seats}'),
+          if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, 'Color', car.color!),
+        ],
+        if (car.lengthMm != null || car.widthMm != null || car.heightMm != null || car.wheelbaseMm != null || car.weightKg != null || car.trunkLiters != null || car.tankLiters != null) ...[
+          _technicalSectionLabel('Dimensiones y capacidades'),
+          if (car.lengthMm != null) _technicalRow(Icons.straighten, 'Longitud', '${car.lengthMm} mm'),
+          if (car.widthMm != null) _technicalRow(Icons.straighten, 'Anchura', '${car.widthMm} mm'),
+          if (car.heightMm != null) _technicalRow(Icons.height, 'Altura', '${car.heightMm} mm'),
+          if (car.wheelbaseMm != null) _technicalRow(Icons.straighten, 'Distancia entre ejes', '${car.wheelbaseMm} mm'),
+          if (car.weightKg != null) _technicalRow(Icons.scale_outlined, 'Peso', '${car.weightKg} kg'),
+          if (car.trunkLiters != null) _technicalRow(Icons.luggage_outlined, 'Maletero', '${car.trunkLiters} litros'),
+          if (car.tankLiters != null) _technicalRow(Icons.local_gas_station_outlined, 'Depósito', '${car.tankLiters} litros'),
+        ],
         if (car.equipment.isNotEmpty) ...[
           const SizedBox(height: 20),
           const Row(children: [
