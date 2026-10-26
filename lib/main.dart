@@ -1993,33 +1993,21 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           )),
           const SizedBox(width: 10),
-          Expanded(child: FilledButton.icon(
-            onPressed: onContact,
-            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-            label: const Text('Consultar'),
-            style: FilledButton.styleFrom(
-              backgroundColor: gold,
-              foregroundColor: Colors.black,
+          Expanded(child: OutlinedButton.icon(
+            onPressed: favoriteLoading ? null : _toggleFavorite,
+            icon: favoriteLoading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isFavorite ? Colors.pinkAccent : gold, size: 18),
+            label: Text(isFavorite ? 'Guardado' : 'Favoritos'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .65)),
               padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           )),
         ]),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: favoriteLoading ? null : _toggleFavorite,
-          icon: favoriteLoading
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : Icon(isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: isFavorite ? Colors.pinkAccent : gold),
-          label: Text(isFavorite ? 'Guardado en favoritos' : 'Guardar en favoritos'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .55)),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
         const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
