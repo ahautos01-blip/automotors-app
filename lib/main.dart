@@ -6300,12 +6300,15 @@ class _AddCarPageState extends State<AddCarPage> {
   int publishedCount = 0;
   bool loadingPublishedCount = true;
   bool vehicleLookupBusy = false;
+  bool loadingVehicleLookupAccess = true;
+  bool canLookupVehicle = false;
 
   @override
   void initState() {
     super.initState();
     loadBrands();
     loadPublishedCount();
+    loadVehicleLookupAccess();
   }
 
   Future<void> loadPublishedCount() async {
@@ -6332,6 +6335,38 @@ class _AddCarPageState extends State<AddCarPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo comprobar el límite de anuncios: $error')),
       );
+    }
+  }
+
+  Future<void> loadVehicleLookupAccess() async {
+    final supabase = Supabase.instance.client;
+    if (supabase.auth.currentUser == null) {
+      if (mounted) setState(() {
+        loadingVehicleLookupAccess = false;
+        canLookupVehicle = false;
+      });
+      return;
+    }
+    try {
+      final response = await supabase.functions.invoke(
+        'lookup-vehicle',
+        body: {'access_only': true},
+      );
+      final allowed = response.status >= 200 &&
+          response.status < 300 &&
+          response.data is Map &&
+          response.data['allowed'] == true;
+      if (!mounted) return;
+      setState(() {
+        canLookupVehicle = allowed;
+        loadingVehicleLookupAccess = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        canLookupVehicle = false;
+        loadingVehicleLookupAccess = false;
+      });
     }
   }
 
@@ -6456,6 +6491,12 @@ class _AddCarPageState extends State<AddCarPage> {
 
   Future<void> lookupVehicle() async {
     if (vehicleLookupBusy) return;
+    if (!canLookupVehicle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Esta función requiere PACK 20 o una suscripción AUTOMOTORS PRO activa.')),
+      );
+      return;
+    }
     final plate = matricula.text.trim().toUpperCase();
     final chassis = vin.text.trim().toUpperCase();
     if (plate.isEmpty == chassis.isEmpty) {
@@ -7054,49 +7095,87 @@ class _AddCarPageState extends State<AddCarPage> {
             ),
             const Divider(color: Color(0xFF5C4A22)),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
+            if (loadingVehicleLookupAccess)
+              const Card(
                 color: panel,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: gold.withValues(alpha: .45)),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(children: [
+                    SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Comprobando acceso al autocompletado…', style: TextStyle(color: Colors.white70))),
+                  ]),
+                ),
+              )
+            else if (canLookupVehicle)
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: panel,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: gold.withValues(alpha: .45)),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.manage_search_rounded, color: gold),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Rellenar ficha automáticamente', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text('Función exclusiva de PACK 20 y AUTOMOTORS PRO. Introduce la matrícula o el VIN y revisa los datos técnicos antes de publicar.', style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 12)),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: TextField(
+                      controller: matricula,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(labelText: 'Matrícula', hintText: '1234 ABC'),
+                      onChanged: (_) => setState(() {}),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: TextField(
+                      controller: vin,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 17,
+                      decoration: const InputDecoration(labelText: 'VIN / bastidor', hintText: '17 caracteres', counterText: ''),
+                      onChanged: (_) => setState(() {}),
+                    )),
+                  ]),
+                  const SizedBox(height: 10),
+                  SizedBox(width: double.infinity, child: FilledButton.icon(
+                    onPressed: vehicleLookupBusy || (matricula.text.trim().isEmpty == vin.text.trim().isEmpty) ? null : lookupVehicle,
+                    icon: vehicleLookupBusy
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                        : const Icon(Icons.auto_fix_high_rounded),
+                    label: Text(vehicleLookupBusy ? 'Buscando datos…' : 'Buscar y rellenar ficha'),
+                    style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
+                  )),
+                ]),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: panel,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: gold.withValues(alpha: .4)),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.lock_outline_rounded, color: gold),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Autocompletado exclusivo', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                  ]),
+                  const SizedBox(height: 6),
+                  const Text('La búsqueda por matrícula o VIN solo está disponible para clientes con PACK 20 activo o suscripción AUTOMOTORS PRO vigente. Puedes completar la ficha manualmente.', style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 12)),
+                  const SizedBox(height: 10),
+                  SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                    onPressed: showPackages,
+                    icon: const Icon(Icons.workspace_premium_rounded, color: gold),
+                    label: const Text('Ver packs y suscripción'),
+                    style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+                  )),
+                ]),
               ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [
-                  Icon(Icons.manage_search_rounded, color: gold),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('Rellenar ficha automáticamente', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
-                ]),
-                const SizedBox(height: 6),
-                const Text('Introduce la matrícula o el VIN y buscaremos los datos técnicos disponibles. Podrás revisarlos y corregirlos antes de publicar.', style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 12)),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: TextField(
-                    controller: matricula,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(labelText: 'Matrícula', hintText: '1234 ABC'),
-                    onChanged: (_) => setState(() {}),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextField(
-                    controller: vin,
-                    textCapitalization: TextCapitalization.characters,
-                    maxLength: 17,
-                    decoration: const InputDecoration(labelText: 'VIN / bastidor', hintText: '17 caracteres', counterText: ''),
-                    onChanged: (_) => setState(() {}),
-                  )),
-                ]),
-                const SizedBox(height: 10),
-                SizedBox(width: double.infinity, child: FilledButton.icon(
-                  onPressed: vehicleLookupBusy || (matricula.text.trim().isEmpty == vin.text.trim().isEmpty) ? null : lookupVehicle,
-                  icon: vehicleLookupBusy
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : const Icon(Icons.auto_fix_high_rounded),
-                  label: Text(vehicleLookupBusy ? 'Buscando datos…' : 'Buscar y rellenar ficha'),
-                  style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
-                )),
-              ]),
-            ),
             const SizedBox(height: 14),
             DropdownButtonFormField<int>(
               initialValue: selectedBrandId,
