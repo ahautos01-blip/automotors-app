@@ -1316,6 +1316,45 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Búsquedas guardadas',
+            onPressed: () async {
+              final user = Supabase.instance.client.auth.currentUser;
+              if (user == null) {
+                final loggedIn = await requireAutomotorsLogin(context);
+                if (!loggedIn || !mounted) return;
+              }
+              if (!mounted) return;
+              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedSearchesPage(
+                onApply: (criteria) {
+                  setState(() {
+                    selectedBrand = (criteria['brand'] ?? 'Todas').toString();
+                    selectedModel = (criteria['model'] ?? 'Todos').toString();
+                    selectedFuel = (criteria['fuel'] ?? 'Todos').toString();
+                    selectedTransmission = (criteria['transmission'] ?? 'Todas').toString();
+                    selectedBodyType = (criteria['body_type'] ?? 'Todos').toString();
+                    selectedLabel = (criteria['label'] ?? 'Todas').toString();
+                    selectedColor = (criteria['color'] ?? '').toString();
+                    minPrice = double.tryParse(criteria['min_price']?.toString() ?? '');
+                    maxPrice = double.tryParse(criteria['max_price']?.toString() ?? '');
+                    minYear = int.tryParse(criteria['min_year']?.toString() ?? '');
+                    maxKm = int.tryParse(criteria['max_km']?.toString() ?? '');
+                    minCv = int.tryParse(criteria['min_cv']?.toString() ?? '');
+                    maxCv = int.tryParse(criteria['max_cv']?.toString() ?? '');
+                    minCc = int.tryParse(criteria['min_cc']?.toString() ?? '');
+                    maxDoors = int.tryParse(criteria['max_doors']?.toString() ?? '');
+                    minSeats = int.tryParse(criteria['min_seats']?.toString() ?? '');
+                    selectedEquipmentFilters
+                      ..clear()
+                      ..addAll((criteria['equipment'] is List) ? List<String>.from(criteria['equipment']) : <String>[]);
+                    searchController.text = (criteria['query'] ?? '').toString();
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Filtros aplicados a la búsqueda.')));
+                },
+              )));
+            },
+            icon: const Icon(Icons.bookmarks_outlined, color: gold),
+          ),
+          IconButton(
             tooltip: 'Mis favoritos',
             onPressed: () async {
               final user = Supabase.instance.client.auth.currentUser;
@@ -1885,6 +1924,168 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           );
         })),
       ]),
+    );
+  }
+}
+
+class SavedSearchesPage extends StatefulWidget {
+  final void Function(Map<String, dynamic>) onApply;
+  const SavedSearchesPage({super.key, required this.onApply});
+
+  @override
+  State<SavedSearchesPage> createState() => _SavedSearchesPageState();
+}
+
+class _SavedSearchesPageState extends State<SavedSearchesPage> {
+  bool loading = true;
+  String? error;
+  List<Map<String, dynamic>> searches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadSearches();
+  }
+
+  Future<void> loadSearches() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() { loading = false; error = 'Inicia sesión para consultar tus búsquedas guardadas.'; });
+        return;
+      }
+      final rows = await Supabase.instance.client
+          .from('saved_vehicle_searches')
+          .select('id, name, criteria, notify_new_listings, notify_price_drops, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      if (!mounted) return;
+      setState(() {
+        searches = List<Map<String, dynamic>>.from(rows);
+        loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { loading = false; error = 'No se pudieron cargar tus búsquedas. Comprueba la conexión e inténtalo de nuevo.'; });
+    }
+  }
+
+  Future<void> deleteSearch(Map<String, dynamic> item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar búsqueda'),
+        content: Text('¿Quieres eliminar «${item['name']}»?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await Supabase.instance.client.from('saved_vehicle_searches').delete().eq('id', item['id']);
+      if (!mounted) return;
+      setState(() => searches.removeWhere((s) => s['id'] == item['id']));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Búsqueda eliminada.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo eliminar la búsqueda.')));
+    }
+  }
+
+  String criteriaSummary(Map<String, dynamic> criteria) {
+    final parts = <String>[];
+    for (final key in ['brand', 'model', 'fuel', 'transmission', 'body_type']) {
+      final value = criteria[key]?.toString();
+      if (value != null && value.isNotEmpty &&
+          !['brand'].contains(key) || (key == 'brand' && value != 'Todas')) {
+        if (!['Todos', 'Todas', ''].contains(value)) parts.add(value);
+      }
+    }
+    for (final entry in [
+      ['min_price', 'Precio desde'], ['max_price', 'Precio hasta'],
+      ['min_year', 'Año desde'], ['max_km', 'Km hasta'],
+      ['min_cv', 'CV desde'], ['max_cv', 'CV hasta'],
+    ]) {
+      final value = criteria[entry[0]];
+      if (value != null && value.toString().isNotEmpty) parts.add('${entry[1]}: $value');
+    }
+    final query = criteria['query']?.toString();
+    if (query != null && query.isNotEmpty) parts.add('Texto: $query');
+    return parts.isEmpty ? 'Sin filtros específicos' : parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Búsquedas guardadas'), actions: [
+        IconButton(tooltip: 'Actualizar', onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: gold)),
+      ]),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : error != null
+              ? Center(child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.lock_outline_rounded, color: gold, size: 38),
+                    const SizedBox(height: 12),
+                    Text(error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 14),
+                    FilledButton(onPressed: loadSearches, child: const Text('Reintentar')),
+                  ]),
+                ))
+              : searches.isEmpty
+                  ? Center(child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.bookmark_border_rounded, size: 52, color: gold),
+                        const SizedBox(height: 14),
+                        const Text('Todavía no tienes búsquedas guardadas', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800), textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        const Text('Abre los filtros del buscador y pulsa «Guardar búsqueda» para tenerlos aquí.', textAlign: TextAlign.center),
+                      ]),
+                    ))
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: searches.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final item = searches[index];
+                        final rawCriteria = item['criteria'];
+                        final criteria = rawCriteria is Map ? Map<String, dynamic>.from(rawCriteria) : <String, dynamic>{};
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1D),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: gold.withValues(alpha: .35)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                const Icon(Icons.bookmark_rounded, color: gold),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(item['name']?.toString() ?? 'Búsqueda guardada', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+                                IconButton(tooltip: 'Eliminar búsqueda', onPressed: () => deleteSearch(item), icon: const Icon(Icons.delete_outline_rounded)),
+                              ]),
+                              const SizedBox(height: 6),
+                              Text(criteriaSummary(criteria), style: TextStyle(color: Colors.white.withValues(alpha: .72), height: 1.4)),
+                              const SizedBox(height: 12),
+                              SizedBox(width: double.infinity, child: FilledButton.icon(
+                                onPressed: () {
+                                  widget.onApply(criteria);
+                                  Navigator.pop(context);
+                                },
+                                icon: const Icon(Icons.filter_alt_rounded),
+                                label: const Text('Aplicar filtros'),
+                              )),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
     );
   }
 }
