@@ -2302,7 +2302,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   }
 
   Future<Map<String, dynamic>> loadSeller() async {
-    final profile = await supabase.from('user_profiles')
+    final profile = await supabase.from('public_seller_profiles')
         .select('id, full_name, account_type, city, province, business_name, phone, profile_photo_path, cover_photo_path, estado_verificacion')
         .eq('id', widget.ownerId)
         .maybeSingle();
