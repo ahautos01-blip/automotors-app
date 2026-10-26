@@ -2736,13 +2736,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
 
   Future<void> _shareListing(BuildContext context) async {
     final listingId = car.listingId;
-    if (listingId == null || listingId.isEmpty) {
-      await _copyListingSummary(context);
-      return;
-    }
-    final shareUri = Uri.base.replace(
-      queryParameters: <String, String>{'listing': listingId},
-    );
+    final hasListingId = listingId != null && listingId.isNotEmpty;
+    final shareUri = hasListingId
+        ? Uri.base.replace(queryParameters: <String, String>{'listing': listingId})
+        : Uri.parse('https://ahautos01-blip.github.io/automotors-app/');
     final title = '${car.brand} ${car.model}';
     final summary = <String>[
       title,
@@ -2751,12 +2748,15 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       if (car.year > 0) 'Año: ${car.year}',
       'Kilómetros: ${_formatKm(car.km)} km',
       '',
-      'Ver ficha completa en AUTOMOTORS: $shareUri',
+      if (hasListingId)
+        'Ver ficha completa en AUTOMOTORS: $shareUri'
+      else
+        'Encuentra más información en AUTOMOTORS: $shareUri',
     ].join('\n');
 
-    // En Flutter Web algunos navegadores integrados no permiten navigator.share
-    // y share_plus copia directamente. Mostrar opciones explícitas evita ese falso
-    // resultado y permite compartir por WhatsApp, Telegram o correo.
+    // Mostrar siempre las opciones explícitas en web. No copiar automáticamente
+    // si el anuncio no trae ID; en ese caso avisamos que el enlace no puede abrir
+    // la ficha exacta hasta que el anuncio tenga un identificador.
     if (kIsWeb) {
       if (!context.mounted) return;
       await showDialog<void>(
@@ -2766,6 +2766,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (!hasListingId)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Este anuncio no tiene identificador para crear un enlace directo a su ficha. Puedes compartir los datos, pero el enlace no abrirá este coche directamente.',
+                  ),
+                ),
               ListTile(
                 leading: const Icon(Icons.chat_rounded),
                 title: const Text('WhatsApp'),
@@ -2805,13 +2812,19 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
-                title: const Text('Copiar enlace'),
+                title: const Text('Copiar enlace y datos'),
                 onTap: () async {
                   await Clipboard.setData(ClipboardData(text: summary));
                   if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Enlace y datos del anuncio copiados.')),
+                      SnackBar(
+                        content: Text(
+                          hasListingId
+                              ? 'Enlace y datos del anuncio copiados.'
+                              : 'Datos copiados. Este anuncio aún no tiene enlace directo.',
+                        ),
+                      ),
                     );
                   }
                 },
@@ -2829,6 +2842,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       return;
     }
 
+    if (!hasListingId) {
+      await _copyListingSummary(context);
+      return;
+    }
     try {
       await SharePlus.instance.share(
         ShareParams(title: title, text: summary, uri: shareUri),
