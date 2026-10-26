@@ -126,7 +126,7 @@ drop trigger if exists enforce_automotors_listing_limits
   on public.vehicle_listings;
 
 create trigger enforce_automotors_listing_limits
-before insert or update of status, owner_id
+before insert or update of status, owner_id, first_published_at
 on public.vehicle_listings
 for each row
 execute function public.enforce_automotors_listing_limits();
