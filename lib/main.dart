@@ -2119,6 +2119,28 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   Container(width: 1, height: 34, color: const Color(0xFF29323A)),
                   profileStat(isVerifiedBusiness ? 'Verificado' : '—', 'Confianza'),
                 ]),
+                if (supabase.auth.currentUser?.id == widget.ownerId) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await Navigator.push<void>(context, MaterialPageRoute(
+                          builder: (_) => const ProfilePage(),
+                        ));
+                        if (!mounted) return;
+                        setState(() => dataFuture = loadSeller());
+                      },
+                      icon: const Icon(Icons.manage_accounts_outlined),
+                      label: const Text('Mis datos y editar perfil'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: gold,
+                        side: const BorderSide(color: gold),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 17),
                 Row(children: [
                   Expanded(child: OutlinedButton.icon(
