@@ -4569,6 +4569,8 @@ class _GaragePageState extends State<GaragePage> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> listingsFuture;
   bool busy = false;
+  String statusFilter = 'Todos';
+  String searchQuery = '';
 
   String euros(double price) =>
       '${price.toStringAsFixed(0).replaceAllMapped(
@@ -4768,13 +4770,61 @@ class _GaragePageState extends State<GaragePage> {
         if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('No se pudieron cargar tus anuncios: ${snapshot.error}')));
         final rows = snapshot.data ?? [];
         if (rows.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí.')));
+        final counts = <String, int>{
+          'Todos': rows.length,
+          'Publicados': rows.where((r) => r['status']?.toString() == 'published').length,
+          'Pausados': rows.where((r) => ['draft', 'paused'].contains(r['status']?.toString())).length,
+          'Reservados': rows.where((r) => r['status']?.toString() == 'reserved').length,
+          'Vendidos': rows.where((r) => r['status']?.toString() == 'sold').length,
+        };
+        final normalizedQuery = searchQuery.trim().toLowerCase();
+        final visibleRows = rows.where((listing) {
+          final status = listing['status']?.toString() ?? 'published';
+          final matchesStatus = statusFilter == 'Todos' ||
+              (statusFilter == 'Publicados' && status == 'published') ||
+              (statusFilter == 'Pausados' && ['draft', 'paused'].contains(status)) ||
+              (statusFilter == 'Reservados' && status == 'reserved') ||
+              (statusFilter == 'Vendidos' && status == 'sold');
+          final searchable = '${listingName(listing)} ${listing['year'] ?? ''} ${listing['fuel'] ?? ''}'.toLowerCase();
+          return matchesStatus && (normalizedQuery.isEmpty || searchable.contains(normalizedQuery));
+        }).toList();
         return Stack(children: [
           ListView(padding: const EdgeInsets.all(16), children: [
             const Text('Tus vehículos', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
-            const Text('Pulsa un anuncio para ver su ficha. Usa el menú para editar, pausar o eliminar.'),
-            const SizedBox(height: 16),
-            ...rows.map((listing) {
+            const Text('Filtra por estado o busca por marca, modelo, año y combustible.'),
+            const SizedBox(height: 14),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Buscar en mis anuncios…',
+                prefixIcon: const Icon(Icons.search, color: gold),
+                suffixIcon: searchQuery.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), tooltip: 'Borrar búsqueda', onPressed: () => setState(() => searchQuery = '')),
+                filled: true,
+                fillColor: panel,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              ),
+              onChanged: (value) => setState(() => searchQuery = value),
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: counts.entries.map((entry) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text('${entry.key} (${entry.value})'),
+                  selected: statusFilter == entry.key,
+                  selectedColor: gold,
+                  labelStyle: TextStyle(color: statusFilter == entry.key ? Colors.black : Colors.white, fontWeight: FontWeight.w700),
+                  onSelected: (_) => setState(() => statusFilter = entry.key),
+                ),
+              )).toList()),
+            ),
+            const SizedBox(height: 12),
+            Text('${visibleRows.length} de ${rows.length} anuncios', style: const TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            if (visibleRows.isEmpty)
+              const Padding(padding: EdgeInsets.symmetric(vertical: 36), child: Column(children: [Icon(Icons.search_off_rounded, size: 42, color: Colors.white38), SizedBox(height: 10), Text('No hay anuncios que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70))]))
+            else ...visibleRows.map((listing) {
               final status = listing['status']?.toString() ?? 'published';
               final isReserved = status == 'reserved';
               final isSold = status == 'sold';
