@@ -1,16 +1,11 @@
 name: Build and deploy Flutter web
 
 on:
+  # Rebuild on every main-branch commit so changes to app configuration,
+  # migrations, or supporting files cannot leave Pages serving an old bundle.
   push:
     branches:
       - main
-    paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'web/**'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - '.github/workflows/flutter-pages.yml'
   workflow_dispatch:
 
 permissions:
