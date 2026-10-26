@@ -1316,6 +1316,19 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Alertas de búsqueda',
+            onPressed: () async {
+              final user = Supabase.instance.client.auth.currentUser;
+              if (user == null) {
+                final loggedIn = await requireAutomotorsLogin(context);
+                if (!loggedIn || !mounted) return;
+              }
+              if (!mounted) return;
+              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const VehicleSearchAlertsPage()));
+            },
+            icon: const Icon(Icons.notifications_active_outlined, color: gold),
+          ),
+          IconButton(
             tooltip: 'Búsquedas guardadas',
             onPressed: () async {
               final user = Supabase.instance.client.auth.currentUser;
@@ -1916,6 +1929,93 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           );
         })),
       ]),
+    );
+  }
+}
+
+class VehicleSearchAlertsPage extends StatefulWidget {
+  const VehicleSearchAlertsPage({super.key});
+  @override
+  State<VehicleSearchAlertsPage> createState() => _VehicleSearchAlertsPageState();
+}
+class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
+  bool loading = true;
+  String? error;
+  List<Map<String, dynamic>> alerts = [];
+  @override
+  void initState() { super.initState(); loadAlerts(); }
+  Future<void> loadAlerts() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() { loading = false; error = 'Inicia sesión para consultar tus alertas.'; });
+        return;
+      }
+      final rows = await Supabase.instance.client.from('vehicle_search_alerts')
+          .select('id, search_id, listing_id, alert_type, title, message, created_at, read_at')
+          .eq('user_id', user.id).order('created_at', ascending: false).limit(100);
+      if (!mounted) return;
+      setState(() { alerts = List<Map<String, dynamic>>.from(rows); loading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { loading = false; error = 'No se pudieron cargar las alertas. Comprueba la conexión e inténtalo de nuevo.'; });
+    }
+  }
+  Future<void> markRead(Map<String, dynamic> alert) async {
+    if (alert['read_at'] != null) return;
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+      await Supabase.instance.client.from('vehicle_search_alerts').update({'read_at': now}).eq('id', alert['id']);
+      if (!mounted) return;
+      setState(() => alert['read_at'] = now);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo marcar la alerta como leída.')));
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    final unread = alerts.where((a) => a['read_at'] == null).length;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Alertas de búsqueda'), actions: [
+        IconButton(tooltip: 'Actualizar', onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: gold)),
+      ]),
+      body: loading
+        ? const Center(child: CircularProgressIndicator(color: gold))
+        : error != null
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.notifications_off_outlined, color: gold, size: 40), const SizedBox(height: 12),
+              Text(error!, textAlign: TextAlign.center), const SizedBox(height: 14),
+              FilledButton(onPressed: loadAlerts, child: const Text('Reintentar')),
+            ])))
+          : alerts.isEmpty
+            ? Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.notifications_none_rounded, size: 54, color: gold), const SizedBox(height: 14),
+                const Text('Todavía no tienes alertas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                const Text('Cuando aparezca un coche que coincida con tus búsquedas guardadas o baje de precio, lo verás aquí.',
+                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+              ])))
+            : ListView(padding: const EdgeInsets.all(16), children: [
+                Text('${unread} sin leer · ${alerts.length} alertas', style: const TextStyle(color: gold, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                for (final alert in alerts)
+                  Card(
+                    color: alert['read_at'] == null ? const Color(0xFF25231C) : const Color(0xFF18181B),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: Icon(alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
+                        color: alert['read_at'] == null ? gold : Colors.white54),
+                      title: Text(alert['title']?.toString() ?? 'Alerta', style: const TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(alert['message']?.toString() ?? '')),
+                      trailing: alert['read_at'] == null
+                        ? IconButton(tooltip: 'Marcar como leída', onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: gold))
+                        : const Icon(Icons.check_circle_outline, color: Colors.white38),
+                      onTap: () => markRead(alert),
+                    ),
+                  ),
+              ]),
     );
   }
 }
