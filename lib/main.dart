@@ -2589,7 +2589,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             const Icon(Icons.fact_check_outlined, color: gold, size: 22),
             const SizedBox(width: 9),
             const Expanded(child: Text('Calidad de la ficha', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
-            Text('\$completed/\${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+            Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
           ]),
           const SizedBox(height: 8),
           Text(
