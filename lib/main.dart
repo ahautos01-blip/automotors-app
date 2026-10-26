@@ -3481,15 +3481,43 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         if (car.tankLiters != null) _technicalRow(Icons.local_gas_station_outlined, 'Depósito', '${car.tankLiters} litros'),
         if (car.equipment.isNotEmpty) ...[
           const SizedBox(height: 20),
-          const Text('Equipamiento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Card(
-            color: panel,
-            child: Column(
-              children: car.equipment.map((item) => ListTile(
-                dense: true,
-                leading: const Icon(Icons.check_circle_outline, color: gold),
-                title: Text(item),
+          const Row(children: [
+            Icon(Icons.checklist_rounded, color: gold, size: 22),
+            SizedBox(width: 9),
+            Text('Equipamiento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 5),
+          Text(
+            '${car.equipment.length} elementos indicados en el anuncio',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: panel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: car.equipment.map((item) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                decoration: BoxDecoration(
+                  color: gold.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: gold.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_outline, size: 17, color: gold),
+                    const SizedBox(width: 7),
+                    Flexible(child: Text(item, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                  ],
+                ),
               )).toList(),
             ),
           ),
