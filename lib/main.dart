@@ -2186,9 +2186,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
               ]),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, isVerifiedBusiness ? 0 : 14, 18, 14),
             child: Transform.translate(
-              offset: const Offset(0, -26),
+              // Only overlap the cover for verified business profiles. Personal
+              // profiles have no cover, so a negative offset clips the avatar
+              // against the top edge on iPhone home-screen web apps.
+              offset: Offset(0, isVerifiedBusiness ? -26 : 0),
               child: Column(children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Container(
