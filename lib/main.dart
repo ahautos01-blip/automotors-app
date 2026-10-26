@@ -3586,11 +3586,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         title: Text('${car.brand} ${car.model}'),
         actions: [
           IconButton(
-            tooltip: 'Reportar anuncio',
-            onPressed: _reportListing,
-            icon: const Icon(Icons.flag_outlined, color: gold),
-          ),
-          IconButton(
             tooltip: isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
             onPressed: favoriteLoading ? null : _toggleFavorite,
             icon: favoriteLoading
