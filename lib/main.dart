@@ -1812,20 +1812,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           rangeField('Potencia máxima (CV)', maxCv, 0, 1000, (v)=>setState(()=>maxCv=v)),
           rangeField('Año mínimo', minYear, 1990, DateTime.now().year+1, (v)=>setState(()=>minYear=v)),
           rangeField('Año máximo', maxYear, 1990, DateTime.now().year+1, (v)=>setState(()=>maxYear=v)),
-          Row(children: [
-            Expanded(child: OutlinedButton.icon(
-              onPressed: saveCurrentSearch,
-              icon: const Icon(Icons.notifications_active_outlined),
-              label: const Text('Guardar búsqueda'),
-              style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
-            )),
-            const SizedBox(width: 8),
-            Expanded(child: FilledButton(
-              onPressed: () => setState(() => showFilters = false),
-              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
-              child: const Text('Ver resultados'),
-            )),
-          ]),
+          SizedBox(width: double.infinity, child: FilledButton(
+            onPressed: () => setState(() => showFilters = false),
+            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
+            child: const Text('Ver resultados'),
+          )),
         ])))),
         Expanded(child: found.isEmpty ? const Center(child: Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color:Colors.white70))) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
@@ -2000,8 +1991,9 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
     for (final key in ['brand', 'model', 'fuel', 'transmission', 'body_type']) {
       final value = criteria[key]?.toString();
       if (value != null && value.isNotEmpty &&
-          !['brand'].contains(key) || (key == 'brand' && value != 'Todas')) {
-        if (!['Todos', 'Todas', ''].contains(value)) parts.add(value);
+          !(key == 'brand' && value == 'Todas') &&
+          !['Todos', 'Todas'].contains(value)) {
+        parts.add(value);
       }
     }
     for (final entry in [
