@@ -3381,7 +3381,19 @@ class _EditListingPageState extends State<EditListingPage> {
     finally { if (mounted) setState(() => saving = false); }
   }
 
-  Widget textField(String label, TextEditingController controller, {bool numeric = false, bool required = false}) => Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: controller, keyboardType: numeric ? TextInputType.number : TextInputType.text, decoration: InputDecoration(labelText: label), validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Completa este campo' : null));
+  Widget textField(String label, TextEditingController controller, {bool numeric = false, bool required = false, bool multiline = false}) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: controller,
+      keyboardType: numeric ? TextInputType.number : (multiline ? TextInputType.multiline : TextInputType.text),
+      minLines: multiline ? 4 : 1,
+      maxLines: multiline ? 8 : 1,
+      textInputAction: multiline ? TextInputAction.newline : TextInputAction.next,
+      textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
+      decoration: InputDecoration(labelText: label, alignLabelWithHint: multiline),
+      validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Completa este campo' : null,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Editar anuncio')), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -3389,7 +3401,7 @@ class _EditListingPageState extends State<EditListingPage> {
     DropdownButtonFormField<String>(value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration: const InputDecoration(labelText: 'Combustible'), items: const [DropdownMenuItem(value:'Diésel',child:Text('Diésel')),DropdownMenuItem(value:'Gasolina',child:Text('Gasolina')),DropdownMenuItem(value:'Híbrido',child:Text('Híbrido')),DropdownMenuItem(value:'Eléctrico',child:Text('Eléctrico'))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
     textField('Teléfono de contacto', phone), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
     DropdownButtonFormField<String>(value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => label = v)),
-    textField('Descripción', description), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? 'Guardando...' : 'Guardar cambios')),
+    textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? 'Guardando...' : 'Guardar cambios')),
   ])));
 }
 
