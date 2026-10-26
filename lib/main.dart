@@ -5379,7 +5379,13 @@ class _EditListingPageState extends State<EditListingPage> {
       maxLines: multiline ? 8 : 1,
       textInputAction: multiline ? TextInputAction.newline : TextInputAction.next,
       textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
-      decoration: InputDecoration(labelText: label, alignLabelWithHint: multiline),
+      decoration: InputDecoration(
+        labelText: label,
+        alignLabelWithHint: multiline,
+        hintText: multiline
+            ? 'Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.'
+            : null,
+      ),
       validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Completa este campo' : null,
     ),
   );
@@ -6371,8 +6377,15 @@ class _AddCarPageState extends State<AddCarPage> {
         keyboardType: numeric ? TextInputType.number : (multiline ? TextInputType.multiline : TextInputType.text),
         minLines: multiline ? 4 : 1,
         maxLines: multiline ? 8 : 1,
+        textInputAction: multiline ? TextInputAction.newline : TextInputAction.next,
         textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
-        decoration: InputDecoration(labelText: label, alignLabelWithHint: multiline),
+        decoration: InputDecoration(
+          labelText: label,
+          alignLabelWithHint: multiline,
+          hintText: multiline
+              ? 'Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.'
+              : null,
+        ),
         onChanged: (_) {
           if (mounted) setState(() {});
         },
