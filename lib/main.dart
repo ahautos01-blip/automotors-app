@@ -5638,12 +5638,94 @@ class _AddCarPageState extends State<AddCarPage> {
         maxLines: multiline ? 8 : 1,
         textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
         decoration: InputDecoration(labelText: label, alignLabelWithHint: multiline),
+        onChanged: (_) {
+          if (mounted) setState(() {});
+        },
         validator: (value) {
           if (requiredField && (value == null || value.trim().isEmpty)) {
             return 'Completa este campo';
           }
           return null;
         },
+      ),
+    );
+  }
+
+  List<MapEntry<String, bool>> get listingQualityChecks => [
+    MapEntry('Marca y modelo seleccionados', selectedBrandId != null && selectedModelId != null),
+    MapEntry('Año indicado', year.text.trim().isNotEmpty && int.tryParse(year.text.trim()) != null),
+    MapEntry('Kilometraje indicado', km.text.trim().isNotEmpty && int.tryParse(km.text.trim()) != null),
+    MapEntry('Precio indicado', price.text.trim().isNotEmpty && double.tryParse(price.text.trim().replaceAll('.', '').replaceAll(',', '.')) != null),
+    MapEntry('Al menos 3 fotografías', photos.length >= 3),
+    MapEntry('Descripción detallada', description.text.trim().length >= 40),
+    MapEntry('Datos técnicos adicionales', cv.text.trim().isNotEmpty || cilindradaCc.text.trim().isNotEmpty || version.text.trim().isNotEmpty),
+  ];
+
+  Widget buildListingQualityCard() {
+    final checks = listingQualityChecks;
+    final completed = checks.where((item) => item.value).length;
+    final progress = completed / checks.length;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: gold.withValues(alpha: .45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: gold),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Calidad de tu anuncio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+              ),
+              Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: Colors.white12,
+              valueColor: const AlwaysStoppedAnimation<Color>(gold),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            completed == checks.length
+                ? '¡Excelente! Tu anuncio incluye la información clave para generar confianza.'
+                : 'Completa estas recomendaciones para que los compradores conozcan mejor el vehículo.',
+            style: const TextStyle(color: Colors.white70, height: 1.35, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          ...checks.map((item) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                Icon(
+                  item.value ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  size: 17,
+                  color: item.value ? gold : Colors.white38,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.key,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: item.value ? Colors.white : Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
       ),
     );
   }
@@ -5928,6 +6010,8 @@ class _AddCarPageState extends State<AddCarPage> {
                 ])),
               ]),
             ),
+            const SizedBox(height: 14),
+            buildListingQualityCard(),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
