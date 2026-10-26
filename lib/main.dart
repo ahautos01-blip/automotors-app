@@ -8,6 +8,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 const gold = Color(0xFFD4AF37);
 const black = Color(0xFF0D0D0F);
@@ -933,6 +934,21 @@ class _HomePageState extends State<HomePage> {
           ..addAll(loadedCars);
         loadingCars = false;
       });
+      final sharedListingId = Uri.base.queryParameters['listing'];
+      if (sharedListingId != null && sharedListingId.isNotEmpty) {
+        final sharedCar = loadedCars.where((item) => item.listingId == sharedListingId).firstOrNull;
+        if (sharedCar != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) openCarDetails(sharedCar);
+          });
+        } else if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Este anuncio ya no está disponible.')),
+            );
+          });
+        }
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => loadingCars = false);
@@ -2711,6 +2727,34 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     }
   }
 
+  Future<void> _shareListing(BuildContext context) async {
+    final listingId = car.listingId;
+    if (listingId == null || listingId.isEmpty) {
+      await _copyListingSummary(context);
+      return;
+    }
+    final base = Uri.base;
+    final shareUri = base.replace(queryParameters: <String, String>{'listing': listingId});
+    final title = '${car.brand} ${car.model}';
+    final summary = <String>[
+      title,
+      if (car.version?.trim().isNotEmpty == true) car.version!.trim(),
+      'Precio: $priceText',
+      if (car.year > 0) 'Año: ${car.year}',
+      'Kilómetros: ${_formatKm(car.km)} km',
+      '',
+      'Ver ficha completa en AUTOMOTORS: $shareUri',
+    ].join('\n');
+    try {
+      await SharePlus.instance.share(ShareParams(title: title, text: summary, uri: shareUri));
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: summary));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enlace del anuncio copiado. Ya puedes pegarlo para compartir la ficha.')),
+      );
+    }
+  }
+
   Future<void> _copyListingSummary(BuildContext context) async {
     final details = <String>[
       '${car.brand} ${car.model}',
@@ -3063,9 +3107,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         const SizedBox(height: 16),
         Row(children: [
           Expanded(child: OutlinedButton.icon(
-            onPressed: () => _copyListingSummary(context),
-            icon: const Icon(Icons.copy_all_outlined, size: 18),
-            label: const Text('Copiar ficha'),
+            onPressed: () => _shareListing(context),
+            icon: const Icon(Icons.ios_share_rounded, size: 18),
+            label: const Text('Compartir anuncio'),
             style: OutlinedButton.styleFrom(
               foregroundColor: gold,
               side: BorderSide(color: gold.withValues(alpha: 0.65)),
