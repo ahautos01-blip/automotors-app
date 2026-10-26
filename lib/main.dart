@@ -2734,7 +2734,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     await Clipboard.setData(ClipboardData(text: details));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Datos del anuncio copiados para compartir.')),
+        const SnackBar(content: Text('Ficha del vehículo copiada al portapapeles.')),
       );
     }
   }
@@ -3064,8 +3064,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         Row(children: [
           Expanded(child: OutlinedButton.icon(
             onPressed: () => _copyListingSummary(context),
-            icon: const Icon(Icons.ios_share_rounded, size: 18),
-            label: const Text('Compartir anuncio'),
+            icon: const Icon(Icons.copy_all_outlined, size: 18),
+            label: const Text('Copiar ficha'),
             style: OutlinedButton.styleFrom(
               foregroundColor: gold,
               side: BorderSide(color: gold.withValues(alpha: 0.65)),
