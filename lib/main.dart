@@ -6299,6 +6299,7 @@ class _AddCarPageState extends State<AddCarPage> {
   bool publishing = false;
   int publishedCount = 0;
   bool loadingPublishedCount = true;
+  bool vehicleLookupBusy = false;
 
   @override
   void initState() {
@@ -6440,6 +6441,155 @@ class _AddCarPageState extends State<AddCarPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudieron cargar los modelos: $error')),
       );
+    }
+  }
+
+  String _normalizeCatalogName(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9áéíóúüñ]'), '');
+
+  int? _readVehicleNumber(dynamic value) {
+    if (value == null) return null;
+    final match = RegExp(r'\d+').firstMatch(value.toString());
+    return match == null ? null : int.tryParse(match.group(0)!);
+  }
+
+  Future<void> lookupVehicle() async {
+    if (vehicleLookupBusy) return;
+    final plate = matricula.text.trim().toUpperCase();
+    final chassis = vin.text.trim().toUpperCase();
+    if (plate.isEmpty == chassis.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Introduce una matrícula o un VIN, pero no ambos para la misma búsqueda.')),
+      );
+      return;
+    }
+    if (chassis.isNotEmpty && chassis.length != 17) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El VIN debe tener 17 caracteres.')),
+      );
+      return;
+    }
+    setState(() => vehicleLookupBusy = true);
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'lookup-vehicle',
+        body: plate.isNotEmpty ? {'plate': plate} : {'vin': chassis},
+      );
+      final payload = response.data;
+      if (response.status < 200 || response.status >= 300) {
+        final message = payload is Map ? payload['error']?.toString() : null;
+        throw Exception(message?.isNotEmpty == true ? message : 'No se pudo consultar el vehículo.');
+      }
+      if (payload is! Map || payload['data'] is! Map) {
+        throw Exception('La respuesta del proveedor no contiene una ficha válida.');
+      }
+      final data = Map<String, dynamic>.from(payload['data'] as Map);
+      String valueOf(List<String> keys) {
+        for (final key in keys) {
+          final value = data[key];
+          if (value != null && value.toString().trim().isNotEmpty) return value.toString().trim();
+        }
+        return '';
+      }
+      final brandName = valueOf(['brand', 'make']);
+      final modelName = valueOf(['model', 'modelName']);
+      final versionName = valueOf(['version', 'trim', 'variant']);
+      final firstDate = valueOf(['firstRegistrationDate', 'registrationDate', 'year']);
+      final power = _readVehicleNumber(data['powerHP'] ?? data['powerHp'] ?? data['powerCV']);
+      final displacement = _readVehicleNumber(data['displacementCcm'] ?? data['displacementCC'] ?? data['engineDisplacement']);
+      final gearbox = valueOf(['gearboxType', 'transmission']).toLowerCase();
+      final fuelValue = valueOf(['fuelType', 'fuel']).toLowerCase();
+      final bodyValue = valueOf(['bodyType', 'bodyStyle']).toLowerCase();
+      final environmentalValue = valueOf(['environmentalLabel', 'dgtLabel', 'environmentalSticker']).toUpperCase();
+      final apiVin = valueOf(['vin', 'chassisNumber']);
+      final apiPlate = valueOf(['plate', 'registrationNumber']);
+
+      if (brandName.isNotEmpty) {
+        final wantedBrand = _normalizeCatalogName(brandName);
+        final brand = brands.where((row) => _normalizeCatalogName(row['name'].toString()) == wantedBrand).firstOrNull;
+        if (brand != null) {
+          final brandId = (brand['id'] as num).toInt();
+          setState(() => selectedBrandId = brandId);
+          await loadModels(brandId);
+          if (!mounted) return;
+          final wantedModel = _normalizeCatalogName(modelName);
+          final model = models.where((row) => _normalizeCatalogName(row['name'].toString()) == wantedModel).firstOrNull;
+          if (model != null) setState(() => selectedModelId = (model['id'] as num).toInt());
+        }
+      }
+
+      setState(() {
+        if (firstDate.length >= 4) {
+          final yearMatch = RegExp(r'^(\d{4})').firstMatch(firstDate);
+          if (yearMatch != null) year.text = yearMatch.group(1)!;
+        }
+        if (power != null) cv.text = '$power';
+        if (displacement != null) cilindradaCc.text = '$displacement';
+        if (versionName.isNotEmpty) version.text = versionName;
+        if (apiVin.isNotEmpty) vin.text = apiVin.toUpperCase();
+        if (apiPlate.isNotEmpty) matricula.text = apiPlate.toUpperCase();
+        if (gearbox.contains('manual')) {
+          transmission = 'Manual';
+        } else if (gearbox.contains('dsg')) {
+          transmission = 'Automático (DSG)';
+        } else if (gearbox.contains('auto')) {
+          transmission = 'Automático';
+        }
+        if (fuelValue.contains('diesel') || fuelValue.contains('diésel')) {
+          fuel = 'Diésel';
+        } else if (fuelValue.contains('petrol') || fuelValue.contains('gasoline') || fuelValue.contains('gasolina')) {
+          fuel = 'Gasolina';
+        } else if (fuelValue.contains('electric') || fuelValue.contains('eléctrico')) {
+          fuel = 'Eléctrico';
+        } else if (fuelValue.contains('hybrid') || fuelValue.contains('híbrido')) {
+          fuel = 'Híbrido';
+        }
+        if (bodyValue.contains('suv')) {
+          bodyType = 'SUV';
+        } else if (bodyValue.contains('hatch') || bodyValue.contains('compact')) {
+          bodyType = 'Compacto';
+        } else if (bodyValue.contains('estate') || bodyValue.contains('wagon') || bodyValue.contains('familiar')) {
+          bodyType = 'Familiar';
+        } else if (bodyValue.contains('coupe') || bodyValue.contains('coupé')) {
+          bodyType = 'Coupé';
+        } else if (bodyValue.contains('convertible') || bodyValue.contains('cabrio')) {
+          bodyType = 'Cabrio';
+        } else if (bodyValue.contains('van') || bodyValue.contains('furgoneta')) {
+          bodyType = 'Furgoneta';
+        } else if (bodyValue.contains('pickup')) {
+          bodyType = 'Pickup';
+        } else if (bodyValue.contains('sedan') || bodyValue.contains('saloon') || bodyValue.contains('berlina')) {
+          bodyType = 'Berlina';
+        }
+        if (environmentalLabels.contains(environmentalValue)) etiquetaMedioambiental = environmentalValue;
+        final doorCount = _readVehicleNumber(data['doors']);
+        final seatCount = _readVehicleNumber(data['seats'] ?? data['seatingCapacity']);
+        if (doorCount != null) doors.text = '$doorCount';
+        if (seatCount != null) seats.text = '$seatCount';
+        final exteriorColor = valueOf(['color', 'exteriorColor']);
+        if (exteriorColor.isNotEmpty) color.text = exteriorColor;
+        final emissions = valueOf(['emissionsStandard', 'emissionStandard']);
+        if (emissions.isNotEmpty) emissionsStandard.text = emissions;
+      });
+      final brandMatched = selectedBrandId != null;
+      final modelMatched = selectedModelId != null;
+      final missing = <String>[];
+      if (brandName.isNotEmpty && !brandMatched) missing.add('selecciona la marca');
+      if (modelName.isNotEmpty && !modelMatched) missing.add('selecciona el modelo del catálogo');
+      final note = missing.isEmpty
+          ? 'Datos técnicos encontrados. Revisa la ficha antes de publicar.'
+          : 'Datos encontrados. Además, ' + missing.join(' y ') + ' para vincularlo al catálogo de AUTOMOTORS.';
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(note), duration: const Duration(seconds: 6)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo rellenar el vehículo: ' + error.toString().replaceFirst('Exception: ', '')), duration: const Duration(seconds: 7)),
+      );
+    } finally {
+      if (mounted) setState(() => vehicleLookupBusy = false);
     }
   }
 
@@ -6904,6 +7054,50 @@ class _AddCarPageState extends State<AddCarPage> {
             ),
             const Divider(color: Color(0xFF5C4A22)),
             const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: panel,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: gold.withValues(alpha: .45)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Row(children: [
+                  Icon(Icons.manage_search_rounded, color: gold),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Rellenar ficha automáticamente', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                ]),
+                const SizedBox(height: 6),
+                const Text('Introduce la matrícula o el VIN y buscaremos los datos técnicos disponibles. Podrás revisarlos y corregirlos antes de publicar.', style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 12)),
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(child: TextField(
+                    controller: matricula,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(labelText: 'Matrícula', hintText: '1234 ABC'),
+                    onChanged: (_) => setState(() {}),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextField(
+                    controller: vin,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 17,
+                    decoration: const InputDecoration(labelText: 'VIN / bastidor', hintText: '17 caracteres', counterText: ''),
+                    onChanged: (_) => setState(() {}),
+                  )),
+                ]),
+                const SizedBox(height: 10),
+                SizedBox(width: double.infinity, child: FilledButton.icon(
+                  onPressed: vehicleLookupBusy || (matricula.text.trim().isEmpty == vin.text.trim().isEmpty) ? null : lookupVehicle,
+                  icon: vehicleLookupBusy
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                      : const Icon(Icons.auto_fix_high_rounded),
+                  label: Text(vehicleLookupBusy ? 'Buscando datos…' : 'Buscar y rellenar ficha'),
+                  style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
+                )),
+              ]),
+            ),
+            const SizedBox(height: 14),
             DropdownButtonFormField<int>(
               initialValue: selectedBrandId,
               decoration: const InputDecoration(labelText: 'Marca'),
