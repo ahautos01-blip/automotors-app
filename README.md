@@ -14,7 +14,7 @@ Los cuatro productos son suscripciones auto-renovables mensuales que se compran 
 
 ## Arquitectura prevista
 
-- Flutter: catálogo de productos, compra nativa, escucha del resultado, restauración y presentación del estado de acceso.
+- Flutter: dependencia oficial `in_app_purchase` añadida y servicio inicial `lib/services/store_purchase_service.dart` para consultar productos y escuchar resultados. El checkout está bloqueado deliberadamente (`checkoutEnabled = false`) hasta desplegar y probar el verificador real de servidor.
 - iOS: StoreKit/App Store mediante el plugin Flutter de compras dentro de la aplicación.
 - Android: Google Play Billing mediante el plugin Flutter de compras dentro de la aplicación.
 - Supabase Edge Functions: verificación de transacciones contra las APIs oficiales de Apple y Google; recepción de notificaciones de servidor.
@@ -25,7 +25,7 @@ Los cuatro productos son suscripciones auto-renovables mensuales que se compran 
 
 Los botones de compra siguen desactivados y no se procesan cobros reales. La migración `supabase/migrations/202610230001_ad_pack_payments.sql` define la base para el estado de suscripciones nativas y el registro de eventos de tienda. Revisar y aplicar primero en un entorno de pruebas; no ejecutar a ciegas en producción.
 
-La aplicación todavía necesita la integración Flutter de compras, la validación de servidor, las notificaciones de Apple/Google, el control atómico del límite de anuncios activos y pruebas completas en sandbox.
+La aplicación todavía necesita conectar el servicio de compras a la interfaz, implementar y desplegar `verify-store-purchase` con credenciales oficiales de Apple/Google, procesar notificaciones de renovación/cancelación/reembolso, aplicar el límite de anuncios activos en el servidor y completar las pruebas en sandbox. No se deben habilitar compras reales hasta terminar esos pasos.
 
 ## Reglas de acceso que debe aplicar el servidor
 
