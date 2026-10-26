@@ -3408,6 +3408,44 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
+  Future<void> signOutFromProfile() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Quieres cerrar tu sesión de AUTOMOTORS?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: gold,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await supabase.auth.signOut();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Has cerrado sesión.')),
+      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo cerrar sesión. Inténtalo de nuevo.')),
+      );
+    }
+  }
+
   Future<void> loadProfile() async {
     try {
       final user = supabase.auth.currentUser;
@@ -3668,7 +3706,30 @@ class _ProfilePageState extends State<ProfilePage> {
             const Text('DATOS PERSONALES', style: TextStyle(color: gold, fontWeight: FontWeight.bold)), _readOnlyRow('Nombre y apellidos', name.text), _readOnlyRow('Teléfono', phone.text), _readOnlyRow('Ciudad', city.text), _readOnlyRow('Provincia', province.text),
             if (accountType == 'empresa') _readOnlyRow('Razón social', businessName.text),
             if (isProfessional) ...[_readOnlyRow('Identificación fiscal', fiscalId.text), _readOnlyRow('Dirección fiscal', address.text)],
-            const SizedBox(height: 18), FilledButton.icon(onPressed: () => setState(() => editing = true), icon: const Icon(Icons.edit), label: const Text('Editar perfil'), style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black)),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => setState(() => editing = true),
+                icon: const Icon(Icons.edit),
+                label: const Text('Editar perfil'),
+                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: signOutFromProfile,
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Cerrar sesión'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
           ]),
     );
   }
