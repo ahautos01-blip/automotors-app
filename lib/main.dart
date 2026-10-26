@@ -3515,12 +3515,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           Text('Ficha técnica', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 14),
-        if (car.matricula != null && car.matricula!.trim().isNotEmpty) ...[
-          _technicalSectionLabel('Identificación'),
-          _technicalRow(Icons.confirmation_number_outlined, 'Matrícula', car.matricula!),
-        ],
-        if (car.vin?.trim().isNotEmpty == true)
-          _technicalRow(Icons.qr_code_2_outlined, 'Número VIN / bastidor', car.vin!),
         if (car.version?.trim().isNotEmpty == true)
           _technicalRow(Icons.badge_outlined, 'Versión', car.version!),
         if (car.cv != null || car.cilindradaCc != null || car.transmission?.trim().isNotEmpty == true) ...[
@@ -3889,7 +3883,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, vin, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, status, year, km, price, fuel, description, phone, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, tank_liters, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .inFilter('status', ['published', 'reserved', 'sold'])
           .maybeSingle();
@@ -3930,8 +3924,6 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         fuel: raw['fuel']?.toString() ?? '',
         description: raw['description']?.toString() ?? '',
         phone: raw['phone']?.toString() ?? '',
-        matricula: raw['matricula']?.toString(),
-        vin: raw['vin']?.toString(),
         cv: (raw['cv'] as num?)?.toInt(),
         cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
         etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
@@ -3946,13 +3938,6 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
         consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
         emissionsStandard: raw['emissions_standard']?.toString(),
-        lengthMm: (raw['length_mm'] as num?)?.toInt(),
-        widthMm: (raw['width_mm'] as num?)?.toInt(),
-        heightMm: (raw['height_mm'] as num?)?.toInt(),
-        wheelbaseMm: (raw['wheelbase_mm'] as num?)?.toInt(),
-        weightKg: (raw['weight_kg'] as num?)?.toInt(),
-        trunkLiters: (raw['trunk_liters'] as num?)?.toInt(),
-        tankLiters: (raw['tank_liters'] as num?)?.toInt(),
         equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
         photos: photoBytes,
         listingId: raw['id']?.toString(),
