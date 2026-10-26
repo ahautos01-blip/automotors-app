@@ -2333,6 +2333,104 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
   );
 }
 
+class SaveListingIdButton extends StatefulWidget {
+  final String? listingId;
+  const SaveListingIdButton({super.key, required this.listingId});
+
+  @override
+  State<SaveListingIdButton> createState() => _SaveListingIdButtonState();
+}
+
+class _SaveListingIdButtonState extends State<SaveListingIdButton> {
+  bool isSaved = false;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final id = widget.listingId;
+    if (user == null || id == null || id.isEmpty) return;
+    try {
+      final row = await Supabase.instance.client
+          .from('saved_vehicles')
+          .select('listing_id')
+          .eq('user_id', user.id)
+          .eq('listing_id', id)
+          .maybeSingle();
+      if (mounted) setState(() => isSaved = row != null);
+    } catch (_) {
+      // El perfil sigue funcionando si favoritos no está disponible.
+    }
+  }
+
+  Future<void> _toggle() async {
+    if (loading) return;
+    var user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+      user = Supabase.instance.client.auth.currentUser;
+    }
+    final id = widget.listingId;
+    if (user == null || id == null || id.isEmpty) return;
+    setState(() => loading = true);
+    try {
+      final db = Supabase.instance.client;
+      if (isSaved) {
+        await db.from('saved_vehicles')
+            .delete().eq('user_id', user.id).eq('listing_id', id);
+      } else {
+        await db.from('saved_vehicles').insert({
+          'user_id': user.id,
+          'listing_id': id,
+        });
+      }
+      if (!mounted) return;
+      setState(() => isSaved = !isSaved);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(isSaved
+            ? 'Vehículo guardado en favoritos.'
+            : 'Vehículo eliminado de favoritos.'),
+      ));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo actualizar favoritos. Inténtalo de nuevo.'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.black.withValues(alpha: .72),
+    shape: const CircleBorder(),
+    child: IconButton(
+      tooltip: isSaved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      visualDensity: VisualDensity.compact,
+      onPressed: loading ? null : _toggle,
+      icon: loading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+            )
+          : Icon(
+              isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: isSaved ? Colors.redAccent : gold,
+              size: 21,
+            ),
+    ),
+  );
+}
+
 class SavedVehiclesPage extends StatefulWidget {
   final List<Car> cars;
   final void Function(Car) onOpenCar;
@@ -3465,6 +3563,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   if (sold) Positioned.fill(child: Container(color: Colors.black.withValues(alpha: .15))),
                   if ((label ?? '').isNotEmpty && label!.toLowerCase() != 'sin etiqueta' && !sold)
                     Positioned(left: 5, top: 5, child: EnvironmentalSticker(label: label, size: 34)),
+                  if (!sold && !isOwnProfile)
+                    Positioned(
+                      right: 7,
+                      top: 7,
+                      child: SaveListingIdButton(listingId: listing['id']?.toString()),
+                    ),
                   if (sold || isReserved) Positioned(top: 12, left: 0, right: 0, child: Transform.rotate(
                     angle: -.10,
                     child: Container(
