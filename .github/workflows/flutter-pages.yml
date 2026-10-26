@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'lib/**'
+      - 'test/**'
       - 'web/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
@@ -36,6 +37,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
 
       - name: Build web app
         run: flutter build web --release --base-href /automotors-app/
