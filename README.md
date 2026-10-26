@@ -1,31 +1,51 @@
-# AUTOMOTORS — app Android + iPhone, pagos preparados (sin cobros reales)
+# AUTOMOTORS — app Android + iPhone, suscripciones nativas (sin cobros reales)
 
-## Reglas comerciales acordadas
+## Modelo comercial acordado
+
+Los cuatro productos son suscripciones auto-renovables mensuales que se compran exclusivamente dentro de la aplicación, mediante App Store en iOS y Google Play Billing en Android.
+
 - Primeras 5 publicaciones gratuitas por usuario.
-- Pack 10 anuncios: 59 €.
-- Pack 15 anuncios: 75 €.
-- Pack 20 anuncios: 99 €.
-- AUTOMOTORS PRO: 199 €/mes, publicaciones ilimitadas mientras la suscripción esté activa. El precio al cliente es 199 € en ambas tiendas; las comisiones se descuentan de ese importe, por lo que no se garantiza recibir 199 € netos.
-- Liquidaciones: Apple y Google pagan según sus propios calendarios a la cuenta bancaria de autónomo registrada en cada plataforma. No se guardan datos bancarios en la app.
+- PACK 10: 59 €/mes; hasta 10 anuncios activos mientras esté vigente.
+- PACK 15: 75 €/mes; hasta 15 anuncios activos mientras esté vigente.
+- PACK 20: 99 €/mes; hasta 20 anuncios activos mientras esté vigente.
+- AUTOMOTORS PRO: 199 €/mes; anuncios ilimitados mientras esté vigente.
+- Los precios son precios objetivo para España y deben confirmarse en las consolas de las tiendas. Las comisiones se descuentan de los ingresos; no se garantiza recibir el precio íntegro.
+- Las tiendas liquidan las ventas según sus calendarios a la cuenta bancaria configurada por el titular en cada plataforma. No se guardan datos bancarios en AUTOMOTORS.
 
-## Contenido
-- `lib/main.dart`: código Flutter actual con los planes y sus precios visibles. Las acciones de compra están intencionadamente desactivadas; no cobra ni activa créditos.
-- `supabase/migrations/202610230001_ad_pack_payments.sql`: tablas base para pedidos/créditos y estado de suscripción. Revisar con el esquema real antes de ejecutar.
-- `ios/PRODUCTS.md`: productos que se deben crear en App Store Connect.
-- `android/PRODUCTS.md`: productos que se deben crear en Google Play Console.
+## Arquitectura prevista
 
-## Lo que aún no está implementado
-Este paquete NO es una integración de pago lista para producción. Falta añadir y probar `in_app_purchase`/StoreKit y Google Play Billing en Flutter; configurar productos en cada tienda; implementar funciones backend para validar transacciones Apple y purchase tokens Google; procesar notificaciones de renovaciones, cancelaciones y reembolsos; y aplicar el control de créditos de forma atómica al publicar. Hasta entonces, la app solo informa de los planes y no permite comprar.
+- Flutter: catálogo de productos, compra nativa, escucha del resultado, restauración y presentación del estado de acceso.
+- iOS: StoreKit/App Store mediante el plugin Flutter de compras dentro de la aplicación.
+- Android: Google Play Billing mediante el plugin Flutter de compras dentro de la aplicación.
+- Supabase Edge Functions: verificación de transacciones contra las APIs oficiales de Apple y Google; recepción de notificaciones de servidor.
+- PostgreSQL/Supabase: estado de suscripción por usuario, tienda y producto; registro idempotente de eventos; control de límites de publicación.
+- El cliente nunca decide que una compra está pagada. Solo el servidor activa, renueva, suspende o revoca permisos tras validar la fuente oficial.
 
-## Pasos seguros
-1. Crear Apple Developer y Google Play Console con los datos reales del autónomo.
-2. Crear los 4 productos en cada tienda con los IDs de los archivos de producto. Revisar precios finales y fiscalidad antes de publicar.
-3. Revisar la migración SQL en un proyecto de pruebas y con copia de seguridad. No ejecutarla directamente en producción.
-4. Implementar validación en servidor con credenciales guardadas como secretos, nunca en `main.dart`.
-5. Añadir verificación idempotente para que una transacción no conceda créditos dos veces.
-6. Conectar publicación de anuncios con créditos: 5 gratis; después, un crédito por anuncio o PRO activo. Este control debe existir en base de datos, no solo en la interfaz.
-7. Probar sandbox/TestFlight y licencia de pruebas de Google: compras aprobadas, pendientes, canceladas, repetidas, reembolsadas, expiración de PRO y restauración de compras.
-8. Activar ventas reales únicamente tras completar las pruebas y confirmar las reglas vigentes de Apple/Google para España.
+## Estado actual
+
+Los botones de compra siguen desactivados y no se procesan cobros reales. La migración `supabase/migrations/202610230001_ad_pack_payments.sql` define la base para el estado de suscripciones nativas y el registro de eventos de tienda. Revisar y aplicar primero en un entorno de pruebas; no ejecutar a ciegas en producción.
+
+La aplicación todavía necesita la integración Flutter de compras, la validación de servidor, las notificaciones de Apple/Google, el control atómico del límite de anuncios activos y pruebas completas en sandbox.
+
+## Reglas de acceso que debe aplicar el servidor
+
+1. Las primeras cinco publicaciones gratuitas se calculan por cuenta de usuario, no por dispositivo.
+2. PACK 10/15/20 permiten hasta el número correspondiente de anuncios activos mientras la suscripción tenga acceso vigente.
+3. AUTOMOTORS PRO permite anuncios ilimitados mientras la suscripción esté activa o en el periodo de gracia confirmado por la tienda.
+4. Cancelar la renovación conserva el acceso hasta la fecha de expiración confirmada.
+5. Compras pendientes no habilitan el plan. Reembolsos, revocaciones y expiraciones actualizan el acceso.
+6. El límite debe comprobarse y aplicarse en el servidor al publicar, para evitar publicaciones simultáneas que excedan el plan.
+7. Las transacciones y notificaciones se procesan idempotentemente para evitar conceder permisos dos veces.
+
+## Configuración pendiente de las tiendas
+
+1. Crear los cuatro productos como suscripciones mensuales auto-renovables en App Store Connect y Google Play Console.
+2. Confirmar IDs, precios, periodos, grupos de suscripción y ofertas/base plans.
+3. Configurar credenciales de Apple y Google como secretos de Supabase. Nunca colocarlas en el cliente Flutter ni compartirlas por chat.
+4. Configurar App Store Server Notifications V2 y Google Play Real-time developer notifications.
+5. Probar compras aprobadas, pendientes, fallidas, restauradas, renovaciones, cancelaciones, periodos de gracia, expiraciones, reembolsos y revocaciones.
+6. Activar ventas reales únicamente después de completar pruebas y revisar las normas vigentes de ambas tiendas para España.
 
 ## Seguridad
-No compartas claves secretas, archivos de firma, credenciales de tiendas ni datos bancarios. No introduzcas claves privadas en Flutter. El cliente nunca debe decidir por sí solo que una compra está pagada.
+
+No compartir claves privadas, archivos de firma, credenciales de tienda ni datos bancarios. No habilitar permisos por valores enviados por el cliente. El backend debe verificar con Apple o Google antes de actualizar los permisos del usuario.
