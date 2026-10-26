@@ -4477,14 +4477,6 @@ class _ProfilePageState extends State<ProfilePage> {
           }
           if (text.isEmpty) return null;
 
-          if (numeric) {
-            final parsed = double.tryParse(
-              text.replaceAll('.', '').replaceAll(',', '.'),
-            );
-            if (parsed == null) return 'Introduce un número válido';
-            if (parsed < 0) return 'El valor no puede ser negativo';
-          }
-
           if (label.startsWith('Teléfono')) {
             final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
             if (digits.length < 9 || digits.length > 15) {
