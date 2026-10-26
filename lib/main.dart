@@ -2599,6 +2599,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   bool isFavorite = false;
   bool favoriteLoading = false;
   int currentPhotoIndex = 0;
+  late final PageController _photoController = PageController();
+
+  @override
+  void dispose() {
+    _photoController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -2977,6 +2984,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ? Stack(
               children: [
                 PageView.builder(
+                  controller: _photoController,
                   itemCount: car.photos.length,
                   onPageChanged: (index) {
                     if (mounted && currentPhotoIndex != index) {
@@ -3049,6 +3057,49 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           : const Center(
               child: Icon(Icons.directions_car, size: 100, color: gold),
             ),
+    );
+  }
+
+  Widget _photoThumbnails() {
+    if (car.photos.length < 2) return const SizedBox.shrink();
+    return SizedBox(
+      height: 74,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(top: 10),
+        itemCount: car.photos.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 9),
+        itemBuilder: (context, index) {
+          final selected = currentPhotoIndex == index;
+          return Semantics(
+            button: true,
+            label: 'Ver foto ${index + 1} de ${car.photos.length}',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                _photoController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: 92,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected ? gold : Colors.white24,
+                    width: selected ? 2 : 1,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Image.memory(car.photos[index], fit: BoxFit.cover),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -3548,7 +3599,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                       children: [
                         Expanded(
                           flex: 6,
-                          child: _gallery(context, height: 430),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _gallery(context, height: 430),
+                              _photoThumbnails(),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 24),
                         Expanded(
@@ -3559,6 +3616,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     )
                   else ...[
                     _gallery(context, height: constraints.maxWidth < 500 ? 270 : 360),
+                    _photoThumbnails(),
                     const SizedBox(height: 20),
                     _vehicleInformation(context),
                   ],
