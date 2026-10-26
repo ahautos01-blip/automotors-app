@@ -2924,6 +2924,32 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _quickSpec(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF20252A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: gold),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _vehicleInformation(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2946,6 +2972,23 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ),
         const SizedBox(height: 14),
+        // Resumen visual de los datos clave del vehículo.
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (car.year > 0)
+              _quickSpec(Icons.calendar_today_outlined, '${car.year}'),
+            _quickSpec(Icons.speed_rounded, '${_formatKm(car.km)} km'),
+            if (car.fuel.trim().isNotEmpty)
+              _quickSpec(Icons.local_gas_station_outlined, car.fuel),
+            if (car.cv != null)
+              _quickSpec(Icons.bolt_outlined, '${car.cv} CV'),
+            if (car.transmission?.trim().isNotEmpty == true)
+              _quickSpec(Icons.settings_outlined, car.transmission!.trim()),
+          ],
+        ),
+        const SizedBox(height: 16),
         Row(children: [
           Expanded(child: OutlinedButton.icon(
             onPressed: () => _copyListingSummary(context),
