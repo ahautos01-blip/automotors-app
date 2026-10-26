@@ -582,7 +582,7 @@ class VehicleComparisonPage extends StatelessWidget {
   String _price(double value) =>
       '\${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
   String _value(Object? value, [String suffix = '']) =>
-      value == null || value.toString().trim().isEmpty ? 'No indicado' : '\$value\$suffix';
+      value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
 
   @override
   Widget build(BuildContext context) {
