@@ -477,6 +477,43 @@ class _ReservedRibbon extends StatelessWidget {
   );
 }
 
+class VehicleSearchResultsPage extends StatelessWidget {
+  final List<Car> cars;
+  final void Function(Car) onOpenCar;
+  const VehicleSearchResultsPage({super.key, required this.cars, required this.onOpenCar});
+
+  String priceText(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => '.')} €';
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Resultados de búsqueda')),
+    body: cars.isEmpty
+      ? const Center(child: Padding(padding: EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.search_off_rounded, size: 54, color: gold), SizedBox(height: 14),
+          Text('No hay vehículos con estos filtros', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+          SizedBox(height: 8), Text('Cambia o limpia alguno de los filtros e inténtalo de nuevo.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)),
+        ])))
+      : Column(children: [
+          Padding(padding: const EdgeInsets.all(16), child: Align(alignment: Alignment.centerLeft, child: Text('${cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70)))),
+          Expanded(child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), itemCount: cars.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final car = cars[index];
+              return Card(color: panel, clipBehavior: Clip.antiAlias, child: InkWell(onTap: () => onOpenCar(car), child: Row(children: [
+                SizedBox(width: 128, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFF292929), child: const Icon(Icons.directions_car, size: 42, color: gold))),
+                Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  const SizedBox(height: 6), Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
+                  const SizedBox(height: 6), Text('${car.year} · ${car.km} km · ${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ]))),
+              ])));
+            },
+          )),
+        ]),
+  );
+}
+
 class AutomotorsApp extends StatelessWidget {
   const AutomotorsApp({super.key});
 
@@ -526,6 +563,9 @@ class _HomePageState extends State<HomePage> {
   double? maxPrice;
   int? minYear;
   int? maxKm;
+  String selectedTransmission = 'Todas', selectedBodyType = 'Todos', selectedLabel = 'Todas', selectedColor = '';
+  int? minCv, maxCv, minCc, maxDoors, minSeats;
+  final Set<String> selectedEquipmentFilters = {};
 
   final List<Car> cars = [];
   bool loadingCars = true;
@@ -640,14 +680,23 @@ class _HomePageState extends State<HomePage> {
       final matchesMaxPrice = maxPrice == null || car.price <= maxPrice!;
       final matchesMinYear = minYear == null || car.year >= minYear!;
       final matchesMaxKm = maxKm == null || car.km <= maxKm!;
+      final matchesTransmission = selectedTransmission == 'Todas' || car.transmission == selectedTransmission;
+      final matchesBodyType = selectedBodyType == 'Todos' || car.bodyType == selectedBodyType;
+      final matchesLabel = selectedLabel == 'Todas' || car.etiquetaMedioambiental == selectedLabel;
+      final matchesColor = selectedColor.trim().isEmpty || (car.color ?? '').toLowerCase().contains(selectedColor.trim().toLowerCase());
+      final matchesMinCv = minCv == null || (car.cv != null && car.cv! >= minCv!);
+      final matchesMaxCv = maxCv == null || (car.cv != null && car.cv! <= maxCv!);
+      final matchesMinCc = minCc == null || (car.cilindradaCc != null && car.cilindradaCc! >= minCc!);
+      final matchesMaxDoors = maxDoors == null || (car.doors != null && car.doors! <= maxDoors!);
+      final matchesMinSeats = minSeats == null || (car.seats != null && car.seats! >= minSeats!);
+      final matchesEquipment = selectedEquipmentFilters.every((item) => car.equipment.contains(item));
       return matchesSearch &&
           matchesBrand &&
           matchesModel &&
           matchesFuel &&
           matchesMinPrice &&
           matchesMaxPrice &&
-          matchesMinYear &&
-          matchesMaxKm;
+          matchesMinYear && matchesMaxKm && matchesTransmission && matchesBodyType && matchesLabel && matchesColor && matchesMinCv && matchesMaxCv && matchesMinCc && matchesMaxDoors && matchesMinSeats && matchesEquipment;
     }).toList();
   }
 
@@ -660,6 +709,14 @@ class _HomePageState extends State<HomePage> {
         TextEditingController(text: minYear?.toString() ?? '');
     final maxKmController =
         TextEditingController(text: maxKm?.toString() ?? '');
+    final minCvController = TextEditingController(text: minCv?.toString() ?? '');
+    final maxCvController = TextEditingController(text: maxCv?.toString() ?? '');
+    final minCcController = TextEditingController(text: minCc?.toString() ?? '');
+    final doorsController = TextEditingController(text: maxDoors?.toString() ?? '');
+    final seatsController = TextEditingController(text: minSeats?.toString() ?? '');
+    final colorController = TextEditingController(text: selectedColor);
+    var transmission = selectedTransmission, bodyType = selectedBodyType, label = selectedLabel;
+    final equipmentFilters = Set<String>.from(selectedEquipmentFilters);
     var fuel = selectedFuel;
     var brand = selectedBrand;
     var model = selectedModel;
@@ -762,6 +819,22 @@ class _HomePageState extends State<HomePage> {
                       decoration: const InputDecoration(labelText: 'Máximo kilómetros'),
                     )),
                   ]),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(value: transmission, decoration: const InputDecoration(labelText: 'Transmisión'), items: const ['Todas','Manual','Automático','Automático (DSG)'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => transmission = v); }),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(value: bodyType, decoration: const InputDecoration(labelText: 'Tipo de carrocería'), items: const ['Todos','Berlina','Compacto','SUV','Familiar','Coupé','Cabrio','Monovolumen','Furgoneta','Pickup'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => bodyType = v); }),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(value: label, decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: const ['Todas','Sin etiqueta','B','C','ECO','CERO'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => label = v); }),
+                  const SizedBox(height: 12),
+                  TextField(controller: colorController, decoration: const InputDecoration(labelText: 'Color exterior')),
+                  const SizedBox(height: 12),
+                  Row(children: [Expanded(child: TextField(controller: minCvController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CV desde'))), const SizedBox(width: 12), Expanded(child: TextField(controller: maxCvController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CV hasta')))]),
+                  const SizedBox(height: 12),
+                  Row(children: [Expanded(child: TextField(controller: minCcController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cilindrada mínima (cc)'))), const SizedBox(width: 12), Expanded(child: TextField(controller: doorsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Máximo de puertas')))]),
+                  TextField(controller: seatsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Plazas mínimas')),
+                  const SizedBox(height: 8),
+                  const Text('Equipamiento', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(item), value: equipmentFilters.contains(item), activeColor: gold, onChanged: (checked) => setSheetState(() { if (checked == true) { equipmentFilters.add(item); } else { equipmentFilters.remove(item); } }))),
                   const SizedBox(height: 22),
                   Row(children: [
                     Expanded(child: OutlinedButton(
@@ -774,6 +847,7 @@ class _HomePageState extends State<HomePage> {
                           maxPrice = null;
                           minYear = null;
                           maxKm = null;
+                          selectedTransmission = 'Todas'; selectedBodyType = 'Todos'; selectedLabel = 'Todas'; selectedColor = ''; minCv = null; maxCv = null; minCc = null; maxDoors = null; minSeats = null; selectedEquipmentFilters.clear();
                         });
                         Navigator.pop(sheetContext);
                       },
@@ -797,8 +871,10 @@ class _HomePageState extends State<HomePage> {
                           maxPrice = parseDouble(maxPriceController.text);
                           minYear = parseInt(minYearController.text);
                           maxKm = parseInt(maxKmController.text);
+                          selectedTransmission = transmission; selectedBodyType = bodyType; selectedLabel = label; selectedColor = colorController.text; minCv = parseInt(minCvController.text); maxCv = parseInt(maxCvController.text); minCc = parseInt(minCcController.text); maxDoors = parseInt(doorsController.text); minSeats = parseInt(seatsController.text); selectedEquipmentFilters..clear()..addAll(equipmentFilters);
                         });
                         Navigator.pop(sheetContext);
+                        Navigator.push<void>(context, MaterialPageRoute(builder: (_) => VehicleSearchResultsPage(cars: filteredCars, onOpenCar: openCarDetails)));
                       },
                       child: const Text('Ver resultados'),
                     )),
@@ -813,7 +889,7 @@ class _HomePageState extends State<HomePage> {
     minPriceController.dispose();
     maxPriceController.dispose();
     minYearController.dispose();
-    maxKmController.dispose();
+    maxKmController.dispose(); minCvController.dispose(); maxCvController.dispose(); minCcController.dispose(); doorsController.dispose(); seatsController.dispose(); colorController.dispose();
   }
 
   String euros(double price) =>
