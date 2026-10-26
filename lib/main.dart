@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -3481,7 +3482,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final phone = profile?['phone']?.toString() ?? '';
         final digits = validWhatsAppDigits(phone);
         final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
-        return SingleChildScrollView(child: Column(children: [
+        return ScrollConfiguration(
+          behavior: MaterialScrollBehavior().copyWith(
+            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+          ),
+          child: SingleChildScrollView(
+            primary: true,
+            physics: const ClampingScrollPhysics(),
+            child: Column(children: [
           if (isVerifiedBusiness)
             SizedBox(
               height: 178,
@@ -3679,7 +3687,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
               ]))),
             ],
           ),
-        ]));
+        ]))),
       },
     ),
   );
