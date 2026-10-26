@@ -2024,8 +2024,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     backgroundColor: const Color(0xFF080D11),
     appBar: AppBar(
       backgroundColor: const Color(0xFF080D11),
-      title: const Text('AUTOMOTORS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: .7)),
-      centerTitle: true,
+      foregroundColor: gold,
+      automaticallyImplyLeading: true,
+      title: null,
+      centerTitle: false,
     ),
     body: FutureBuilder<Map<String, dynamic>>(
       future: dataFuture,
@@ -2102,7 +2104,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     Text(displayType, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     if (finalCity(profile) is Widget) finalCity(profile),
                   ])),
-                  if (digits != null) IconButton(
+                  if (supabase.auth.currentUser?.id != widget.ownerId && digits != null) IconButton(
                     tooltip: 'WhatsApp',
                     onPressed: () async {
                       final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
@@ -2141,6 +2143,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     ),
                   ),
                 ],
+                if (supabase.auth.currentUser?.id != widget.ownerId) ...[
                 const SizedBox(height: 17),
                 Row(children: [
                   Expanded(child: OutlinedButton.icon(
@@ -2192,6 +2195,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 12)),
                   )),
                 ]),
+                ],
               ]),
             ),
           ),
