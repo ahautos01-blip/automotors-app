@@ -904,6 +904,85 @@ class _HomePageState extends State<HomePage> {
     }).toList();
   }
 
+  Future<void> saveCurrentSearch() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+    }
+    final nameController = TextEditingController(
+      text: [
+        if (selectedBrand != 'Todas') selectedBrand,
+        if (selectedModel != 'Todos') selectedModel,
+        if (selectedFuel != 'Todos') selectedFuel,
+      ].join(' ').trim(),
+    );
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Guardar búsqueda'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          maxLength: 80,
+          decoration: const InputDecoration(
+            labelText: 'Nombre de la búsqueda',
+            hintText: 'Ej. SUV diésel hasta 20.000 €',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final value = nameController.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    if (name == null || !mounted) return;
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) return;
+    try {
+      await Supabase.instance.client.from('saved_vehicle_searches').insert({
+        'user_id': currentUser.id,
+        'name': name,
+        'criteria': {
+          'brand': selectedBrand,
+          'model': selectedModel,
+          'fuel': selectedFuel,
+          'min_price': minPrice,
+          'max_price': maxPrice,
+          'min_year': minYear,
+          'max_km': maxKm,
+          'transmission': selectedTransmission,
+          'body_type': selectedBodyType,
+          'label': selectedLabel,
+          'color': selectedColor,
+          'min_cv': minCv,
+          'max_cv': maxCv,
+          'min_cc': minCc,
+          'max_doors': maxDoors,
+          'min_seats': minSeats,
+          'equipment': selectedEquipmentFilters.toList(),
+          'query': searchController.text.trim(),
+        },
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Búsqueda guardada en tu cuenta.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar la búsqueda. Inténtalo de nuevo.')),
+      );
+    }
+  }
+
   Future<void> openFilters() async {
     final minPriceController =
         TextEditingController(text: minPrice?.toStringAsFixed(0) ?? '');
@@ -1694,7 +1773,20 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           rangeField('Potencia máxima (CV)', maxCv, 0, 1000, (v)=>setState(()=>maxCv=v)),
           rangeField('Año mínimo', minYear, 1990, DateTime.now().year+1, (v)=>setState(()=>minYear=v)),
           rangeField('Año máximo', maxYear, 1990, DateTime.now().year+1, (v)=>setState(()=>maxYear=v)),
-          Align(alignment: Alignment.centerRight, child: TextButton(onPressed:()=>setState(()=>showFilters=false), child: const Text('Mostrar resultados', style: TextStyle(color:gold)))),
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(
+              onPressed: saveCurrentSearch,
+              icon: const Icon(Icons.notifications_active_outlined),
+              label: const Text('Guardar búsqueda'),
+              style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: FilledButton(
+              onPressed: () => setState(() => showFilters = false),
+              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
+              child: const Text('Ver resultados'),
+            )),
+          ]),
         ])))),
         Expanded(child: found.isEmpty ? const Center(child: Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color:Colors.white70))) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
