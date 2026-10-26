@@ -3679,7 +3679,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
               ]))),
             ],
           ),
-        ])));
+        ]));
       },
     ),
   );
