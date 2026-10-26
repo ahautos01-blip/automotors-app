@@ -4477,11 +4477,8 @@ class _ProfilePageState extends State<ProfilePage> {
           }
           if (text.isEmpty) return null;
 
-          if (label.startsWith('Teléfono')) {
-            final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
-            if (digits.length < 9 || digits.length > 15) {
-              return 'Introduce un teléfono válido (9–15 cifras)';
-            }
+          if (label.startsWith('Teléfono') && validWhatsAppDigits(text) == null) {
+            return 'Introduce un teléfono válido, incluido el prefijo internacional si procede';
           }
           return null;
         },
@@ -5683,15 +5680,22 @@ class _AddCarPageState extends State<AddCarPage> {
     );
   }
 
-  List<MapEntry<String, bool>> get listingQualityChecks => [
-    MapEntry('Marca y modelo seleccionados', selectedBrandId != null && selectedModelId != null),
-    MapEntry('Año indicado', year.text.trim().isNotEmpty && int.tryParse(year.text.trim()) != null),
-    MapEntry('Kilometraje indicado', km.text.trim().isNotEmpty && int.tryParse(km.text.trim()) != null),
-    MapEntry('Precio indicado', price.text.trim().isNotEmpty && double.tryParse(price.text.trim().replaceAll('.', '').replaceAll(',', '.')) != null),
-    MapEntry('Al menos 3 fotografías', photos.length >= 3),
-    MapEntry('Descripción detallada', description.text.trim().length >= 40),
-    MapEntry('Datos técnicos adicionales', cv.text.trim().isNotEmpty || cilindradaCc.text.trim().isNotEmpty || version.text.trim().isNotEmpty),
-  ];
+  List<MapEntry<String, bool>> get listingQualityChecks {
+    final yearValue = int.tryParse(year.text.trim());
+    final kmValue = int.tryParse(km.text.trim());
+    final priceValue = double.tryParse(
+      price.text.trim().replaceAll('.', '').replaceAll(',', '.'),
+    );
+    return [
+      MapEntry('Marca y modelo seleccionados', selectedBrandId != null && selectedModelId != null),
+      MapEntry('Año válido', yearValue != null && yearValue >= 1886 && yearValue <= DateTime.now().year + 1),
+      MapEntry('Kilometraje válido', kmValue != null && kmValue >= 0),
+      MapEntry('Precio válido', priceValue != null && priceValue > 0),
+      MapEntry('Al menos 3 fotografías', photos.length >= 3),
+      MapEntry('Descripción detallada', description.text.trim().length >= 40),
+      MapEntry('Datos técnicos adicionales', cv.text.trim().isNotEmpty || cilindradaCc.text.trim().isNotEmpty || version.text.trim().isNotEmpty),
+    ];
+  }
 
   Widget buildListingQualityCard() {
     final checks = listingQualityChecks;
