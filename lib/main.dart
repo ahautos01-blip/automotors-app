@@ -4471,8 +4471,25 @@ class _ProfilePageState extends State<ProfilePage> {
         keyboardType: keyboard,
         decoration: InputDecoration(labelText: label),
         validator: (value) {
-          if (requiredField && (value == null || value.trim().isEmpty)) {
+          final text = value?.trim() ?? '';
+          if (requiredField && text.isEmpty) {
             return 'Completa este campo';
+          }
+          if (text.isEmpty) return null;
+
+          if (numeric) {
+            final parsed = double.tryParse(
+              text.replaceAll('.', '').replaceAll(',', '.'),
+            );
+            if (parsed == null) return 'Introduce un número válido';
+            if (parsed < 0) return 'El valor no puede ser negativo';
+          }
+
+          if (label.startsWith('Teléfono')) {
+            final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
+            if (digits.length < 9 || digits.length > 15) {
+              return 'Introduce un teléfono válido (9–15 cifras)';
+            }
           }
           return null;
         },
@@ -5951,6 +5968,18 @@ class _AddCarPageState extends State<AddCarPage> {
     vin.dispose();
     cv.dispose();
     cilindradaCc.dispose();
+    version.dispose();
+    doors.dispose();
+    seats.dispose();
+    color.dispose();
+    emissionsStandard.dispose();
+    lengthMm.dispose();
+    widthMm.dispose();
+    heightMm.dispose();
+    wheelbaseMm.dispose();
+    weightKg.dispose();
+    trunkLiters.dispose();
+    tankLiters.dispose();
     super.dispose();
   }
 
