@@ -2692,14 +2692,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     Text(displayType, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     if (finalCity(profile) is Widget) finalCity(profile),
                   ])),
-                  if (supabase.auth.currentUser?.id != widget.ownerId && digits != null) IconButton(
-                    tooltip: 'WhatsApp',
-                    onPressed: () async {
-                      final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    },
-                    icon: const Icon(Icons.chat, color: Color(0xFF25D366), size: 27),
-                  ),
+
                 ]),
                 const SizedBox(height: 19),
                 Row(children: [
@@ -2734,16 +2727,24 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 if (supabase.auth.currentUser?.id != widget.ownerId) ...[
                 const SizedBox(height: 17),
                 Row(children: [
-                  Expanded(child: OutlinedButton.icon(
-                    onPressed: digits == null ? null : () async {
-                      final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    },
-                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                    label: const Text('WhatsApp'),
-                    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF25D366), side: const BorderSide(color: Color(0xFF25D366)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                  )),
-                  const SizedBox(width: 10),
+                  if (digits != null)
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF25D366),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        tooltip: 'Abrir WhatsApp',
+                        onPressed: () async {
+                          final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        },
+                        icon: const Icon(Icons.chat, color: Colors.white, size: 25),
+                        iconSize: 28,
+                        padding: const EdgeInsets.all(13),
+                      ),
+                    ),
+                  if (digits != null) const SizedBox(width: 10),
                   Expanded(child: FilledButton.icon(
                     onPressed: () async {
                       final user = supabase.auth.currentUser;
