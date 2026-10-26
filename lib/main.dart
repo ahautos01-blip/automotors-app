@@ -945,7 +945,7 @@ class _HomePageState extends State<HomePage> {
         }
         if (sharedCar != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) openCarDetails(sharedCar);
+            if (mounted) openCarDetails(sharedCar!);
           });
         } else if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
