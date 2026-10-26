@@ -4601,6 +4601,20 @@ class _GaragePageState extends State<GaragePage> {
     return '${b is Map ? b['name'] ?? 'Marca' : 'Marca'} ${m is Map ? m['name'] ?? 'Modelo' : 'Modelo'}';
   }
 
+  List<String> listingSuggestions(Map<String, dynamic> listing) {
+    final suggestions = <String>[];
+    final photos = listing['vehicle_photos'];
+    if (photos is! List || photos.isEmpty) suggestions.add('Añade fotos');
+    final description = listing['description']?.toString().trim() ?? '';
+    if (description.length < 50) suggestions.add('Amplía la descripción');
+    if (listing['cv'] == null) suggestions.add('Añade los CV');
+    final label = listing['etiqueta_medioambiental']?.toString().trim() ?? '';
+    if (label.isEmpty) suggestions.add('Indica la etiqueta ambiental');
+    final phone = listing['phone']?.toString().trim() ?? '';
+    if (phone.isEmpty) suggestions.add('Añade un teléfono de contacto');
+    return suggestions;
+  }
+
   Future<void> setListingStatus(Map<String, dynamic> listing, String status) async {
     final user = supabase.auth.currentUser;
     if (user == null) {
@@ -4872,6 +4886,32 @@ class _GaragePageState extends State<GaragePage> {
                     Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km · ${euros(price)}', style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 5),
                     Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    const SizedBox(height: 8),
+                    Builder(builder: (context) {
+                      final suggestions = listingSuggestions(listing);
+                      final completed = 5 - suggestions.length;
+                      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          const Icon(Icons.auto_awesome_outlined, size: 14, color: gold),
+                          const SizedBox(width: 5),
+                          Text('Calidad de la ficha: $completed/5', style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w700)),
+                        ]),
+                        const SizedBox(height: 5),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: completed / 5,
+                            minHeight: 4,
+                            backgroundColor: Colors.white12,
+                            color: completed == 5 ? Colors.greenAccent : gold,
+                          ),
+                        ),
+                        if (suggestions.isNotEmpty) ...[
+                          const SizedBox(height: 5),
+                          Text(suggestions.join(' · '), style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                        ],
+                      ]);
+                    }),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: 'Opciones del anuncio', onSelected: (value) {
                     if (value == 'edit') editListing(listing);
