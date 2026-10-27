@@ -12,10 +12,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:automotors_base/services/store_purchase_service.dart';
+import 'package:automotors_base/sold_reviews_features.dart';
 
 const gold = Color(0xFFD4AF37);
 const black = Color(0xFF0D0D0F);
 const panel = Color(0xFF1A1A1D);
+
+final ValueNotifier<bool> automotorsEnglish = ValueNotifier(false);
+
+String appText(String spanish, String english) =>
+    automotorsEnglish.value ? english : spanish;
 
 
 class AutomotorsBrandMark extends StatelessWidget {
@@ -33,11 +39,10 @@ class AutomotorsBrandMark extends StatelessWidget {
       ),
       boxShadow: const [BoxShadow(color: Color(0x332D2200), blurRadius: 8, offset: Offset(0, 3))],
     ),
-    child: Center(child: Icon(
-      Icons.directions_car_filled_rounded,
-      color: const Color(0xFF0D0D0F),
-      size: size * .62,
-    )),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * .28),
+        child: Image.asset('assets/automotors_app_icon.png', width: size, height: size, fit: BoxFit.cover),
+      ),
   );
 }
 
@@ -835,7 +840,10 @@ class AutomotorsApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
-      home: const HomePage(),
+      home: ValueListenableBuilder<bool>(
+        valueListenable: automotorsEnglish,
+        builder: (_, english, __) => HomePage(key: ValueKey(english)),
+      ),
     );
   }
 }
@@ -1496,8 +1504,17 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          PopupMenuButton<bool>(
+            tooltip: appText('Seleccionar idioma', 'Choose language'),
+            onSelected: (english) => automotorsEnglish.value = english,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: false, child: Text('Español')),
+              PopupMenuItem(value: true, child: Text('English')),
+            ],
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: gold, size: 19), const SizedBox(width: 4), Text(automotorsEnglish.value ? 'EN' : 'ES', style: const TextStyle(color: gold, fontWeight: FontWeight.w900))])),
+          ),
           IconButton(
-            tooltip: 'Alertas de búsqueda',
+            tooltip: appText('Alertas de búsqueda', 'Search alerts'),
             onPressed: () async {
               final user = Supabase.instance.client.auth.currentUser;
               if (user == null) {
@@ -1508,66 +1525,6 @@ class _HomePageState extends State<HomePage> {
               Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const VehicleSearchAlertsPage()));
             },
             icon: const Icon(Icons.notifications_active_outlined, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Búsquedas guardadas',
-            onPressed: () async {
-              final user = Supabase.instance.client.auth.currentUser;
-              if (user == null) {
-                final loggedIn = await requireAutomotorsLogin(context);
-                if (!loggedIn || !mounted) return;
-              }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedSearchesPage(
-                onApply: (criteria) {
-                  setState(() {
-                    selectedBrand = (criteria['brand'] ?? 'Todas').toString();
-                    selectedModel = (criteria['model'] ?? 'Todos').toString();
-                    selectedFuel = (criteria['fuel'] ?? 'Todos').toString();
-                    selectedTransmission = (criteria['transmission'] ?? 'Todas').toString();
-                    selectedBodyType = (criteria['body_type'] ?? 'Todos').toString();
-                    selectedLabel = (criteria['label'] ?? 'Todas').toString();
-                    selectedColor = (criteria['color'] ?? '').toString();
-                    minPrice = double.tryParse(criteria['min_price']?.toString() ?? '');
-                    maxPrice = double.tryParse(criteria['max_price']?.toString() ?? '');
-                    minYear = int.tryParse(criteria['min_year']?.toString() ?? '');
-                    maxKm = int.tryParse(criteria['max_km']?.toString() ?? '');
-                    minCv = int.tryParse(criteria['min_cv']?.toString() ?? '');
-                    maxCv = int.tryParse(criteria['max_cv']?.toString() ?? '');
-                    minCc = int.tryParse(criteria['min_cc']?.toString() ?? '');
-                    maxDoors = int.tryParse(criteria['max_doors']?.toString() ?? '');
-                    minSeats = int.tryParse(criteria['min_seats']?.toString() ?? '');
-                    selectedEquipmentFilters
-                      ..clear()
-                      ..addAll((criteria['equipment'] is List) ? List<String>.from(criteria['equipment']) : <String>[]);
-                    searchController.text = (criteria['query'] ?? '').toString();
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Filtros aplicados a la búsqueda.')));
-                },
-              )));
-            },
-            icon: const Icon(Icons.bookmarks_outlined, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Mis favoritos',
-            onPressed: () async {
-              final user = Supabase.instance.client.auth.currentUser;
-              if (user == null) {
-                final loggedIn = await requireAutomotorsLogin(context);
-                if (!loggedIn || !mounted) return;
-              }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedVehiclesPage(
-                cars: List<Car>.from(cars),
-                onOpenCar: openCarDetails,
-              )));
-            },
-            icon: const Icon(Icons.favorite_border_rounded, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Actualizar anuncios',
-            onPressed: loadCars,
-            icon: const Icon(Icons.refresh_rounded),
           ),
           const SizedBox(width: 6),
         ],
@@ -1606,16 +1563,16 @@ class _HomePageState extends State<HomePage> {
                           color: gold.withValues(alpha: .13),
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        child: const Text('VEHÍCULOS VERIFICADOS',
+                        child: Text(appText('VEHÍCULOS VERIFICADOS', 'VERIFIED VEHICLES'),
                           style: TextStyle(color: gold, fontSize: 10,
                             letterSpacing: 1.1, fontWeight: FontWeight.w800)),
                       ),
                       const SizedBox(height: 14),
-                      const Text('Encuentra\ntu próximo coche.',
+                      Text(appText('Encuentra\ntu próximo coche.', 'Find\nyour next car.'),
                         style: TextStyle(fontSize: 29, height: 1.08,
                           fontWeight: FontWeight.w900, letterSpacing: -.6)),
                       const SizedBox(height: 8),
-                      const Text('Vehículos de particulares y profesionales.',
+                      Text(appText('Vehículos de particulares y profesionales.', 'Cars from private sellers and professionals.'),
                         style: TextStyle(color: Colors.white70, fontSize: 13)),
                       const SizedBox(height: 14),
                       OutlinedButton.icon(
@@ -1625,14 +1582,14 @@ class _HomePageState extends State<HomePage> {
                             onOpenCar: openCarDetails,
                           ))),
                         icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                        label: const Text('Ver vehículos'),
+                        label: Text(appText('Ver vehículos', 'Browse vehicles')),
                         style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
                       ),
                       const SizedBox(height: 18),
                       Row(children: [
                         const Icon(Icons.verified_user_outlined, color: gold, size: 17),
                         const SizedBox(width: 7),
-                        Text('${cars.length} vehículos anunciados',
+                        Text(appText('${cars.length} vehículos anunciados', '${cars.length} vehicles listed'),
                           style: const TextStyle(color: Colors.white70, fontSize: 12)),
                       ]),
                     ],
@@ -1670,10 +1627,10 @@ class _HomePageState extends State<HomePage> {
                       onSubmitted: (_) => onFieldSubmitted(),
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Escribe marca o modelo...',
+                        hintText: appText('Escribe marca o modelo...', 'Search make or model...'),
                         prefixIcon: const Icon(Icons.search_rounded),
                         suffixIcon: controller.text.isEmpty ? null : IconButton(
-                          tooltip: 'Borrar búsqueda', icon: const Icon(Icons.close_rounded),
+                          tooltip: appText('Borrar búsqueda', 'Clear search'), icon: const Icon(Icons.close_rounded),
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
                         filled: true,
@@ -3233,76 +3190,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
-  Widget _listingCompletenessCard() {
-    final checks = <MapEntry<String, bool>>[
-      MapEntry('Fotografías del vehículo', car.photos.isNotEmpty),
-      MapEntry('Descripción del anuncio', car.description.trim().length >= 40),
-      MapEntry('Año de matriculación', car.year > 0),
-      MapEntry('Kilometraje', car.km >= 0),
-      MapEntry('Combustible', car.fuel.trim().isNotEmpty),
-      MapEntry('Potencia', car.cv != null),
-      MapEntry('Transmisión', car.transmission?.trim().isNotEmpty == true),
-      MapEntry('Carrocería', car.bodyType?.trim().isNotEmpty == true),
-      MapEntry('Color', car.color?.trim().isNotEmpty == true),
-      MapEntry('Equipamiento', car.equipment.isNotEmpty),
-    ];
-    final completed = checks.where((item) => item.value).length;
-    final progress = completed / checks.length;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gold.withValues(alpha: 0.38)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.fact_check_outlined, color: gold, size: 22),
-            const SizedBox(width: 9),
-            const Expanded(child: Text('Calidad de la ficha', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
-            Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
-          ]),
-          const SizedBox(height: 8),
-          Text(
-            'Datos incluidos en este anuncio. Una ficha más completa ayuda a comparar vehículos.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.72), height: 1.4, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 7,
-              backgroundColor: Colors.white12,
-              valueColor: const AlwaysStoppedAnimation<Color>(gold),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 7,
-            children: checks.map((item) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-              decoration: BoxDecoration(
-                color: item.value ? gold.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: item.value ? gold.withValues(alpha: 0.35) : Colors.white12),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(item.value ? Icons.check_circle_outline : Icons.radio_button_unchecked, size: 14, color: item.value ? gold : Colors.white54),
-                const SizedBox(width: 5),
-                Text(item.key, style: TextStyle(fontSize: 11, color: item.value ? Colors.white : Colors.white60)),
-              ]),
-            )).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _technicalSectionLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(top: 14, bottom: 4),
@@ -3484,8 +3371,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           )),
         ]),
         const SizedBox(height: 18),
-        _listingCompletenessCard(),
-        const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
             width: double.infinity,
@@ -3565,28 +3450,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           if (car.cilindradaCc != null) _technicalRow(Icons.settings, 'Cilindrada', '${car.cilindradaCc} cc'),
           if (car.transmission?.trim().isNotEmpty == true) _technicalRow(Icons.settings_outlined, 'Transmisión', car.transmission!),
         ],
-        if (car.etiquetaMedioambiental != null && car.etiquetaMedioambiental!.trim().isNotEmpty) ...[
+        if (car.etiquetaMedioambiental != null && car.etiquetaMedioambiental!.trim().isNotEmpty && car.etiquetaMedioambiental!.toLowerCase() != 'sin etiqueta') ...[
           _technicalSectionLabel('Emisiones'),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 54),
-                const SizedBox(width: 12),
-                const Text('Etiqueta medioambiental'),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    car.etiquetaMedioambiental!,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: environmentalLabelColor(car.etiquetaMedioambiental),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 54),
           ),
         ],
         if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true || car.showVinPublicly && car.vin?.trim().isNotEmpty == true) ...[
@@ -3804,6 +3672,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     const SizedBox(height: 20),
                     _vehicleInformation(context),
                   ],
+                  if (car.status == 'sold' && car.listingId != null && car.ownerId != null && car.ownerId != Supabase.instance.client.auth.currentUser?.id) ...[
+                    const SizedBox(height: 12),
+                    VehicleReviewForm(listingId: car.listingId!, sellerId: car.ownerId!),
+                  ],
                   const SizedBox(height: 24),
                 ],
               ),
@@ -3842,6 +3714,13 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   Future<void> updateProfileListingStatus(Map<String, dynamic> listing, String status) async {
     if (!isOwnProfile) return;
     try {
+      if (status == 'sold') {
+        final sold = await showDialog<bool>(context: context, builder: (_) => MarkVehicleSoldDialog(listingId: listing['id'].toString()));
+        if (sold != true || !mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio marcado como vendido.')));
+        await refreshSeller();
+        return;
+      }
       await supabase.from('vehicle_listings').update({'status': status})
         .eq('id', listing['id'].toString()).eq('owner_id', widget.ownerId);
       if (!mounted) return;
@@ -3869,6 +3748,11 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       // Un fallo al cargar datos públicos del perfil no debe ocultar sus anuncios.
       profile = null;
     }
+    String aboutUs = '';
+    try {
+      final about = await supabase.from('seller_about_profiles').select('about_us').eq('user_id', widget.ownerId).maybeSingle();
+      aboutUs = about?['about_us']?.toString() ?? '';
+    } catch (_) {}
     final listings = await supabase.from('vehicle_listings')
         .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
@@ -3899,7 +3783,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       }
       listing['_firstPhotoBytes'] = firstPhoto;
     }
-    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows};
+    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows, 'aboutUs': aboutUs};
   }
 
   String? publicPhotoUrl(dynamic path) {
@@ -4055,6 +3939,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     ]),
   );
 
+  Widget profileStatWidget(Widget value, String label) => Expanded(
+    child: Column(children: [value, const SizedBox(height: 3), Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70), textAlign: TextAlign.center)]),
+  );
+
   Widget profileVehicleGrid(List<Map<String, dynamic>> rows, {required bool sold}) {
     if (rows.isEmpty) {
       return Center(child: Padding(
@@ -4184,15 +4072,40 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final profile = result['profile'] as Map<String, dynamic>?;
         final listings = List<Map<String, dynamic>>.from(result['listings'] ?? []);
         final soldListings = List<Map<String, dynamic>>.from(result['soldListings'] ?? []);
+        final aboutUs = result['aboutUs']?.toString() ?? '';
         final name = displayName(profile);
         final type = (profile?['account_type'] ?? 'particular').toString().toLowerCase();
         final verified = (profile?['estado_verificacion'] ?? '').toString().toLowerCase() == 'aprobada';
         final isVerifiedBusiness = verified && (type == 'empresa' || type == 'autonomo');
+        final isProfessional = type == 'empresa' || type == 'autonomo';
+        final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
+        final profileTabs = <String>['Anuncios', 'Vendidos', if (isProfessional) 'Sobre nosotros', 'Valoraciones'];
+        final profileTabChildren = <Widget>[
+          Column(children: [
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24), const SizedBox(width: 8), const Expanded(child: Text('Vehículos disponibles', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))), Text('${listings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))])),
+            const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Anuncios publicados y reservados actualmente', style: TextStyle(color: Colors.white60, fontSize: 12)))),
+            profileVehicleGrid(listings, sold: false),
+          ]),
+          Column(children: [
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24), const SizedBox(width: 8), const Expanded(child: Text('Vehículos vendidos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))), Text('${soldListings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))])),
+            const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Historial de vehículos vendidos por este vendedor', style: TextStyle(color: Colors.white60, fontSize: 12)))),
+            profileVehicleGrid(soldListings, sold: true),
+          ]),
+          if (isProfessional) ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
+            const Text('Sobre nosotros', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+            const SizedBox(height: 12),
+            if (aboutUs.trim().isNotEmpty) Text(aboutUs, style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5)),
+            if (aboutUs.trim().isEmpty) Text('$displayType · ${isVerifiedBusiness ? 'Profesional verificado' : 'Vendedor profesional'}', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            finalCity(profile),
+            if (isOwnProfile) Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(onPressed: () async { await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())); if (mounted) await refreshSeller(); }, icon: const Icon(Icons.edit), label: const Text('Editar Sobre nosotros'))),
+          ]),
+          SellerReviewsSection(sellerId: widget.ownerId),
+        ];
+        if (selectedProfileTab >= profileTabs.length) selectedProfileTab = 0;
         final cover = publicPhotoUrl(profile?['cover_photo_path']);
         final avatar = publicPhotoUrl(profile?['profile_photo_path']);
         final phone = profile?['phone']?.toString() ?? '';
         final digits = validWhatsAppDigits(phone);
-        final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
         return ScrollConfiguration(
           behavior: MaterialScrollBehavior().copyWith(
             dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
@@ -4251,7 +4164,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     ]),
                     const SizedBox(height: 3),
                     Text(displayType, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                    if (finalCity(profile) is Widget) finalCity(profile),
+                    finalCity(profile),
                   ])),
 
                 ]),
@@ -4261,7 +4174,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   Container(width: 1, height: 34, color: const Color(0xFF29323A)),
                   profileStat('${soldListings.length}', 'Vendidos'),
                   Container(width: 1, height: 34, color: const Color(0xFF29323A)),
-                  profileStat(isVerifiedBusiness ? 'Verificado' : '—', 'Confianza'),
+                  profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
                   const SizedBox(height: 16),
@@ -4353,51 +4266,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           Container(
             decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF29323A)))),
             child: Row(children: [
-              _profileTabButton('Anuncios', 0),
-              _profileTabButton('Vendidos', 1),
-              _profileTabButton('Sobre nosotros', 2),
-              _profileTabButton('Valoraciones', 3),
+              for (var i = 0; i < profileTabs.length; i++) _profileTabButton(profileTabs[i], i),
             ]),
           ),
           IndexedStack(
             index: selectedProfileTab,
-            children: [
-              Column(children: [
-                Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [
-                  const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Vehículos disponibles', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))),
-                  Text('${listings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                ])),
-                const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Anuncios publicados y reservados actualmente', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                profileVehicleGrid(listings, sold: false),
-              ]),
-              Column(children: [
-                Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [
-                  const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Vehículos vendidos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))),
-                  Text('${soldListings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                ])),
-                const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Historial de vehículos vendidos por este vendedor', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                profileVehicleGrid(soldListings, sold: true),
-              ]),
-              ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
-                const Text('Sobre nosotros', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-                const SizedBox(height: 12),
-                Text('$displayType', style: const TextStyle(color: Colors.white70, fontSize: 16)),
-                if (finalCity(profile) != const SizedBox.shrink()) finalCity(profile),
-                if (isVerifiedBusiness) const ListTile(leading: Icon(Icons.verified_user, color: Color(0xFF25D366)), title: Text('Profesional verificado')),
-                const ListTile(leading: Icon(Icons.directions_car, color: gold), title: Text('Vehículos disponibles y vendidos en AUTOMOTORS')),
-              ]),
-              const Center(child: Padding(padding: EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.star_border_rounded, color: gold, size: 42),
-                SizedBox(height: 10),
-                Text('Valoraciones', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-                SizedBox(height: 6),
-                Text('Las valoraciones aparecerán aquí cuando estén disponibles.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
-              ]))),
-            ],
+            children: profileTabChildren,
           ),
           ]),
           ),
@@ -4636,20 +4510,6 @@ class _GaragePageState extends State<GaragePage> {
     return '${b is Map ? b['name'] ?? 'Marca' : 'Marca'} ${m is Map ? m['name'] ?? 'Modelo' : 'Modelo'}';
   }
 
-  List<String> listingSuggestions(Map<String, dynamic> listing) {
-    final suggestions = <String>[];
-    final photos = listing['vehicle_photos'];
-    if (photos is! List || photos.isEmpty) suggestions.add('Añade fotos');
-    final description = listing['description']?.toString().trim() ?? '';
-    if (description.length < 50) suggestions.add('Amplía la descripción');
-    if (listing['cv'] == null) suggestions.add('Añade los CV');
-    final label = listing['etiqueta_medioambiental']?.toString().trim() ?? '';
-    if (label.isEmpty) suggestions.add('Indica la etiqueta ambiental');
-    final phone = listing['phone']?.toString().trim() ?? '';
-    if (phone.isEmpty) suggestions.add('Añade un teléfono de contacto');
-    return suggestions;
-  }
-
   Future<void> setListingStatus(Map<String, dynamic> listing, String status) async {
     final user = supabase.auth.currentUser;
     if (user == null) {
@@ -4670,6 +4530,14 @@ class _GaragePageState extends State<GaragePage> {
 
     setState(() => busy = true);
     try {
+      if (normalizedStatus == 'sold') {
+        setState(() => busy = false);
+        final sold = await showDialog<bool>(context: context, builder: (_) => MarkVehicleSoldDialog(listingId: listing['id'].toString()));
+        if (sold != true || !mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio marcado como vendido.')));
+        refreshListings();
+        return;
+      }
       final updated = await supabase
           .from('vehicle_listings')
           .update({'status': normalizedStatus})
@@ -4922,45 +4790,6 @@ class _GaragePageState extends State<GaragePage> {
                     const SizedBox(height: 5),
                     Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
                     const SizedBox(height: 8),
-                    Builder(builder: (context) {
-                      final suggestions = listingSuggestions(listing);
-                      final completed = 5 - suggestions.length;
-                      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          const Icon(Icons.auto_awesome_outlined, size: 14, color: gold),
-                          const SizedBox(width: 5),
-                          Text('Calidad de la ficha: $completed/5', style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w700)),
-                        ]),
-                        const SizedBox(height: 5),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: completed / 5,
-                            minHeight: 4,
-                            backgroundColor: Colors.white12,
-                            color: completed == 5 ? Colors.greenAccent : gold,
-                          ),
-                        ),
-                        if (suggestions.isNotEmpty) ...[
-                          const SizedBox(height: 5),
-                          Text(suggestions.join(' · '), style: const TextStyle(fontSize: 11, color: Colors.white54)),
-                          if (!isSold)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: busy ? null : () => editListing(listing),
-                                icon: const Icon(Icons.edit_note_rounded, size: 17),
-                                label: const Text('Completar ficha'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: gold,
-                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ]);
-                    }),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: 'Opciones del anuncio', onSelected: (value) {
                     if (value == 'edit') editListing(listing);
@@ -5060,6 +4889,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final province = TextEditingController();
   final address = TextEditingController();
   final businessName = TextEditingController();
+  final aboutUs = TextEditingController();
   String accountType = 'particular';
   String? verificationStatus;
   String? documentName;
@@ -5093,6 +4923,7 @@ class _ProfilePageState extends State<ProfilePage> {
     province.dispose();
     address.dispose();
     businessName.dispose();
+    aboutUs.dispose();
     super.dispose();
   }
 
@@ -5156,6 +4987,10 @@ class _ProfilePageState extends State<ProfilePage> {
         documentName = row['verification_document_path']?.toString();
         profilePhotoPath = row['profile_photo_path']?.toString();
         coverPhotoPath = row['cover_photo_path']?.toString();
+        try {
+          final about = await supabase.from('seller_about_profiles').select('about_us').eq('user_id', user.id).maybeSingle();
+          aboutUs.text = about?['about_us']?.toString() ?? '';
+        } catch (_) {}
       }
     } catch (e) {
       if (mounted) {
@@ -5285,6 +5120,13 @@ class _ProfilePageState extends State<ProfilePage> {
         data['estado_verificacion'] = 'No aplicable';
       }
       await supabase.from('user_profiles').upsert(data, onConflict: 'id');
+      if (isProfessional) {
+        await supabase.from('seller_about_profiles').upsert({
+          'user_id': user.id,
+          'about_us': aboutUs.text.trim(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'user_id');
+      }
       if (!mounted) return;
       setState(() {
         verificationStatus = data['estado_verificacion']?.toString() ?? verificationStatus;
@@ -5367,6 +5209,7 @@ class _ProfilePageState extends State<ProfilePage> {
             field('Teléfono', phone, requiredField: true, keyboard: TextInputType.phone), field('Ciudad', city, requiredField: true), field('Provincia', province, requiredField: true),
             if (isProfessional) ...[
               field(accountType == 'empresa' ? 'Dirección fiscal de la empresa' : 'Dirección fiscal o profesional', address, requiredField: true),
+              Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: aboutUs, maxLines: 5, maxLength: 2000, decoration: const InputDecoration(labelText: 'Sobre nosotros', hintText: 'Presenta tu negocio, experiencia y servicios.'))),
               const SizedBox(height: 8), const Text('VERIFICACIÓN DE CUENTA', style: TextStyle(color: gold, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8), const Text('Adjunta documentación para solicitar la verificación. La portada solo se habilita cuando la cuenta profesional está aprobada.'),
               OutlinedButton.icon(onPressed: saving ? null : chooseDocument, icon: const Icon(Icons.upload_file), label: Text(documentName == null ? 'Adjuntar documentación' : 'Documento: $documentName')),
@@ -6254,23 +6097,23 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
     final packs = <_PublishPackData>[
       _PublishPackData(
         title: 'PACK 10', price: _storePrice('automotors_pack_10'), icon: Icons.diamond_outlined,
-        subtitle: 'Todo lo necesario para empezar', cars: '10 anuncios · 3 destacados',
-        benefits: const ['Publica hasta 10 vehículos', 'Hasta 3 anuncios destacados', 'Visible en búsquedas', 'Gestión desde tu perfil'],
+        subtitle: appText('Todo lo necesario para empezar', 'Everything you need to get started'), cars: appText('10 anuncios · 3 destacados', '10 listings · 3 featured'),
+        benefits: automotorsEnglish.value ? const ['List up to 10 vehicles', 'Up to 3 featured listings', 'Visible in search', 'Manage from your profile'] : const ['Publica hasta 10 vehículos', 'Hasta 3 anuncios destacados', 'Visible en búsquedas', 'Gestión desde tu perfil'],
       ),
       _PublishPackData(
         title: 'PACK 15', price: _storePrice('automotors_pack_15'), icon: Icons.diamond_outlined,
-        subtitle: 'Más visibilidad para tu negocio', cars: '15 anuncios · 5 destacados', popular: true,
-        benefits: const ['Publica hasta 15 vehículos', 'Hasta 5 anuncios destacados', 'Etiquetas destacadas', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
+        subtitle: appText('Más visibilidad para tu negocio', 'More visibility for your business'), cars: appText('15 anuncios · 5 destacados', '15 listings · 5 featured'), popular: true,
+        benefits: automotorsEnglish.value ? const ['List up to 15 vehicles', 'Up to 5 featured listings', 'Featured badges', 'Priority in search', 'View statistics'] : const ['Publica hasta 15 vehículos', 'Hasta 5 anuncios destacados', 'Etiquetas destacadas', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
         title: 'PACK 20', price: _storePrice('automotors_pack_20'), icon: Icons.diamond_outlined,
-        subtitle: 'Para concesionarios con más stock', cars: '20 anuncios · 8 destacados',
-        benefits: const ['Publica hasta 20 vehículos', 'Hasta 8 anuncios destacados', 'Mayor visibilidad', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
+        subtitle: appText('Para concesionarios con más stock', 'For dealers with larger inventories'), cars: appText('20 anuncios · 8 destacados', '20 listings · 8 featured'),
+        benefits: automotorsEnglish.value ? const ['List up to 20 vehicles', 'Up to 8 featured listings', 'More visibility', 'Priority in search', 'View statistics'] : const ['Publica hasta 20 vehículos', 'Hasta 8 anuncios destacados', 'Mayor visibilidad', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
         title: 'AUTOMOTORS PRO', price: _storePrice('automotors_pro_monthly_199'), icon: Icons.workspace_premium_rounded,
-        subtitle: 'Para una venta profesional sin límites', cars: 'Anuncios ilimitados',
-        benefits: const ['Anuncios ilimitados mientras esté activa', 'Máxima visibilidad', 'Prioridad en búsquedas', 'Estadísticas avanzadas', 'Soporte prioritario'],
+        subtitle: appText('Para una venta profesional sin límites', 'Professional selling without listing limits'), cars: appText('Anuncios ilimitados · hasta 15 destacados', 'Unlimited listings · up to 15 featured'),
+        benefits: automotorsEnglish.value ? const ['Unlimited listings while active', 'Feature up to 15 vehicles', 'Maximum visibility', 'Priority in search', 'Advanced statistics', 'Priority support'] : const ['Anuncios ilimitados mientras esté activa', 'Hasta 15 vehículos destacados', 'Máxima visibilidad', 'Prioridad en búsquedas', 'Estadísticas avanzadas', 'Soporte prioritario'],
       ),
     ];
     return Scaffold(
@@ -6278,7 +6121,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
       appBar: AppBar(
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
-        title: const Text('Publicar mi vehículo', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(appText('Publicar mi vehículo', 'List my vehicle'), style: const TextStyle(fontWeight: FontWeight.w900)),
         centerTitle: true,
       ),
       bottomNavigationBar: SafeArea(
@@ -6288,7 +6131,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
           decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFF5A4720)))),
           child: OutlinedButton.icon(
             onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.sell_outlined), label: const Text('PUBLICAR GRATIS  →'),
+            icon: const Icon(Icons.sell_outlined), label: Text(appText('PUBLICAR GRATIS  →', 'LIST FOR FREE  →')),
             style: OutlinedButton.styleFrom(foregroundColor: _gold, side: const BorderSide(color: _gold, width: 1.6), padding: const EdgeInsets.symmetric(vertical: 15), textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
           ),
         ),
@@ -6303,10 +6146,10 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
               border: Border.all(color: _gold.withValues(alpha: .5)),
               gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF33230B), Color(0xFF15120D), Color(0xFF080808)]),
             ),
-            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('LLEGA A MÁS COMPRADORES', style: TextStyle(color: _gold, fontSize: 20, fontWeight: FontWeight.w900)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(appText('LLEGA A MÁS COMPRADORES', 'REACH MORE BUYERS'), style: const TextStyle(color: _gold, fontSize: 20, fontWeight: FontWeight.w900)),
               SizedBox(height: 8),
-              Text('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', style: TextStyle(color: Colors.white, height: 1.4)),
+              Text(appText('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', 'Choose the plan that suits you best.\nIncrease your listing visibility with our plans.'), style: TextStyle(color: Colors.white, height: 1.4)),
             ]),
           ),
           const SizedBox(height: 16),
@@ -6340,9 +6183,9 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
           TextButton.icon(
             onPressed: _purchaseService.restorePurchases,
             icon: const Icon(Icons.restore_rounded),
-            label: const Text('Restaurar compras'),
+            label: Text(appText('Restaurar compras', 'Restore purchases')),
           ),
-          const Text('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', style: TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
+          Text(appText('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', 'Pack purchases and subscriptions are not enabled in the app yet.'), style: const TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -6382,7 +6225,7 @@ class _PublishPackCard extends StatelessWidget {
         const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(benefit, style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text('Elegir ${data.title}', style: const TextStyle(fontWeight: FontWeight.w900)))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w900)))),
       ]),
     );
   }
