@@ -6225,6 +6225,18 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
   static const Color _panel = Color(0xFF111111);
 
   String _storePrice(String productId) {
+    // App Store Connect only makes these subscriptions available in Spain.
+    // StoreKit can still return the tester's account currency for the product
+    // metadata, while Apple's purchase sheet correctly localizes the charge.
+    const spainPrices = <String, String>{
+      'automotors_pack_10': '59,00 €',
+      'automotors_pack_15': '75,00 €',
+      'automotors_pack_20': '99,00 €',
+      'automotors_pro_monthly_199': '199,00 €',
+    };
+    final spainPrice = spainPrices[productId];
+    if (spainPrice != null) return spainPrice;
+
     for (final product in _purchaseService.products) {
       if (product.id == productId) return product.price;
     }
