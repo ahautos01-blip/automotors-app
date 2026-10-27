@@ -5397,6 +5397,22 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GaragePage()),
+                ),
+                icon: const Icon(Icons.directions_car_outlined),
+                label: const Text('Mis anuncios'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: gold,
+                  side: BorderSide(color: gold.withValues(alpha: .65)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () => setState(() => editing = true),
                 icon: const Icon(Icons.edit),
