@@ -142,8 +142,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://ndicdhlpbyywqyjgxpnx.supabase.co',
-    publishableKey: 'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu',
+    url: const String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: 'https://ndicdhlpbyywqyjgxpnx.supabase.co',
+    ),
+    publishableKey: const String.fromEnvironment(
+      'SUPABASE_PUBLISHABLE_KEY',
+      defaultValue: 'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu',
+    ),
   );
 
   runApp(const AutomotorsApp());
