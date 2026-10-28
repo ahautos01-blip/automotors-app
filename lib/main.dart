@@ -2154,11 +2154,21 @@ class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo marcar la alerta como leída.')));
     }
   }
+  Future<void> openAlert(Map<String, dynamic> alert) async {
+    await markRead(alert);
+    if (!mounted || alert['alert_type'] != 'review_requested') return;
+    final listingId = alert['listing_id']?.toString();
+    if (listingId == null || listingId.isEmpty) return;
+    await Navigator.push<void>(context, MaterialPageRoute(
+      builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
+    ));
+    if (mounted) await loadAlerts();
+  }
   @override
   Widget build(BuildContext context) {
     final unread = alerts.where((a) => a['read_at'] == null).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Alertas de búsqueda'), actions: [
+      appBar: AppBar(title: const Text('Notificaciones'), actions: [
         IconButton(tooltip: 'Actualizar', onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: gold)),
       ]),
       body: loading
@@ -2174,7 +2184,7 @@ class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
                 const Icon(Icons.notifications_none_rounded, size: 54, color: gold), const SizedBox(height: 14),
                 const Text('Todavía no tienes alertas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                const Text('Cuando aparezca un coche que coincida con tus búsquedas guardadas o baje de precio, lo verás aquí.',
+                const Text('Aquí verás las invitaciones para valorar tus compras y las alertas de tus búsquedas guardadas.',
                   textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
               ])))
             : ListView(padding: const EdgeInsets.all(16), children: [
@@ -2185,14 +2195,14 @@ class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
                     color: alert['read_at'] == null ? const Color(0xFF25231C) : const Color(0xFF18181B),
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
-                      leading: Icon(alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
+                      leading: Icon(alert['alert_type'] == 'review_requested' ? Icons.rate_review_outlined : alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
                         color: alert['read_at'] == null ? gold : Colors.white54),
                       title: Text(alert['title']?.toString() ?? 'Alerta', style: const TextStyle(fontWeight: FontWeight.w800)),
                       subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(alert['message']?.toString() ?? '')),
                       trailing: alert['read_at'] == null
                         ? IconButton(tooltip: 'Marcar como leída', onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: gold))
                         : const Icon(Icons.check_circle_outline, color: Colors.white38),
-                      onTap: () => markRead(alert),
+                      onTap: () => openAlert(alert),
                     ),
                   ),
               ]),
