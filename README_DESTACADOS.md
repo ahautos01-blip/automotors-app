@@ -1,7 +1,8 @@
 # Destacados y cupos de publicación
 
 Implementación preparada en el worktree `vehicle-highlights`, desde la rama iOS.
-La migración sigue pendiente de autorización para instalarla en Supabase.
+La migración se instaló en el Supabase principal el 28 de octubre de 2026,
+tras la autorización del usuario.
 
 ## Reglas
 
@@ -28,18 +29,18 @@ pero solo tiene efecto con un plan vigente. Al bajar de plan se muestran los
 primeros seleccionados, hasta el límite nuevo. El servidor serializa por cuenta
 las solicitudes para impedir que dos dispositivos consuman la última plaza.
 
-## Cambios e instalación pendiente
+## Cambios e instalación
 
 - `supabase/migrations/20261028021644_vehicle_highlights_and_account_limits.sql`
   crea una tabla privada de selecciones, funciones de consulta y gestión y
   sustituye el trigger anterior de publicación. No elimina anuncios ni compras.
 - `lib/vehicle_feature_control.dart` añade el botón, estado y contador del propietario.
 - `lib/main.dart` integra el control y consulta destacados válidos desde el servidor.
-- `pubspec.yaml` prepara la versión 1.0.0+8 para la siguiente build.
+- `pubspec.yaml` prepara la versión 1.0.1+9 para la siguiente build.
 
 Aplicar la migración antes de distribuir la build. La base de datos principal es
-`ndicdhlpbyywqyjgxpnx`. La primera instalación remota quedó bloqueada por revisión
-automática; no se ha aplicado ningún cambio remoto de esta tarea.
+`ndicdhlpbyywqyjgxpnx`. La instalación autorizada quedó completada y se verificaron
+las funciones públicas y sus permisos.
 
 La migración presupone las tablas de productos, compras y derechos ya existentes
 en el proyecto principal. Crea o reutiliza el registro privado de publicaciones,
