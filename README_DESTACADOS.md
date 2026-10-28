@@ -31,7 +31,7 @@ las solicitudes para impedir que dos dispositivos consuman la última plaza.
 
 ## Cambios e instalación
 
-- `supabase/migrations/20261028021644_vehicle_highlights_and_account_limits.sql`
+- `supabase/migrations/20261028021959_vehicle_highlights_and_account_limits.sql`
   crea una tabla privada de selecciones, funciones de consulta y gestión y
   sustituye el trigger anterior de publicación. No elimina anuncios ni compras.
 - `lib/vehicle_feature_control.dart` añade el botón, estado y contador del propietario.

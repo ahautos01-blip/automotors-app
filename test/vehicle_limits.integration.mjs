@@ -25,7 +25,7 @@ await db.exec(`
   create table public.user_promotion_entitlements(id uuid primary key,user_id uuid,purchase_id uuid,
     status text,starts_at timestamptz,ends_at timestamptz);
 `);
-await db.exec(await readFile(new URL('../supabase/migrations/20261028021644_vehicle_highlights_and_account_limits.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261028021959_vehicle_highlights_and_account_limits.sql', import.meta.url), 'utf8'));
 const rows = async (sql, args=[]) => (await db.query(sql,args)).rows;
 const scalar = async (sql,args=[]) => Object.values((await rows(sql,args))[0])[0];
 const login = async user => { await db.query("select set_config('request.jwt.claim.sub',$1,false)",[user ?? '']); };
