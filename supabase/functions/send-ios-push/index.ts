@@ -25,15 +25,18 @@ Deno.serve(async request => {
   if (!workerToken || workerToken.length !== 64) return reply(401,{error:'Unauthorized'});
   try {
     if (!await rpc('authorize_push_worker',{p_token:workerToken})) return reply(401,{error:'Unauthorized'});
+    apnsClient ??= Deno.createHttpClient({http1:false,http2:true});
     const pem = Deno.env.get('APNS_PRIVATE_KEY');
     const keyId = Deno.env.get('APNS_KEY_ID');
     const teamId = Deno.env.get('APNS_TEAM_ID');
     const bundleId = Deno.env.get('IOS_BUNDLE_ID');
     // Keep jobs pending until the APNs key has been configured. Do not burn retries.
-    if (!pem || !keyId || !teamId || !bundleId) return reply(503,{error:'apns_not_configured'});
+    if (!pem || !keyId || !teamId || !bundleId) return reply(503,{
+      error:'apns_not_configured',
+      missing:['APNS_PRIVATE_KEY','APNS_KEY_ID','APNS_TEAM_ID','IOS_BUNDLE_ID'].filter(name=>!Deno.env.get(name)),
+    });
     const now = Math.floor(Date.now()/1000);
     if (!jwt || now-jwt.issued>=2700) jwt={value:await apnsJwt(pem,keyId,teamId,now),issued:now};
-    apnsClient ??= Deno.createHttpClient({http1:false,http2:true});
     const jobs = await rpc('claim_push_deliveries',{p_token:workerToken}) as Delivery[];
     let accepted=0;
     // Bounded batches, with per-device leases and independent retries.
