@@ -117,6 +117,10 @@ create function private.queue_review_push() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
   if new.alert_type<>'review_requested' then return new; end if;
+  if auth.uid() is not null and not exists(select 1 from public.vehicle_listings v
+      where v.id=new.listing_id and v.owner_id=auth.uid()) then
+    raise exception 'Solo el vendedor puede confirmar esta compra.' using errcode='42501';
+  end if;
   if not exists(select 1 from public.vehicle_listings v where v.id=new.listing_id and v.status='sold'
       and not v.sold_externally and v.sold_to_buyer_id=new.user_id) then return new; end if;
   insert into private.push_deliveries(device_id,user_id,event_key,kind,listing_id)
