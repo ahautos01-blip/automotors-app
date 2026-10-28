@@ -54,8 +54,11 @@ class IosPushService with WidgetsBindingObserver {
     if (!supported || db.auth.currentSession == null) return;
     try {
       final granted = await _channel.invokeMethod<bool>('register') ?? false;
-      if (granted) await _saveDevice();
-      else await _removeDevice();
+      if (granted) {
+        await _saveDevice();
+      } else {
+        await _removeDevice();
+      }
     } catch (_) { /* Retry on the next foreground or sign-in event. */ }
   }
 

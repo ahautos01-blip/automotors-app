@@ -3,7 +3,7 @@ import UIKit
 import UserNotifications
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UNUserNotificationCenterDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pushChannel: FlutterMethodChannel?
   private var dartReady = false
   private var deviceToken: String?
@@ -68,13 +68,13 @@ import UserNotifications
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
-  func userNotificationCenter(_ center: UNUserNotificationCenter,
+  override func userNotificationCenter(_ center: UNUserNotificationCenter,
       willPresent notification: UNNotification,
       withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
     completionHandler([.banner, .sound])
   }
 
-  func userNotificationCenter(_ center: UNUserNotificationCenter,
+  override func userNotificationCenter(_ center: UNUserNotificationCenter,
       didReceive response: UNNotificationResponse,
       withCompletionHandler completionHandler: @escaping () -> Void) {
     if response.actionIdentifier != UNNotificationDismissActionIdentifier {
