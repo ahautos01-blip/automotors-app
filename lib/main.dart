@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:automotors_base/services/store_purchase_service.dart';
+import 'package:automotors_base/services/verified_store_plans.dart';
 import 'package:automotors_base/sold_reviews_features.dart';
 import 'package:automotors_base/vehicle_feature_control.dart';
 
@@ -1430,15 +1431,9 @@ class _HomePageState extends State<HomePage> {
       final loggedIn = await requireAutomotorsLogin(context);
       if (!loggedIn || !mounted) return;
     }
-    final publishFree = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const PublishOptionsPage()),
-    );
-    if (publishFree != true || !mounted) return;
-
     final car = await Navigator.push<Car>(
       context,
-      MaterialPageRoute(builder: (_) => const AddCarPage()),
+      MaterialPageRoute(builder: (_) => const PublishOptionsPage()),
     );
     if (car != null && mounted) setState(() => cars.insert(0, car));
   }
@@ -6052,14 +6047,85 @@ class PublishOptionsPage extends StatefulWidget {
   State<PublishOptionsPage> createState() => _PublishOptionsPageState();
 }
 
-class _PublishOptionsPageState extends State<PublishOptionsPage> {
+class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBindingObserver {
   late final StorePurchaseService _purchaseService;
   StreamSubscription<String>? _purchaseMessages;
   StreamSubscription<void>? _purchaseChanges;
+  VerifiedStorePlans _verifiedPlans = VerifiedStorePlans.empty;
+  Timer? _planExpiryTimer;
+  String? _planAccessError;
+  bool _openingPublication = false;
+  int _planRead = 0;
+
+  Future<void> _loadVerifiedPlans() async {
+    final read = ++_planRead;
+    final db = Supabase.instance.client;
+    final user = db.auth.currentUser;
+    try {
+      final rows = user == null ? <Map<String, dynamic>>[] : await db
+        .from('user_subscriptions')
+        .select('product_id, status, started_at, created_at, expires_at')
+        .eq('user_id', user.id);
+      if (!mounted || read != _planRead) return;
+      final plans = VerifiedStorePlans.fromRows(List<Map<String, dynamic>>.from(rows));
+      _planExpiryTimer?.cancel();
+      setState(() { _verifiedPlans = plans; _planAccessError = null; });
+      final expiry = plans.nextExpiry;
+      if (expiry != null) {
+        final remaining = expiry.difference(DateTime.now().toUtc());
+        _planExpiryTimer = Timer(remaining.isNegative ? Duration.zero : remaining, _loadVerifiedPlans);
+      }
+    } catch (_) {
+      if (!mounted || read != _planRead) return;
+      _planExpiryTimer?.cancel();
+      setState(() {
+        _verifiedPlans = VerifiedStorePlans.empty;
+        _planAccessError = appText('No se pudo consultar tu plan. Reintenta para comprobar el acceso.',
+          'Could not load your plan. Retry to check access.');
+      });
+    }
+  }
+
+  Future<void> _openPublication([String? productId]) async {
+    if (_openingPublication) return;
+    setState(() => _openingPublication = true);
+    try {
+      if (Supabase.instance.client.auth.currentUser == null) {
+        final loggedIn = await requireAutomotorsLogin(context);
+        if (!loggedIn || !mounted) return;
+      }
+      if (productId != null) {
+        await _loadVerifiedPlans();
+        if (!mounted) return;
+        if (!_verifiedPlans.isActive(productId)) {
+          throw Exception(appText('El pago aún no está verificado o el plan ha caducado.',
+            'Payment is not verified yet or the plan has expired.'));
+        }
+      }
+      final allowed = await Supabase.instance.client.rpc('can_publish_vehicle_listing');
+      if (!mounted) return;
+      if (allowed != true) {
+        throw Exception(appText('Has alcanzado el límite de anuncios activos de tu cuenta.',
+          'You have reached your active listing limit.'));
+      }
+      final car = await Navigator.push<Car>(context, MaterialPageRoute(builder: (_) => const AddCarPage()));
+      if (car != null && mounted) Navigator.pop(context, car);
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _openingPublication = false);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadVerifiedPlans();
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _purchaseService = StorePurchaseService();
     _purchaseMessages = _purchaseService.messages.listen((message) {
       if (!mounted) return;
@@ -6069,12 +6135,16 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
     });
     _purchaseChanges = _purchaseService.changes.listen((_) {
       if (mounted) setState(() {});
+      _loadVerifiedPlans();
     });
     _purchaseService.initialize();
+    _loadVerifiedPlans();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _planExpiryTimer?.cancel();
     _purchaseMessages?.cancel();
     _purchaseChanges?.cancel();
     _purchaseService.dispose();
@@ -6142,7 +6212,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFF5A4720)))),
           child: OutlinedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: _openingPublication ? null : () => _openPublication(),
             icon: const Icon(Icons.sell_outlined), label: Text(appText('PUBLICAR GRATIS  →', 'LIST FOR FREE  →')),
             style: OutlinedButton.styleFrom(foregroundColor: _gold, side: const BorderSide(color: _gold, width: 1.6), padding: const EdgeInsets.symmetric(vertical: 15), textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
           ),
@@ -6168,6 +6238,14 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
           for (final pack in packs) ...[
             _PublishPackCard(
               data: pack,
+              onPublish: _verifiedPlans.isActive(switch (pack.title) {
+                'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
+                'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
+              }) && !_openingPublication
+                ? () => _openPublication(switch (pack.title) {
+                    'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
+                    'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
+                  }) : null,
               onSelect: StorePurchaseService.checkoutEnabled &&
                       _purchaseService.products.any((product) => product.id == switch (pack.title) {
                         'PACK 10' => 'automotors_pack_10',
@@ -6197,7 +6275,13 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
             icon: const Icon(Icons.restore_rounded),
             label: Text(appText('Restaurar compras', 'Restore purchases')),
           ),
-          Text(appText('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', 'Pack purchases and subscriptions are not enabled in the app yet.'), style: const TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
+          if (_planAccessError != null) ...[
+            Text(_planAccessError!, style: const TextStyle(color: Colors.orangeAccent)),
+            TextButton(onPressed: _loadVerifiedPlans, child: Text(appText('Reintentar', 'Retry'))),
+          ],
+          Text(appText('El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.',
+            'Access is enabled after payment verification. You can restore purchases with the same account.'),
+            style: const TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -6215,7 +6299,8 @@ class _PublishPackData {
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
   final VoidCallback? onSelect;
-  const _PublishPackCard({required this.data, required this.onSelect});
+  final VoidCallback? onPublish;
+  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish});
   static const Color gold = Color(0xFFFFC447);
   @override
   Widget build(BuildContext context) {
@@ -6238,6 +6323,15 @@ class _PublishPackCard extends StatelessWidget {
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(benefit, style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
         const SizedBox(height: 8),
         SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w900)))),
+        if (onPublish != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: onPublish,
+            icon: const Icon(Icons.add_circle_outline),
+            label: Text(appText('Publicar vehículo', 'List vehicle')),
+            style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+          )),
+        ],
       ]),
     );
   }

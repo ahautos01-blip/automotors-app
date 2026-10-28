@@ -179,6 +179,9 @@ class StorePurchaseService {
         return;
       }
 
+      // Notify screens only after the server has saved a verified purchase.
+      // They re-read the subscription record rather than trusting StoreKit.
+      _changes.add(null);
       if (purchase.pendingCompletePurchase) {
         await _store.completePurchase(purchase);
       }

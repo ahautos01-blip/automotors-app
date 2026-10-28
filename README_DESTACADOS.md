@@ -36,7 +36,12 @@ las solicitudes para impedir que dos dispositivos consuman la última plaza.
   sustituye el trigger anterior de publicación. No elimina anuncios ni compras.
 - `lib/vehicle_feature_control.dart` añade el botón, estado y contador del propietario.
 - `lib/main.dart` integra el control y consulta destacados válidos desde el servidor.
-- `pubspec.yaml` prepara la versión 1.0.1+9 para la siguiente build.
+- `pubspec.yaml` prepara la versión 1.0.1+10 para la siguiente build.
+- Tras verificar o restaurar una compra vigente, aparece **Publicar vehículo**
+  debajo del botón de ese plan. La pantalla vuelve a consultar el servidor al
+  recibir la verificación, al volver a primer plano y al caducar un plan.
+- `lookup-vehicle` versión 8 reconoce PACK 20 y PRO comprados en Apple, además
+  de los derechos del sistema anterior. Valida de nuevo el plan en cada consulta.
 
 Aplicar la migración antes de distribuir la build. La base de datos principal es
 `ndicdhlpbyywqyjgxpnx`. La instalación autorizada quedó completada y se verificaron
@@ -49,7 +54,9 @@ reconstruir publicaciones eliminadas antes de que existiera dicho registro.
 
 ## Validación
 
-`flutter test --no-pub`: 9 pruebas correctas.
+`flutter test --no-pub`: 12 pruebas correctas.
+`node test/lookup_access.integration.mjs`: acceso exclusivo de PACK 20/PRO,
+incluidos estados pendientes, revocados, caducados, fechas futuras y planes inferiores.
 
 Pruebas de PostgreSQL en memoria con Node y `@electric-sql/pglite@0.3.14`:
 
