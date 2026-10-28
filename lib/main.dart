@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:automotors_base/services/store_purchase_service.dart';
 import 'package:automotors_base/sold_reviews_features.dart';
+import 'package:automotors_base/vehicle_feature_control.dart';
 
 const gold = Color(0xFFD4AF37);
 const black = Color(0xFF0D0D0F);
@@ -954,7 +955,7 @@ class _HomePageState extends State<HomePage> {
       final loadedCars = <Car>[];
       final featuredIds = <String>{};
       try {
-        final promotions = await supabase.from('vehicle_promotions').select('vehicle_id').eq('status', 'active').lte('starts_at', DateTime.now().toUtc().toIso8601String()).gt('ends_at', DateTime.now().toUtc().toIso8601String());
+        final promotions = await supabase.rpc('get_featured_vehicle_ids');
         for (final promotion in List<Map<String, dynamic>>.from(promotions)) {
           final id = promotion['vehicle_id']?.toString();
           if (id != null && id.isNotEmpty) featuredIds.add(id);
@@ -1442,8 +1443,8 @@ class _HomePageState extends State<HomePage> {
     if (car != null && mounted) setState(() => cars.insert(0, car));
   }
 
-  void openCarDetails(Car car) {
-    Navigator.push<void>(
+  Future<void> openCarDetails(Car car) async {
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -1453,6 +1454,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+    if (mounted) await loadCars();
   }
 
   @override
@@ -3544,6 +3546,16 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ),
         const SizedBox(height: 22),
+        if (car.listingId != null && car.ownerId == Supabase.instance.client.auth.currentUser?.id)
+          VehicleFeatureControl(
+            english: automotorsEnglish.value,
+            manage: (enabled) async => Map<String, dynamic>.from(
+              await Supabase.instance.client.rpc('manage_vehicle_feature', params: {
+                'p_vehicle_id': car.listingId,
+                'p_enabled': enabled,
+              }) as Map,
+            ),
+          ),
         if (car.ownerId != null) ...[
           OutlinedButton.icon(
             onPressed: () async {
@@ -6326,23 +6338,23 @@ class _AddCarPageState extends State<AddCarPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tus primeros 5 anuncios son gratuitos.'),
+              Text('5 publicaciones de bienvenida no recuperables al vender o eliminar. Después dispones de 3 plazas gratuitas reutilizables.'),
               SizedBox(height: 12),
               Text('PACK 10 · 59 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('10 publicaciones adicionales y hasta 3 coches destacados.'),
+              Text('Hasta 10 anuncios activos y 3 vehículos destacados.'),
               SizedBox(height: 8),
               Text('PACK 15 · 75 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('15 publicaciones adicionales y hasta 5 coches destacados.'),
+              Text('Hasta 15 anuncios activos y 5 vehículos destacados.'),
               SizedBox(height: 8),
               Text('PACK 20 · 99 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('20 publicaciones adicionales y hasta 8 coches destacados.'),
+              Text('Hasta 20 anuncios activos y 8 vehículos destacados.'),
               SizedBox(height: 16),
               Divider(),
               Text('AUTOMOTORS PRO · 199 €/mes', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Publicaciones ilimitadas y prioridad para todos tus anuncios mientras la suscripción esté activa.'),
+              Text('Publicaciones ilimitadas y hasta 15 vehículos destacados mientras la suscripción esté activa.'),
               SizedBox(height: 12),
               Text(
-                'Los pagos todavía no están activados. Las compras se habilitarán cuando estén configurados Google Play Billing, Apple In-App Purchase y la validación segura en Supabase. No se realizará ningún cobro desde esta pantalla.',
+                'Consulta los planes y gestiona tus compras o restauraciones desde las opciones de publicación de la aplicación móvil.',
               ),
             ],
           ),
