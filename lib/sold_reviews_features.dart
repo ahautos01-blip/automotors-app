@@ -137,6 +137,68 @@ class _MarkVehicleSoldDialogState extends State<MarkVehicleSoldDialog> {
   );
 }
 
+/// Opens a verified purchase from a review invitation in the in-app inbox.
+class BuyerPurchaseReviewPage extends StatefulWidget {
+  final String listingId;
+  const BuyerPurchaseReviewPage({super.key, required this.listingId});
+  @override
+  State<BuyerPurchaseReviewPage> createState() => _BuyerPurchaseReviewPageState();
+}
+
+class _BuyerPurchaseReviewPageState extends State<BuyerPurchaseReviewPage> {
+  late Future<Map<String, dynamic>?> purchase;
+  @override
+  void initState() { super.initState(); purchase = _load(); }
+
+  Future<Map<String, dynamic>?> _load() async {
+    final db = Supabase.instance.client;
+    final buyerId = db.auth.currentUser?.id;
+    if (buyerId == null) return null;
+    final listing = await db.from('vehicle_listings')
+        .select('id, owner_id')
+        .eq('id', widget.listingId).eq('status', 'sold')
+        .eq('sold_externally', false).eq('sold_to_buyer_id', buyerId)
+        .maybeSingle();
+    if (listing == null || listing['owner_id'] == null) return null;
+    final prior = await db.from('vehicle_reviews').select('id')
+        .eq('listing_id', widget.listingId).eq('buyer_id', buyerId).maybeSingle();
+    return {...listing, 'already_reviewed': prior != null};
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Valora tu compra')),
+    body: FutureBuilder<Map<String, dynamic>?>(
+      future: purchase,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('No se pudo cargar la compra. Inténtalo de nuevo.'),
+            TextButton(
+              onPressed: () => setState(() => purchase = _load()),
+              child: const Text('Reintentar'),
+            ),
+          ]));
+        }
+        final listing = snapshot.data;
+        if (listing == null) {
+          return const Center(child: Padding(padding: EdgeInsets.all(24),
+            child: Text('Esta compra no está disponible para valorar con tu cuenta.')));
+        }
+        if (listing['already_reviewed'] == true) {
+          return const Center(child: Text('Ya has valorado esta compra. ¡Gracias!'));
+        }
+        return ListView(padding: const EdgeInsets.all(16), children: [
+          VehicleReviewForm(listingId: widget.listingId, sellerId: listing['owner_id'].toString()),
+        ]);
+      },
+    ),
+  );
+}
+
 class VehicleReviewForm extends StatefulWidget {
   final String listingId;
   final String sellerId;
@@ -149,6 +211,7 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
   final controller = TextEditingController();
   int communication = 0, trust = 0, vehicleCondition = 0;
   bool saving = false;
+  bool submitted = false;
   String? message;
   late Future<bool> eligible;
 
@@ -179,7 +242,7 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
         communication: communication, trust: trust, vehicleCondition: vehicleCondition,
         reviewText: controller.text,
       );
-      if (mounted) setState(() { saving = false; message = '¡Gracias! Tu valoración ya aparece en el perfil del vendedor.'; });
+      if (mounted) setState(() { saving = false; submitted = true; message = '¡Gracias! Tu valoración ya aparece en el perfil del vendedor.'; });
     } catch (e) {
       if (mounted) setState(() { saving = false; message = 'No se pudo publicar la valoración. $e'; });
     }
@@ -201,6 +264,9 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
     future: eligible,
     builder: (context, snapshot) {
       if (snapshot.data != true) return const SizedBox.shrink();
+      if (submitted) return Card(child: Padding(
+        padding: const EdgeInsets.all(16), child: Text(message!),
+      ));
       return Card(child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
