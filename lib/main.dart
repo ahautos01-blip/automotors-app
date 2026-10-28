@@ -3173,6 +3173,22 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
+  Widget _featureControl() {
+    if (car.listingId == null ||
+        car.ownerId != Supabase.instance.client.auth.currentUser?.id) {
+      return const SizedBox.shrink();
+    }
+    return VehicleFeatureControl(
+      english: automotorsEnglish.value,
+      manage: (enabled) async => Map<String, dynamic>.from(
+        await Supabase.instance.client.rpc('manage_vehicle_feature', params: {
+          'p_vehicle_id': car.listingId,
+          'p_enabled': enabled,
+        }) as Map,
+      ),
+    );
+  }
+
   Widget _safetyTip(IconData icon, String message) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -3541,16 +3557,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ),
         const SizedBox(height: 22),
-        if (car.listingId != null && car.ownerId == Supabase.instance.client.auth.currentUser?.id)
-          VehicleFeatureControl(
-            english: automotorsEnglish.value,
-            manage: (enabled) async => Map<String, dynamic>.from(
-              await Supabase.instance.client.rpc('manage_vehicle_feature', params: {
-                'p_vehicle_id': car.listingId,
-                'p_enabled': enabled,
-              }) as Map,
-            ),
-          ),
         if (car.ownerId != null) ...[
           OutlinedButton.icon(
             onPressed: () async {
@@ -3663,6 +3669,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                             children: [
                               _gallery(context, height: 430),
                               _photoThumbnails(),
+                              _featureControl(),
                             ],
                           ),
                         ),
@@ -3676,6 +3683,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   else ...[
                     _gallery(context, height: constraints.maxWidth < 500 ? 270 : 360),
                     _photoThumbnails(),
+                    _featureControl(),
                     const SizedBox(height: 20),
                     _vehicleInformation(context),
                   ],
