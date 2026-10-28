@@ -2,5 +2,8 @@
 verify_jwt = true
 
 [functions.app-store-server-notifications]
-# Apple signs and sends the payload; this endpoint validates that JWS itself.
+verify_jwt = false
+
+[functions.send-ios-push]
+# The worker validates its private scheduler credential through a service-only RPC.
 verify_jwt = false

@@ -15,12 +15,55 @@ import 'package:automotors_base/services/store_purchase_service.dart';
 import 'package:automotors_base/services/verified_store_plans.dart';
 import 'package:automotors_base/sold_reviews_features.dart';
 import 'package:automotors_base/vehicle_feature_control.dart';
+import 'package:automotors_base/services/ios_push_service.dart';
 
 const gold = Color(0xFFD4AF37);
 const black = Color(0xFF0D0D0F);
 const panel = Color(0xFF1A1A1D);
 
 final ValueNotifier<bool> automotorsEnglish = ValueNotifier(false);
+final automotorsNavigatorKey = GlobalKey<NavigatorState>();
+late final IosPushService automotorsPush;
+
+Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
+  final navigator = automotorsNavigatorKey.currentState;
+  final context = automotorsNavigatorKey.currentContext;
+  if (navigator == null || context == null) return;
+  if (!await requireAutomotorsLogin(context)) return;
+  final db = Supabase.instance.client;
+  if (notification['user_id'] != db.auth.currentUser?.id) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Este aviso pertenece a otra cuenta de AUTOMOTORS.')),
+    );
+    return;
+  }
+  try {
+    if (notification['kind'] == 'review_requested') {
+      final listingId = notification['listing_id']?.toString();
+      if (listingId == null || listingId.isEmpty) return;
+      await navigator.push<void>(MaterialPageRoute(
+        builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
+      ));
+    } else if (notification['kind'] == 'chat_message') {
+      final conversationId = notification['conversation_id']?.toString();
+      if (conversationId == null || !RegExp(r'^[0-9]+$').hasMatch(conversationId)) return;
+      // RLS verifies that the current user still belongs to this conversation.
+      final conversation = await db.from('chat_conversations').select('id, listing_id')
+          .eq('id', conversationId).maybeSingle();
+      if (conversation == null) throw StateError('Conversation unavailable');
+      if (!navigator.mounted) return;
+      await navigator.push<void>(MaterialPageRoute(builder: (_) => ChatPage(
+        conversationId: conversationId,
+        listingId: conversation['listing_id']?.toString(),
+        title: 'Mensajes',
+      )));
+    }
+  } catch (_) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Este aviso ya no está disponible.')),
+    );
+  }
+}
 
 String appText(String spanish, String english) =>
     automotorsEnglish.value ? english : spanish;
@@ -159,7 +202,9 @@ Future<void> main() async {
     ),
   );
 
+  automotorsPush = IosPushService(db: Supabase.instance.client, onOpen: openAutomotorsPush);
   runApp(const AutomotorsApp());
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(automotorsPush.start()));
 }
 
 /// Devuelve el número para wa.me solo si parece válido.
@@ -750,6 +795,7 @@ class AutomotorsApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: automotorsNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
       theme: ThemeData(
@@ -4405,6 +4451,7 @@ class PersonalAreaPage extends StatelessWidget {
   const PersonalAreaPage({super.key});
 
   Future<void> _signOut(BuildContext context) async {
+    await automotorsPush.unregister();
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4976,6 +5023,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (confirmed != true || !mounted) return;
     try {
+      await automotorsPush.unregister();
       await supabase.auth.signOut();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
