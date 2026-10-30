@@ -1,0 +1,23 @@
+{
+  "@@locale": "es",
+  "appName": "AUTOMOTORS",
+  "viewVehicles": "Ver vehículos",
+  "publishVehicle": "Publicar vehículo",
+  "favorites": "Favoritos",
+  "chats": "Chats",
+  "profile": "Perfil",
+  "filters": "Filtros",
+  "search": "Buscar",
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "sold": "Vendido",
+  "reserved": "Reservado",
+  "price": "Precio",
+  "year": "Año",
+  "mileage": "Kilometraje",
+  "description": "Descripción",
+  "settings": "Ajustes",
+  "language": "Idioma",
+  "signIn": "Iniciar sesión",
+  "signOut": "Cerrar sesión"
+}
