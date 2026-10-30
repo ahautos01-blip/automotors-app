@@ -1939,6 +1939,8 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     });
   }
 
+  void _clearComparison() => setState(() => _comparisonIds.clear());
+
   void _resetFilters() {
     setState(() {
       search.clear();
@@ -2009,6 +2011,12 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               padding: const EdgeInsets.only(right: 4),
               child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
             )),
+          if (_comparisonIds.isNotEmpty)
+            IconButton(
+              tooltip: 'Vaciar comparador',
+              onPressed: _clearComparison,
+              icon: const Icon(Icons.clear_all_rounded, color: gold),
+            ),
           IconButton(tooltip: 'Restablecer filtros', onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
         ],
       ),
@@ -2066,7 +2074,23 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             child: const Text('Ver resultados'),
           )),
         ])))),
-        Expanded(child: found.isEmpty ? const Center(child: Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color:Colors.white70))) : LayoutBuilder(builder:(context, constraints) {
+        Expanded(child: found.isEmpty ? Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.search_off_rounded, color: gold, size: 48),
+              const SizedBox(height: 12),
+              const Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: _resetFilters,
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Restablecer filtros'),
+                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
+              ),
+            ]),
+          ),
+        ) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
           return GridView.builder(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
