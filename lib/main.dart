@@ -1994,7 +1994,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               padding: const EdgeInsets.only(right: 4),
               child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
             )),
-          IconButton(tooltip: 'Restablecer filtros', onPressed: () => setState(() { search.clear(); brand='Todas'; model='Todos'; fuel='Todos'; minPrice=0; maxPrice=200000; minKm=0; maxKm=300000; minCv=0; maxCv=1000; minYear=1990; maxYear=DateTime.now().year+1; }), icon: const Icon(Icons.restart_alt, color: gold)),
+          IconButton(tooltip: 'Restablecer filtros', onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
         ],
       ),
       bottomNavigationBar: _comparisonIds.length >= 2
@@ -2003,7 +2003,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             child: FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
               onPressed: () {
-                final selected = results.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
+                final selected = widget.cars.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
                 if (selected.length >= 2) {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected)));
                 }
