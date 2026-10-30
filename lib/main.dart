@@ -1614,7 +1614,7 @@ class _HomePageState extends State<HomePage> {
                             onOpenCar: openCarDetails,
                           ))),
                         icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                        label: const Text('Ver vehículos'),
+                        label: Text(AppLocalizations.of(context).viewVehicles),
                         style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
                       ),
                       const SizedBox(height: 18),
@@ -1850,9 +1850,9 @@ class _HomePageState extends State<HomePage> {
         },
         destinations: [
           const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
-          NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: 'Chats'),
-          const NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'Publicar'),
-          const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
+          NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: AppLocalizations.of(context).chats),
+          NavigationDestination(icon: const Icon(Icons.add_circle_outline), selectedIcon: const Icon(Icons.add_circle), label: AppLocalizations.of(context).publishVehicle),
+          NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: AppLocalizations.of(context).profile),
         ],
       ),
     );
@@ -1957,7 +1957,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       backgroundColor: const Color(0xFF0D0F12),
       appBar: AppBar(
         backgroundColor: const Color(0xFF151518),
-        title: const Text('Ver vehículos', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context).viewVehicles, style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           if (_comparisonIds.isNotEmpty)
             Center(child: Padding(
@@ -7100,7 +7100,7 @@ class _AddCarPageState extends State<AddCarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Publicar vehículo', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context).publishVehicle, style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(tooltip: 'Planes y packs', onPressed: showPackages,
             icon: const Icon(Icons.workspace_premium_rounded, color: gold)),
