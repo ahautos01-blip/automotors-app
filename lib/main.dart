@@ -1494,6 +1494,7 @@ class _HomePageState extends State<HomePage> {
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'es', child: Text('Español')),
+              PopupMenuItem(value: 'en', child: Text('English')),
               PopupMenuItem(value: 'ca', child: Text('Català')),
             ],
           ),
