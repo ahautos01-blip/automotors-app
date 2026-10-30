@@ -22,5 +22,11 @@
   "signOut": "Sign out",
   "home": "Home",
   "hideFilters": "Hide filters",
-  "saved": "Saved"
+  "saved": "Saved",
+  "sortVehicles": "Sort vehicles",
+  "featuredFirst": "Featured first",
+  "priceLowHigh": "Price: low to high",
+  "priceHighLow": "Price: high to low",
+  "newestFirst": "Year: newest first",
+  "lowestMileage": "Mileage: low to high"
 }
