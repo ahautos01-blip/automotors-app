@@ -1921,6 +1921,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   int minKm = 0, maxKm = 300000, minCv = 0, maxCv = 1000;
   int minYear = 1990, maxYear = DateTime.now().year + 1;
   bool showFilters = false;
+  String sortOrder = 'featured';
   final Set<String> _comparisonIds = <String>{};
 
   void _toggleCompare(Car car) {
@@ -1969,7 +1970,21 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
       ((minCv == 0 && maxCv == 1000) || (c.cv != null && c.cv! >= minCv && c.cv! <= maxCv)) &&
       ((minYear == 1990 && maxYear == DateTime.now().year + 1) || (c.year != 0 && c.year >= minYear && c.year <= maxYear));
-  }).toList();
+  }).toList()..sort((a, b) {
+    switch (sortOrder) {
+      case 'price_asc':
+        return a.price.compareTo(b.price);
+      case 'price_desc':
+        return b.price.compareTo(a.price);
+      case 'year_desc':
+        return b.year.compareTo(a.year);
+      case 'km_asc':
+        return a.km.compareTo(b.km);
+      default:
+        final featured = (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0);
+        return featured != 0 ? featured : b.year.compareTo(a.year);
+    }
+  });
 
   Widget rangeField(String label, int value, int min, int max, ValueChanged<int> onChanged) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [Expanded(child: Text(label)), Text(number(value), style: const TextStyle(color: gold, fontWeight: FontWeight.bold))]),
@@ -2016,6 +2031,25 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: DropdownButtonFormField<String>(
+            value: sortOrder,
+            decoration: const InputDecoration(
+              labelText: 'Ordenar vehículos',
+              prefixIcon: Icon(Icons.sort_rounded, color: gold),
+              isDense: true,
+            ),
+            items: const [
+              DropdownMenuItem(value: 'featured', child: Text('Destacados primero')),
+              DropdownMenuItem(value: 'price_asc', child: Text('Precio: menor a mayor')),
+              DropdownMenuItem(value: 'price_desc', child: Text('Precio: mayor a menor')),
+              DropdownMenuItem(value: 'year_desc', child: Text('Año: más recientes')),
+              DropdownMenuItem(value: 'km_asc', child: Text('Kilómetros: menos a más')),
+            ],
+            onChanged: (value) => setState(() => sortOrder = value ?? 'featured'),
+          ),
+        ),
         if (showFilters) Expanded(flex: 0, child: ConstrainedBox(constraints: const BoxConstraints(maxHeight: 390), child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Column(children: [
           Row(children: [Expanded(child: DropdownButtonFormField<String>(value: brand, isExpanded: true, decoration: const InputDecoration(labelText: 'Marca'), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(value: models.contains(model)?model:'Todos', isExpanded:true, decoration: const InputDecoration(labelText:'Modelo'), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
           const SizedBox(height:8), DropdownButtonFormField<String>(value:fuel, decoration: const InputDecoration(labelText:'Combustible'), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
