@@ -1,0 +1,23 @@
+{
+  "@@locale": "ca",
+  "appName": "AUTOMOTORS",
+  "viewVehicles": "Veure vehicles",
+  "publishVehicle": "Publicar vehicle",
+  "favorites": "Preferits",
+  "chats": "Xats",
+  "profile": "Perfil",
+  "filters": "Filtres",
+  "search": "Cercar",
+  "save": "Desar",
+  "cancel": "Cancel·lar",
+  "sold": "Venut",
+  "reserved": "Reservat",
+  "price": "Preu",
+  "year": "Any",
+  "mileage": "Quilometratge",
+  "description": "Descripció",
+  "settings": "Configuració",
+  "language": "Idioma",
+  "signIn": "Iniciar sessió",
+  "signOut": "Tancar sessió"
+}
