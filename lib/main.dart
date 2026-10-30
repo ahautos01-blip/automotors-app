@@ -1964,7 +1964,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   List<String> get models => ['Todos', ...widget.cars.where((c) => brand == 'Todas' || c.brand == brand).map((c) => c.model).toSet().toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
-    return ('${c.brand} ${c.model}'.toLowerCase().contains(q)) &&
+    return ('${c.brand} ${c.model} ${c.version ?? ''} ${c.fuel}'.toLowerCase().contains(q)) &&
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
       c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
@@ -2035,17 +2035,17 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: DropdownButtonFormField<String>(
             value: sortOrder,
-            decoration: const InputDecoration(
-              labelText: 'Ordenar vehículos',
-              prefixIcon: Icon(Icons.sort_rounded, color: gold),
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context).sortVehicles,
+              prefixIcon: const Icon(Icons.sort_rounded, color: gold),
               isDense: true,
             ),
-            items: const [
-              DropdownMenuItem(value: 'featured', child: Text('Destacados primero')),
-              DropdownMenuItem(value: 'price_asc', child: Text('Precio: menor a mayor')),
-              DropdownMenuItem(value: 'price_desc', child: Text('Precio: mayor a menor')),
-              DropdownMenuItem(value: 'year_desc', child: Text('Año: más recientes')),
-              DropdownMenuItem(value: 'km_asc', child: Text('Kilómetros: menos a más')),
+            items: [
+              DropdownMenuItem(value: 'featured', child: Text(AppLocalizations.of(context).featuredFirst)),
+              DropdownMenuItem(value: 'price_asc', child: Text(AppLocalizations.of(context).priceLowHigh)),
+              DropdownMenuItem(value: 'price_desc', child: Text(AppLocalizations.of(context).priceHighLow)),
+              DropdownMenuItem(value: 'year_desc', child: Text(AppLocalizations.of(context).newestFirst)),
+              DropdownMenuItem(value: 'km_asc', child: Text(AppLocalizations.of(context).lowestMileage)),
             ],
             onChanged: (value) => setState(() => sortOrder = value ?? 'featured'),
           ),
