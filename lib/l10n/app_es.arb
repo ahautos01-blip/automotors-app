@@ -22,5 +22,11 @@
   "signOut": "Cerrar sesión",
   "home": "Inicio",
   "hideFilters": "Ocultar filtros",
-  "saved": "Guardado"
+  "saved": "Guardado",
+  "sortVehicles": "Ordenar vehículos",
+  "featuredFirst": "Destacados primero",
+  "priceLowHigh": "Precio: menor a mayor",
+  "priceHighLow": "Precio: mayor a menor",
+  "newestFirst": "Año: más recientes",
+  "lowestMileage": "Kilómetros: menos a más"
 }
