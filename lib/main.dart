@@ -1862,7 +1862,7 @@ class _HomePageState extends State<HomePage> {
           }
         },
         destinations: [
-          const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Inicio'),
+          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: AppLocalizations.of(context).home),
           NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: AppLocalizations.of(context).chats),
           NavigationDestination(icon: const Icon(Icons.add_circle_outline), selectedIcon: const Icon(Icons.add_circle), label: AppLocalizations.of(context).publishVehicle),
           NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: AppLocalizations.of(context).profile),
@@ -1998,7 +1998,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
         : null,
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? 'Ocultar filtros' : 'Filtros'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
         if (showFilters) Expanded(flex: 0, child: ConstrainedBox(constraints: const BoxConstraints(maxHeight: 390), child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Column(children: [
           Row(children: [Expanded(child: DropdownButtonFormField<String>(value: brand, isExpanded: true, decoration: const InputDecoration(labelText: 'Marca'), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(value: models.contains(model)?model:'Todos', isExpanded:true, decoration: const InputDecoration(labelText:'Modelo'), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
           const SizedBox(height:8), DropdownButtonFormField<String>(value:fuel, decoration: const InputDecoration(labelText:'Combustible'), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
@@ -3476,7 +3476,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : Icon(isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                     color: isFavorite ? Colors.pinkAccent : gold, size: 18),
-            label: Text(isFavorite ? 'Guardado' : 'Favoritos'),
+            label: Text(isFavorite ? AppLocalizations.of(context).saved : AppLocalizations.of(context).favorites),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .65)),
