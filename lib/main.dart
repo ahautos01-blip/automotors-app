@@ -1,3 +1,5 @@
+import 'l10n/app_localizations.dart';
+import 'services/automotors_locale_controller.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
@@ -146,6 +148,7 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu',
   );
 
+  await AutomotorsLocaleController.instance.load();
   runApp(const AutomotorsApp());
 }
 
@@ -691,12 +694,34 @@ class VehicleComparisonPage extends StatelessWidget {
   }
 }
 
-class AutomotorsApp extends StatelessWidget {
+class AutomotorsApp extends StatefulWidget {
   const AutomotorsApp({super.key});
+
+  @override
+  State<AutomotorsApp> createState() => _AutomotorsAppState();
+}
+
+class _AutomotorsAppState extends State<AutomotorsApp> {
+  @override
+  void initState() {
+    super.initState();
+    AutomotorsLocaleController.instance.addListener(_refreshLocale);
+  }
+
+  void _refreshLocale() => setState(() {});
+
+  @override
+  void dispose() {
+    AutomotorsLocaleController.instance.removeListener(_refreshLocale);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: AutomotorsLocaleController.instance.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
       theme: ThemeData(
