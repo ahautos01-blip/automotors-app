@@ -16,7 +16,7 @@ class AutomotorsLocaleController extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(preferenceKey);
-    if (code != null && supportedCodes.contains(code)) {
+    if (code != null && supportedCodes.contains(code) && _locale.languageCode != code) {
       _locale = Locale(code);
       notifyListeners();
     }
@@ -26,8 +26,8 @@ class AutomotorsLocaleController extends ChangeNotifier {
     if (!supportedCodes.contains(code)) {
       throw ArgumentError.value(code, 'code', 'Unsupported language');
     }
-    if (_locale.languageCode == code) return;
     final prefs = await SharedPreferences.getInstance();
+    if (_locale.languageCode == code && prefs.getString(preferenceKey) == code) return;
     await prefs.setString(preferenceKey, code);
     _locale = Locale(code);
     notifyListeners();
