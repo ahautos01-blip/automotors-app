@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "appName": "AUTOMOTORS",
+  "viewVehicles": "View vehicles",
+  "publishVehicle": "Publish vehicle",
+  "favorites": "Favorites",
+  "chats": "Chats",
+  "profile": "Profile",
+  "filters": "Filters",
+  "search": "Search",
+  "save": "Save",
+  "cancel": "Cancel",
+  "sold": "Sold",
+  "reserved": "Reserved",
+  "price": "Price",
+  "year": "Year",
+  "mileage": "Mileage",
+  "description": "Description",
+  "settings": "Settings",
+  "language": "Language",
+  "signIn": "Sign in",
+  "signOut": "Sign out"
+}
