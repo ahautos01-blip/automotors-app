@@ -22,5 +22,11 @@
   "signOut": "Tancar sessió",
   "home": "Inici",
   "hideFilters": "Amaga els filtres",
-  "saved": "Desat"
+  "saved": "Desat",
+  "sortVehicles": "Ordena els vehicles",
+  "featuredFirst": "Destacats primer",
+  "priceLowHigh": "Preu: de menor a major",
+  "priceHighLow": "Preu: de major a menor",
+  "newestFirst": "Any: més recents",
+  "lowestMileage": "Quilòmetres: de menys a més"
 }
