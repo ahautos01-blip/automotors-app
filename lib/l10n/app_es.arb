@@ -19,5 +19,8 @@
   "settings": "Ajustes",
   "language": "Idioma",
   "signIn": "Iniciar sesión",
-  "signOut": "Cerrar sesión"
+  "signOut": "Cerrar sesión",
+  "home": "Inicio",
+  "hideFilters": "Ocultar filtros",
+  "saved": "Guardado"
 }
