@@ -20,6 +20,15 @@ void main() {
     expect(controller.locale.languageCode, 'ca');
   });
 
+  test('English language is supported and persisted', () async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = AutomotorsLocaleController.instance;
+    await controller.select('en');
+    expect(controller.locale.languageCode, 'en');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(AutomotorsLocaleController.preferenceKey), 'en');
+  });
+
   test('Unknown locale is rejected without changing the selection', () async {
     SharedPreferences.setMockInitialValues({});
     final controller = AutomotorsLocaleController.instance;
