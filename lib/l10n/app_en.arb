@@ -19,5 +19,8 @@
   "settings": "Settings",
   "language": "Language",
   "signIn": "Sign in",
-  "signOut": "Sign out"
+  "signOut": "Sign out",
+  "home": "Home",
+  "hideFilters": "Hide filters",
+  "saved": "Saved"
 }
