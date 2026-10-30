@@ -19,5 +19,8 @@
   "settings": "Configuració",
   "language": "Idioma",
   "signIn": "Iniciar sessió",
-  "signOut": "Tancar sessió"
+  "signOut": "Tancar sessió",
+  "home": "Inici",
+  "hideFilters": "Amaga els filtres",
+  "saved": "Desat"
 }
