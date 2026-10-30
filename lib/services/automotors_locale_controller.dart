@@ -8,7 +8,7 @@ class AutomotorsLocaleController extends ChangeNotifier {
   static final AutomotorsLocaleController instance = AutomotorsLocaleController._();
 
   static const preferenceKey = 'automotors_locale';
-  static const supportedCodes = <String>{'es', 'ca'};
+  static const supportedCodes = <String>{'es', 'en', 'ca'};
 
   Locale _locale = const Locale('es');
   Locale get locale => _locale;
