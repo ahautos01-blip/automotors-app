@@ -1938,6 +1938,23 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     });
   }
 
+  void _resetFilters() {
+    setState(() {
+      search.clear();
+      brand = 'Todas';
+      model = 'Todos';
+      fuel = 'Todos';
+      minPrice = 0;
+      maxPrice = 200000;
+      minKm = 0;
+      maxKm = 300000;
+      minCv = 0;
+      maxCv = 1000;
+      minYear = 1990;
+      maxYear = DateTime.now().year + 1;
+    });
+  }
+
   @override
   void dispose() { search.dispose(); super.dispose(); }
   String euros(double price) => '${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
@@ -1950,8 +1967,8 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
       c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
-      (c.cv == null || (c.cv! >= minCv && c.cv! <= maxCv)) &&
-      (c.year == 0 || (c.year >= minYear && c.year <= maxYear));
+      ((minCv == 0 && maxCv == 1000) || (c.cv != null && c.cv! >= minCv && c.cv! <= maxCv)) &&
+      ((minYear == 1990 && maxYear == DateTime.now().year + 1) || (c.year != 0 && c.year >= minYear && c.year <= maxYear));
   }).toList();
 
   Widget rangeField(String label, int value, int min, int max, ValueChanged<int> onChanged) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
