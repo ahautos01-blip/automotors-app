@@ -1485,6 +1485,18 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: AppLocalizations.of(context).language,
+            icon: const Icon(Icons.language_rounded, color: gold),
+            initialValue: AutomotorsLocaleController.instance.locale.languageCode,
+            onSelected: (code) async {
+              await AutomotorsLocaleController.instance.select(code);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'es', child: Text('Español')),
+              PopupMenuItem(value: 'ca', child: Text('Català')),
+            ],
+          ),
           IconButton(
             tooltip: 'Alertas de búsqueda',
             onPressed: () async {
