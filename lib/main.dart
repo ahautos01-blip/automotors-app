@@ -67,8 +67,48 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
   }
 }
 
-String appText(String spanish, String english) =>
-    automotorsEnglish.value ? english : spanish;
+const Map<String, String> automotorsCatalanText = {
+  "Seleccionar idioma": "Seleccionar idioma",
+  "Alertas de búsqueda": "Alertes de cerca",
+  "VEHÍCULOS VERIFICADOS": "VEHICLES VERIFICATS",
+  "Encuentra\\ntu próximo coche.": "Troba\\nel teu pròxim cotxe.",
+  "Vehículos de particulares y profesionales.": "Vehicles de particulars i professionals.",
+  "Ver vehículos": "Veure vehicles",
+  "Escribe marca o modelo...": "Escriu marca o model...",
+  "Borrar búsqueda": "Esborrar la cerca",
+  "No se pudo consultar tu plan. Reintenta para comprobar el acceso.": "No s'ha pogut consultar el teu pla. Torna-ho a provar.",
+  "El pago aún no está verificado o el plan ha caducado.": "El pagament encara no està verificat o el pla ha caducat.",
+  "Has alcanzado el límite de anuncios activos de tu cuenta.": "Has arribat al límit d'anuncis actius del teu compte.",
+  "Todo lo necesario para empezar": "Tot el que necessites per començar",
+  "10 anuncios · 3 destacados": "10 anuncis · 3 destacats",
+  "Más visibilidad para tu negocio": "Més visibilitat per al teu negoci",
+  "15 anuncios · 5 destacados": "15 anuncis · 5 destacats",
+  "Para concesionarios con más stock": "Per a concessionaris amb més estoc",
+  "20 anuncios · 8 destacados": "20 anuncis · 8 destacats",
+  "Para una venta profesional sin límites": "Per a una venda professional sense límits",
+  "Anuncios ilimitados · hasta 15 destacados": "Anuncis il·limitats · fins a 15 destacats",
+  "Publicar mi vehículo": "Publicar el meu vehicle",
+  "PUBLICAR GRATIS  →": "PUBLICAR GRATIS  →",
+  "LLEGA A MÁS COMPRADORES": "ARRIBA A MÉS COMPRADORS",
+  "Elige la opción que mejor se adapte a ti.\\nAumenta la visibilidad de tus anuncios con nuestros packs.": "Tria l'opció que s'adapti millor a tu.\\nAugmenta la visibilitat dels anuncis amb els nostres paquets.",
+  "Restaurar compras": "Restaurar compres",
+  "Reintentar": "Torna-ho a provar",
+  "El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.": "L'accés s'activa després de verificar el pagament. Pots restaurar les compres amb el mateix compte.",
+  "Publicar vehículo": "Publicar vehicle",
+};
+
+String appText(String spanish, String english) {
+  final language = AutomotorsLocaleController.instance.locale.languageCode;
+  if (language == 'en') return english;
+  if (language == 'ca') {
+    if (spanish.endsWith(' vehículos anunciados')) {
+      return spanish.replaceAll(' vehículos anunciados', ' vehicles anunciats');
+    }
+    if (spanish.startsWith('Elegir ')) return spanish.replaceFirst('Elegir ', 'Triar ');
+    return automotorsCatalanText[spanish] ?? spanish;
+  }
+  return spanish;
+}
 
 
 class AutomotorsBrandMark extends StatelessWidget {
