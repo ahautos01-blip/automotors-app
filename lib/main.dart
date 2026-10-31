@@ -1576,7 +1576,7 @@ class _HomePageState extends State<HomePage> {
           PopupMenuButton<String>(
             tooltip: appText('Seleccionar idioma', 'Choose language'),
             onSelected: (code) async {
-              await AutomotorsLocaleController.instance.select(Locale(code));
+              await AutomotorsLocaleController.instance.select(code);
               automotorsEnglish.value = code == 'en';
             },
             itemBuilder: (_) => const [
