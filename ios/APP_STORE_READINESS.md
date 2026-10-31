@@ -34,9 +34,13 @@ La última incidencia observada devolvía conflictos de cuenta y transacciones c
 
 Las 21 pruebas de Flutter pasan localmente, incluida la pantalla del catálogo a 390 × 844 con filtros abiertos en los tres idiomas. La compilación web de la integración anterior también pasó.
 
-La build 11 se inició en Codemagic desde el commit `1fca17e9ad713eb2b2afbf782cc6efb2a76afccb`:
-https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae63688efa74786046f887e
+La build 11 se compiló y subió correctamente desde el commit `be733792b26ee8a7f1df6fd95ceab1dc35d1d7ab`:
+https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae637d8efa74786046f88df
 
-Que una compilación arranque o genere un archivo no confirma la distribución. Comprobar por separado la compilación/firma, la aceptación de la subida por Apple, el procesamiento y la disponibilidad en el grupo de TestFlight. Al redactar este registro, esa comprobación está en curso.
+Que una compilación arranque o genere un archivo no confirma la distribución. Comprobar por separado la compilación/firma, la aceptación de la subida por Apple, el procesamiento y la disponibilidad en el grupo de TestFlight. Apple confirmó la aceptación de la subida y terminó el procesamiento. La build 11 aparece en App Store Connect con «Falta información de exportación». Está preparada la respuesta «Ninguno de los algoritmos mencionados anteriormente», pendiente de autorización expresa del titular antes de enviarla y asignar la build al grupo interno.
 
 La publicación pública en App Store sigue siendo un paso posterior. Queda revisar la ficha, soporte, privacidad, eliminación de cuenta, moderación y las pruebas físicas de los flujos de compra, chat y publicación antes del envío.
+
+## Perfil de firma renovado
+
+El 31 de octubre de 2026 se activó Push Notifications para el identificador existente y se regeneró su perfil App Store con autorización expresa del titular. La compilación fallaba porque el perfil anterior no incluía aps-environment. La segunda ejecución generó el IPA de 1.0.1 (11), de 27,3 MB, y Apple confirmó UPLOAD SUCCEEDED with no errors.
