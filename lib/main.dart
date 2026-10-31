@@ -2001,7 +2001,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
         _comparisonIds.add(id);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Puedes comparar hasta 3 vehículos.')),
+          SnackBar(content: Text(AppLocalizations.of(context).comparisonLimit)),
         );
       }
     });
@@ -2061,7 +2061,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
     Slider(value: value.clamp(min, max).toDouble(), min: min.toDouble(), max: max.toDouble(), divisions: 100, activeColor: gold, onChanged: (v) => onChanged(v.round())),
   ]);
   Widget priceRange() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(children: [const Expanded(child: Text('Precio (€)')), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: gold, fontSize: 12))]),
+    Row(children: [Expanded(child: Text(AppLocalizations.of(context).priceEuros)), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: gold, fontSize: 12))]),
     RangeSlider(values: RangeValues(minPrice.clamp(0, 200000).toDouble(), maxPrice.clamp(0, 200000).toDouble()), min: 0, max: 200000, divisions: 200, activeColor: gold, onChanged: (v) => setState(() { minPrice = v.start; maxPrice = v.end; })),
   ]);
 
@@ -2081,11 +2081,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             )),
           if (_comparisonIds.isNotEmpty)
             IconButton(
-              tooltip: 'Vaciar comparador',
+              tooltip: AppLocalizations.of(context).clearComparison,
               onPressed: _clearComparison,
               icon: const Icon(Icons.clear_all_rounded, color: gold),
             ),
-          IconButton(tooltip: 'Restablecer filtros', onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
+          IconButton(tooltip: AppLocalizations.of(context).resetFilters, onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
         ],
       ),
       bottomNavigationBar: _comparisonIds.length >= 2
@@ -2100,17 +2100,18 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                 }
               },
               icon: const Icon(Icons.compare_arrows_rounded),
-              label: Text('Comparar ${_comparisonIds.length} vehículos'),
+              label: Text(AppLocalizations.of(context).compareVehicles(_comparisonIds.length)),
             ),
           ))
         : null,
       body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text(AppLocalizations.of(context).vehiclesFound(found.length), style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: DropdownButtonFormField<String>(
             value: sortOrder,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context).sortVehicles,
               prefixIcon: const Icon(Icons.sort_rounded, color: gold),
@@ -2127,38 +2128,38 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           ),
         ),
         if (showFilters) Expanded(flex: 0, child: ConstrainedBox(constraints: const BoxConstraints(maxHeight: 390), child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Column(children: [
-          Row(children: [Expanded(child: DropdownButtonFormField<String>(value: brand, isExpanded: true, decoration: const InputDecoration(labelText: 'Marca'), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(value: models.contains(model)?model:'Todos', isExpanded:true, decoration: const InputDecoration(labelText:'Modelo'), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
-          const SizedBox(height:8), DropdownButtonFormField<String>(value:fuel, decoration: const InputDecoration(labelText:'Combustible'), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
+          Row(children: [Expanded(child: DropdownButtonFormField<String>(value: brand, isExpanded: true, decoration: InputDecoration(labelText: AppLocalizations.of(context).brand), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(value: models.contains(model)?model:'Todos', isExpanded:true, decoration: InputDecoration(labelText: AppLocalizations.of(context).model), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
+          const SizedBox(height:8), DropdownButtonFormField<String>(value:fuel, decoration: InputDecoration(labelText: AppLocalizations.of(context).fuel), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
           const SizedBox(height:8), priceRange(),
-          rangeField('Kilometraje mínimo (km)', minKm, 0, 300000, (v)=>setState(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
-          rangeField('Kilometraje máximo (km)', maxKm, 0, 300000, (v)=>setState(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
-          rangeField('Potencia mínima (CV)', minCv, 0, 1000, (v)=>setState(() { minCv=v; if (maxCv < minCv) maxCv=minCv; })),
-          rangeField('Potencia máxima (CV)', maxCv, 0, 1000, (v)=>setState(() { maxCv=v; if (minCv > maxCv) minCv=maxCv; })),
-          rangeField('Año mínimo', minYear, 1990, DateTime.now().year+1, (v)=>setState(() { minYear=v; if (maxYear < minYear) maxYear=minYear; })),
-          rangeField('Año máximo', maxYear, 1990, DateTime.now().year+1, (v)=>setState(() { maxYear=v; if (minYear > maxYear) minYear=maxYear; })),
+          rangeField(AppLocalizations.of(context).minMileage, minKm, 0, 300000, (v)=>setState(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
+          rangeField(AppLocalizations.of(context).maxMileage, maxKm, 0, 300000, (v)=>setState(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
+          rangeField(AppLocalizations.of(context).minPower, minCv, 0, 1000, (v)=>setState(() { minCv=v; if (maxCv < minCv) maxCv=minCv; })),
+          rangeField(AppLocalizations.of(context).maxPower, maxCv, 0, 1000, (v)=>setState(() { maxCv=v; if (minCv > maxCv) minCv=maxCv; })),
+          rangeField(AppLocalizations.of(context).minYear, minYear, 1990, DateTime.now().year+1, (v)=>setState(() { minYear=v; if (maxYear < minYear) maxYear=minYear; })),
+          rangeField(AppLocalizations.of(context).maxYear, maxYear, 1990, DateTime.now().year+1, (v)=>setState(() { maxYear=v; if (minYear > maxYear) minYear=maxYear; })),
           SizedBox(width: double.infinity, child: FilledButton(
             onPressed: () => setState(() => showFilters = false),
             style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
-            child: const Text('Ver resultados'),
+            child: Text(AppLocalizations.of(context).viewResults),
           )),
         ])))),
         Expanded(child: found.isEmpty ? Center(
-          child: Padding(
+          child: SingleChildScrollView(child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.search_off_rounded, color: gold, size: 48),
               const SizedBox(height: 12),
-              const Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context).noVehiclesFound, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Restablecer filtros'),
+                label: Text(AppLocalizations.of(context).resetFilters),
                 style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
               ),
             ]),
           ),
-        ) : LayoutBuilder(builder:(context, constraints) {
+        )) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
           return GridView.builder(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
@@ -2206,7 +2207,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                                     Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined, color: gold, size: 18),
                                     const SizedBox(width: 5),
-                                    Text(isCompared ? 'Comparar' : 'Añadir', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                    Text(isCompared ? AppLocalizations.of(context).compare : AppLocalizations.of(context).add, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                                   ]),
                                 ),
                               ),
@@ -2224,7 +2225,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               child: Row(mainAxisSize: MainAxisSize.min, children: [
                                 const Icon(Icons.photo_camera_outlined, color: gold, size: 14),
                                 const SizedBox(width: 5),
-                                Text('${car.photos.length} fotos', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                Text(AppLocalizations.of(context).photoCount(car.photos.length), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                               ]),
                             ),
                           ),

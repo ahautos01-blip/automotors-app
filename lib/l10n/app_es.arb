@@ -28,5 +28,47 @@
   "priceLowHigh": "Precio: menor a mayor",
   "priceHighLow": "Precio: mayor a menor",
   "newestFirst": "Año: más recientes",
-  "lowestMileage": "Kilómetros: menos a más"
+  "lowestMileage": "Kilómetros: menos a más",
+  "clearComparison": "Vaciar comparador",
+  "resetFilters": "Restablecer filtros",
+  "searchVehicleHint": "Buscar marca, modelo, versión...",
+  "noVehiclesFound": "No hay vehículos que coincidan con estos filtros.",
+  "viewResults": "Ver resultados",
+  "compare": "Comparar",
+  "add": "Añadir",
+  "brand": "Marca",
+  "model": "Modelo",
+  "fuel": "Combustible",
+  "priceEuros": "Precio (€)",
+  "minMileage": "Kilometraje mínimo (km)",
+  "maxMileage": "Kilometraje máximo (km)",
+  "minPower": "Potencia mínima (CV)",
+  "maxPower": "Potencia máxima (CV)",
+  "minYear": "Año mínimo",
+  "maxYear": "Año máximo",
+  "comparisonLimit": "Puedes comparar hasta 3 vehículos.",
+  "vehiclesFound": "{count, plural, =1{1 vehículo encontrado} other{{count} vehículos encontrados}}",
+  "compareVehicles": "Comparar {count} vehículos",
+  "photoCount": "{count, plural, =1{1 foto} other{{count} fotos}}",
+  "@vehiclesFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@compareVehicles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@photoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
