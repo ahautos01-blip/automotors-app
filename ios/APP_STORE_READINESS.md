@@ -65,3 +65,10 @@ Apple termino de procesar la build 12, id f0deb530-3236-4cc2-a305-76b30f23338c. 
 La version preparada es 1.0.1 (13). Recupera el PNG original AutoMotors_icono_iPhone_1024.png del chat Generar icono app coche, con Audi, BMW, Mercedes, Volkswagen y Porsche. Se conserva el original RGB de 1024 x 1024 y se regeneran 33 exportaciones iOS y web, sin canal alfa.
 
 El inicio de sesion mantiene el icono cuadrado a 112 x 112, con BoxFit.contain y sin un recorte adicional. Se comprueba a anchos de 320, 390 y 430 puntos. Las traducciones y las funciones de la build 12 se conservan. La distribucion de la build 13 se verifica por separado.
+
+Las 39 pruebas de Flutter pasan con el icono original, incluidas las tres comprobaciones del acceso a 320/390/430 puntos. La validacion de GitHub tambien termino correctamente (pruebas y compilacion web): https://github.com/ahautos01-blip/automotors-app/actions/runs/41248731664.
+
+Codemagic compilo, firmo y subio 1.0.1 (13) desde el commit a206ba46e43cf6e2d7cf7b76e67cb0e857cd823b. Confirmo Version code 13 y UPLOAD SUCCEEDED with no errors:
+https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae66cddefa74786046f95fb
+
+Apple termino de procesar la build 13 (1ccb1715-4e89-46ee-b940-b4971c029158). El titular autorizo expresamente guardar para esta build la respuesta "Ninguno de los algoritmos mencionados anteriormente" sobre cifrado. Se guardo y se asigno la build a AUTOMOTORS Sandbox. App Store Connect confirma 1.0.1 (13) "En pruebas", disponible para actualizar en TestFlight con el icono correcto. La publicacion publica sigue pendiente.
