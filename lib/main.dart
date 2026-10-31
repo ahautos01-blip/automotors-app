@@ -1,3 +1,5 @@
+import 'l10n/app_localizations.dart';
+import 'services/automotors_locale_controller.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
@@ -202,6 +204,8 @@ Future<void> main() async {
     ),
   );
 
+  await AutomotorsLocaleController.instance.load();
+  automotorsEnglish.value = AutomotorsLocaleController.instance.locale.languageCode == 'en';
   automotorsPush = IosPushService(db: Supabase.instance.client, onOpen: openAutomotorsPush);
   runApp(const AutomotorsApp());
   WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(automotorsPush.start()));
@@ -789,12 +793,34 @@ class VehicleComparisonPage extends StatelessWidget {
   }
 }
 
-class AutomotorsApp extends StatelessWidget {
+class AutomotorsApp extends StatefulWidget {
   const AutomotorsApp({super.key});
+
+  @override
+  State<AutomotorsApp> createState() => _AutomotorsAppState();
+}
+
+class _AutomotorsAppState extends State<AutomotorsApp> {
+  @override
+  void initState() {
+    super.initState();
+    AutomotorsLocaleController.instance.addListener(_refreshLocale);
+  }
+
+  void _refreshLocale() => setState(() {});
+
+  @override
+  void dispose() {
+    AutomotorsLocaleController.instance.removeListener(_refreshLocale);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: AutomotorsLocaleController.instance.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       navigatorKey: automotorsNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
@@ -1547,14 +1573,18 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
-          PopupMenuButton<bool>(
+          PopupMenuButton<String>(
             tooltip: appText('Seleccionar idioma', 'Choose language'),
-            onSelected: (english) => automotorsEnglish.value = english,
+            onSelected: (code) async {
+              await AutomotorsLocaleController.instance.select(Locale(code));
+              automotorsEnglish.value = code == 'en';
+            },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: false, child: Text('Español')),
-              PopupMenuItem(value: true, child: Text('English')),
+              PopupMenuItem(value: 'es', child: Text('Español')),
+              PopupMenuItem(value: 'en', child: Text('English')),
+              PopupMenuItem(value: 'ca', child: Text('Català')),
             ],
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: gold, size: 19), const SizedBox(width: 4), Text(automotorsEnglish.value ? 'EN' : 'ES', style: const TextStyle(color: gold, fontWeight: FontWeight.w900))])),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: gold, size: 19), const SizedBox(width: 4), Text(AutomotorsLocaleController.instance.locale.languageCode.toUpperCase(), style: const TextStyle(color: gold, fontWeight: FontWeight.w900))])),
           ),
           IconButton(
             tooltip: appText('Alertas de búsqueda', 'Search alerts'),
