@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:automotors_base/main.dart' show appText;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:automotors_base/services/automotors_locale_controller.dart';
 
@@ -18,6 +19,15 @@ void main() {
     await prefs.setString(AutomotorsLocaleController.preferenceKey, 'ca');
     await controller.load();
     expect(controller.locale.languageCode, 'ca');
+  });
+
+  test('Catalan translates multiline home and plan text', () async {
+    SharedPreferences.setMockInitialValues({});
+    await AutomotorsLocaleController.instance.select('ca');
+    expect(appText('Encuentra\ntu próximo coche.', 'Find\nyour next car.'),
+        'Troba\nel teu pròxim cotxe.');
+    expect(appText('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', ''),
+        'Tria l’opció que s’adapti millor a tu.\nAugmenta la visibilitat dels anuncis amb els nostres paquets.'.replaceAll('’', "'"));
   });
 
   test('English language is supported and persisted', () async {

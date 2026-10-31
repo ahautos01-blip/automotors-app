@@ -1,7 +1,7 @@
 name: Check iOS push integration
 on:
   push:
-    branches: [codex/vehicle-highlights]
+    branches: [codex/vehicle-highlights, restore/ios-1.0.1-build10]
     paths: ['lib/**', 'ios/**', 'supabase/functions/send-ios-push/**', '.github/workflows/ios-push-check.yml']
   workflow_dispatch:
 permissions:

@@ -1,0 +1,31 @@
+name: Validate AUTOMOTORS feature branch
+
+on:
+  push:
+    branches:
+      - feature/full-localization-catalan
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Generate localizations
+        run: flutter gen-l10n
+      - name: Run unit and widget tests
+        run: flutter test
+      - name: Compile Flutter web
+        run: flutter build web --release --base-href /automotors-app/
