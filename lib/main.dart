@@ -116,20 +116,17 @@ class AutomotorsBrandMark extends StatelessWidget {
   const AutomotorsBrandMark({super.key, this.size = 36});
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size, height: size,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(size * .28),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFFF2D477), Color(0xFFB88A19)],
+  Widget build(BuildContext context) => Center(
+    widthFactor: 1,
+    heightFactor: 1,
+    child: SizedBox.square(
+      dimension: size,
+      child: Image.asset(
+        'assets/automotors_app_icon.png',
+        fit: BoxFit.contain,
+        semanticLabel: 'AUTOMOTORS',
       ),
-      boxShadow: const [BoxShadow(color: Color(0x332D2200), blurRadius: 8, offset: Offset(0, 3))],
     ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * .28),
-        child: Image.asset('assets/automotors_app_icon.png', width: size, height: size, fit: BoxFit.cover),
-      ),
   );
 }
 
@@ -382,7 +379,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const AutomotorsBrandMark(size: 64),
+                  const AutomotorsBrandMark(size: 112),
                   const SizedBox(height: 12),
                    Text(uiText(context, "AUTOMOTORS"), textAlign: TextAlign.center,
                     style: TextStyle(color: gold, fontSize: 26, fontWeight: FontWeight.bold)),
