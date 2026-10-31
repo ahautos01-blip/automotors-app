@@ -1,3 +1,4 @@
+import 'l10n/ui_text.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -19,7 +20,7 @@ class _VehicleFeatureControlState extends State<VehicleFeatureControl> {
   Map<String, dynamic>? status;
   bool busy = false;
   String? error;
-  String tr(String es, String en) => widget.english ? en : es;
+  String tr(String es, String en) => widget.english ? en : uiText(context, es);
 
   @override
   void initState() {
@@ -38,8 +39,7 @@ class _VehicleFeatureControlState extends State<VehicleFeatureControl> {
     } catch (e) {
       if (!mounted) return;
       setState(() => error = e is PostgrestException ? e.message :
-        tr('No se pudo consultar o actualizar el destacado. Inténtalo de nuevo.',
-          'Could not load or update featured status. Please try again.'));
+        'No se pudo consultar o actualizar el destacado. Inténtalo de nuevo.');
       // Refresh after a concurrent request may have consumed the last slot.
       if (enabled != null) {
         try {
@@ -70,7 +70,7 @@ class _VehicleFeatureControlState extends State<VehicleFeatureControl> {
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: gold)),
           if (status != null) ...[
             const SizedBox(height: 8),
-            Text(tr('Destacados utilizados: $used de $limit', 'Featured slots used: $used of $limit')),
+            Text(widget.english ? 'Featured slots used: $used of $limit' : uiText(context, 'Destacados utilizados: {0} de {1}', [used, limit])),
             const SizedBox(height: 8),
             Text(limit == 0
               ? tr('Necesitas un pack o una suscripción activa.', 'An active pack or subscription is required.')
@@ -85,7 +85,7 @@ class _VehicleFeatureControlState extends State<VehicleFeatureControl> {
                 'This listing is not currently featured: check your plan validity or limit.')),
           ],
           if (error != null) ...[
-            const SizedBox(height: 8), Text(error!, style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 8), Text(uiText(context, error!), style: const TextStyle(color: Colors.redAccent)),
             TextButton(onPressed: busy ? null : () => load(null), child: Text(tr('Reintentar', 'Retry'))),
           ],
           const SizedBox(height: 8),

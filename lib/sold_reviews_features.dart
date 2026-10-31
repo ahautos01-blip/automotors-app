@@ -1,3 +1,4 @@
+import 'l10n/ui_text.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -85,7 +86,7 @@ class _MarkVehicleSoldDialogState extends State<MarkVehicleSoldDialog> {
 
   Future<void> _load() async {
     try { buyers = await AutomotorsSoldReviews.contactedBuyers(widget.listingId); }
-    catch (e) { error = 'No se pudieron cargar los compradores: $e'; }
+    catch (e) { error = uiText(context, 'No se pudieron cargar los compradores: {0}', [e]); }
     if (mounted) setState(() => loading = false);
   }
 
@@ -99,40 +100,40 @@ class _MarkVehicleSoldDialogState extends State<MarkVehicleSoldDialog> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) setState(() { saving = false; error = 'No se pudo marcar como vendido: $e'; });
+      if (mounted) setState(() { saving = false; error = uiText(context, 'No se pudo marcar como vendido: {0}', [e]); });
     }
   }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Marcar vehículo como vendido'),
+    title:  Text(uiText(context, "Marcar vehículo como vendido")),
     content: SizedBox(width: 360, child: loading
       ? const Center(child: CircularProgressIndicator())
       : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('¿A quién has vendido este vehículo?'),
+           Text(uiText(context, "¿A quién has vendido este vehículo?")),
           const SizedBox(height: 10),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             value: soldExternally,
-            title: const Text('Lo he vendido fuera de AUTOMOTORS'),
+            title:  Text(uiText(context, "Lo he vendido fuera de AUTOMOTORS")),
             onChanged: saving ? null : (value) => setState(() { soldExternally = value ?? false; selectedBuyer = null; }),
           ),
-          if (!soldExternally && buyers.isEmpty) const Text('No hay conversaciones para este anuncio. Puedes indicar que la venta fue fuera de AUTOMOTORS.'),
+          if (!soldExternally && buyers.isEmpty)  Text(uiText(context, "No hay conversaciones para este anuncio. Puedes indicar que la venta fue fuera de AUTOMOTORS.")),
           if (!soldExternally && buyers.isNotEmpty) DropdownButtonFormField<String>(
             value: selectedBuyer, isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Comprador del chat'),
+            decoration:  InputDecoration(labelText: uiText(context, "Comprador del chat")),
             items: buyers.map((b) {
               final id = b['buyer_id'].toString();
               final name = b['display_name']?.toString().trim() ?? '';
-              return DropdownMenuItem(value: id, child: Text(name.isNotEmpty ? name : 'Usuario ${id.substring(0, id.length > 8 ? 8 : id.length)}'));
+              return DropdownMenuItem(value: id, child: Text(name.isNotEmpty ? name : uiText(context, "Usuario {0}", [id.substring(0, id.length > 8 ? 8 : id.length)])));
             }).toList(),
             onChanged: saving ? null : (v) => setState(() => selectedBuyer = v),
           ),
-          if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(error!, style: const TextStyle(color: Colors.redAccent))),
+          if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(uiText(context, error!), style: const TextStyle(color: Colors.redAccent))),
         ])),
     actions: [
-      TextButton(onPressed: saving ? null : () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-      FilledButton(onPressed: saving || (!soldExternally && selectedBuyer == null) ? null : _save, child: Text(saving ? 'Guardando...' : 'Confirmar venta')),
+      TextButton(onPressed: saving ? null : () => Navigator.of(context).pop(false), child:  Text(uiText(context, "Cancelar"))),
+      FilledButton(onPressed: saving || (!soldExternally && selectedBuyer == null) ? null : _save, child: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Confirmar venta"))),
     ],
   );
 }
@@ -167,7 +168,7 @@ class _BuyerPurchaseReviewPageState extends State<BuyerPurchaseReviewPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Valora tu compra')),
+    appBar: AppBar(title:  Text(uiText(context, "Valora tu compra"))),
     body: FutureBuilder<Map<String, dynamic>?>(
       future: purchase,
       builder: (context, snapshot) {
@@ -176,20 +177,20 @@ class _BuyerPurchaseReviewPageState extends State<BuyerPurchaseReviewPage> {
         }
         if (snapshot.hasError) {
           return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('No se pudo cargar la compra. Inténtalo de nuevo.'),
+             Text(uiText(context, "No se pudo cargar la compra. Inténtalo de nuevo.")),
             TextButton(
               onPressed: () => setState(() => purchase = _load()),
-              child: const Text('Reintentar'),
+              child:  Text(uiText(context, "Reintentar")),
             ),
           ]));
         }
         final listing = snapshot.data;
         if (listing == null) {
-          return const Center(child: Padding(padding: EdgeInsets.all(24),
-            child: Text('Esta compra no está disponible para valorar con tu cuenta.')));
+          return  Center(child: Padding(padding: EdgeInsets.all(24),
+            child: Text(uiText(context, "Esta compra no está disponible para valorar con tu cuenta."))));
         }
         if (listing['already_reviewed'] == true) {
-          return const Center(child: Text('Ya has valorado esta compra. ¡Gracias!'));
+          return  Center(child: Text(uiText(context, "Ya has valorado esta compra. ¡Gracias!")));
         }
         return ListView(padding: const EdgeInsets.all(16), children: [
           VehicleReviewForm(listingId: widget.listingId, sellerId: listing['owner_id'].toString()),
@@ -244,7 +245,7 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
       );
       if (mounted) setState(() { saving = false; submitted = true; message = '¡Gracias! Tu valoración ya aparece en el perfil del vendedor.'; });
     } catch (e) {
-      if (mounted) setState(() { saving = false; message = 'No se pudo publicar la valoración. $e'; });
+      if (mounted) setState(() { saving = false; message = uiText(context, 'No se pudo publicar la valoración. {0}', [e]); });
     }
   }
 
@@ -252,7 +253,7 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
     Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
     ...List.generate(5, (i) => IconButton(
       visualDensity: VisualDensity.compact,
-      tooltip: '${i + 1} estrellas',
+      tooltip: uiText(context, "{0} estrellas", [i + 1]),
       onPressed: saving ? null : () => onChanged(value == i + 1 ? 0 : i + 1),
       icon: Icon(i < value ? Icons.star_rounded : Icons.star_border_rounded, color: Colors.amber, size: 26),
     )),
@@ -265,19 +266,19 @@ class _VehicleReviewFormState extends State<VehicleReviewForm> {
     builder: (context, snapshot) {
       if (snapshot.data != true) return const SizedBox.shrink();
       if (submitted) return Card(child: Padding(
-        padding: const EdgeInsets.all(16), child: Text(message!),
+        padding: const EdgeInsets.all(16), child: Text(uiText(context, message!)),
       ));
       return Card(child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Valora tu compra', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+           Text(uiText(context, "Valora tu compra"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _rating('Comunicación', communication, (v) => setState(() => communication = v)),
-          _rating('Confianza', trust, (v) => setState(() => trust = v)),
-          _rating('Estado del vehículo', vehicleCondition, (v) => setState(() => vehicleCondition = v)),
-          TextField(controller: controller, maxLines: 4, maxLength: 2000, decoration: const InputDecoration(labelText: 'Cuéntanos tu experiencia')),
-          if (message != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(message!)),
-          FilledButton(onPressed: saving ? null : _submit, child: Text(saving ? 'Enviando...' : 'Publicar valoración')),
+          _rating(uiText(context, "Comunicación"), communication, (v) => setState(() => communication = v)),
+          _rating(uiText(context, "Confianza"), trust, (v) => setState(() => trust = v)),
+          _rating(uiText(context, "Estado del vehículo"), vehicleCondition, (v) => setState(() => vehicleCondition = v)),
+          TextField(controller: controller, maxLines: 4, maxLength: 2000, decoration:  InputDecoration(labelText: uiText(context, "Cuéntanos tu experiencia"))),
+          if (message != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(uiText(context, message!))),
+          FilledButton(onPressed: saving ? null : _submit, child: Text(saving ? uiText(context, "Enviando...") : uiText(context, "Publicar valoración"))),
         ]),
       ));
     },
@@ -319,16 +320,16 @@ class SellerReviewsSection extends StatelessWidget {
     future: _load(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-      if (snapshot.hasError) return const ListTile(title: Text('No se pudieron cargar las valoraciones.'));
+      if (snapshot.hasError) return  ListTile(title: Text(uiText(context, "No se pudieron cargar las valoraciones.")));
       final reviews = snapshot.data ?? [];
       final avgStars = reviews.isEmpty ? 0.0 : reviews.fold<double>(0, (sum, r) => sum + ((r['communication_rating'] as num).toDouble() + (r['trust_rating'] as num).toDouble() + (r['vehicle_condition_rating'] as num).toDouble()) / 3) / reviews.length;
       final confidence = reviews.isEmpty ? 0.0 : 1 + avgStars * 9 / 5;
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Valoraciones del vendedor (${reviews.length})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        if (reviews.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [const Icon(Icons.verified_user, color: Colors.amber), const SizedBox(width: 6), Text('Confianza ${confidence.toStringAsFixed(1)} / 10 · ${reviews.length} valoraciones')])),
-        if (reviews.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Este vendedor todavía no tiene valoraciones.')),
+        Text(uiText(context, "Valoraciones del vendedor ({0})", [reviews.length]), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        if (reviews.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [const Icon(Icons.verified_user, color: Colors.amber), const SizedBox(width: 6), Text(uiText(context, "Confianza {0} / 10 · {1} valoraciones", [confidence.toStringAsFixed(1), reviews.length]))])),
+        if (reviews.isEmpty)  Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text(uiText(context, "Este vendedor todavía no tiene valoraciones."))),
         ...reviews.map((r) => Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Comunicación ${r['communication_rating']}/5 · Confianza ${r['trust_rating']}/5 · Vehículo ${r['vehicle_condition_rating']}/5', style: const TextStyle(color: Colors.amber)),
+          Text(uiText(context, "Comunicación {0}/5 · Confianza {1}/5 · Vehículo {2}/5", [r['communication_rating'], r['trust_rating'], r['vehicle_condition_rating']]), style: const TextStyle(color: Colors.amber)),
           const SizedBox(height: 6), Text(r['review_text'].toString()),
         ])))),
       ]);
