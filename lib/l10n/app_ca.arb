@@ -28,5 +28,47 @@
   "priceLowHigh": "Preu: de menor a major",
   "priceHighLow": "Preu: de major a menor",
   "newestFirst": "Any: més recents",
-  "lowestMileage": "Quilòmetres: de menys a més"
+  "lowestMileage": "Quilòmetres: de menys a més",
+  "clearComparison": "Buida el comparador",
+  "resetFilters": "Restableix els filtres",
+  "searchVehicleHint": "Cerca marca, model, versió...",
+  "noVehiclesFound": "No hi ha vehicles que coincideixin amb aquests filtres.",
+  "viewResults": "Veure resultats",
+  "compare": "Comparar",
+  "add": "Afegir",
+  "brand": "Marca",
+  "model": "Model",
+  "fuel": "Combustible",
+  "priceEuros": "Preu (€)",
+  "minMileage": "Quilometratge mínim (km)",
+  "maxMileage": "Quilometratge màxim (km)",
+  "minPower": "Potència mínima (CV)",
+  "maxPower": "Potència màxima (CV)",
+  "minYear": "Any mínim",
+  "maxYear": "Any màxim",
+  "comparisonLimit": "Pots comparar fins a 3 vehicles.",
+  "vehiclesFound": "{count, plural, =1{1 vehicle trobat} other{{count} vehicles trobats}}",
+  "compareVehicles": "Compara {count} vehicles",
+  "photoCount": "{count, plural, =1{1 foto} other{{count} fotos}}",
+  "@vehiclesFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@compareVehicles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@photoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

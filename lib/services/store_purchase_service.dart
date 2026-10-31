@@ -1,19 +1,25 @@
 import 'dart:async';
 
+import 'store_verification_message.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Native subscription catalog and purchase listener for AUTOMOTORS.
 ///
-/// Checkout intentionally remains disabled until the server-side store
-/// verifier is deployed, configured with Apple/Google credentials, and tested.
-/// A successful local store callback never grants entitlements by itself.
+/// Checkout stays disabled in ordinary builds. A dedicated sandbox build can
+/// opt in with `--dart-define=AUTOMOTORS_ENABLE_STORE_CHECKOUT=true` after its
+/// backend has been configured. A successful local store callback never grants
+/// entitlements by itself.
 class StorePurchaseService {
   StorePurchaseService({InAppPurchase? store})
       : _store = store ?? InAppPurchase.instance;
 
-  static const bool checkoutEnabled = false;
+  static const bool checkoutEnabled = bool.fromEnvironment(
+    'AUTOMOTORS_ENABLE_STORE_CHECKOUT',
+    defaultValue: false,
+  );
 
   static const Map<String, String> productNames = {
     'automotors_pack_10': 'PACK 10',
@@ -25,10 +31,12 @@ class StorePurchaseService {
   final InAppPurchase _store;
   final Map<String, ProductDetails> _products = {};
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+  final StreamController<void> _changes = StreamController<void>.broadcast();
   final StreamController<String> _messages =
       StreamController<String>.broadcast();
 
   Stream<String> get messages => _messages.stream;
+  Stream<void> get changes => _changes.stream;
   List<ProductDetails> get products => List.unmodifiable(_products.values);
   bool get isSupportedPlatform =>
       !kIsWeb &&
@@ -62,6 +70,7 @@ class StorePurchaseService {
       ..clear()
       ..addEntries(response.productDetails.map((product) =>
           MapEntry(product.id, product)));
+    _changes.add(null);
 
     if (response.notFoundIDs.isNotEmpty) {
       _messages.add(
@@ -167,24 +176,28 @@ class StorePurchaseService {
           data['verified'] == true;
       if (!verified) {
         _messages.add(
-          'La tienda recibió la compra, pero AUTOMOTORS aún no ha podido verificarla.',
+          storeVerificationMessage(response.status, data),
         );
         return;
       }
 
+      // Notify screens only after the server has saved a verified purchase.
+      // They re-read the subscription record rather than trusting StoreKit.
+      _changes.add(null);
       if (purchase.pendingCompletePurchase) {
         await _store.completePurchase(purchase);
       }
       _messages.add('Suscripción verificada por el servidor.');
+    } on FunctionException catch (error) {
+      _messages.add(storeVerificationMessage(error.status, error.details));
     } catch (_) {
-      _messages.add(
-        'No se ha podido verificar la compra. No se ha concedido acceso.',
-      );
+      _messages.add(storeVerificationMessage(0, null));
     }
   }
 
   Future<void> dispose() async {
     await _purchaseSubscription?.cancel();
+    await _changes.close();
     await _messages.close();
   }
 }

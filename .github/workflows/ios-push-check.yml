@@ -1,0 +1,27 @@
+name: Check iOS push integration
+on:
+  push:
+    branches: [codex/vehicle-highlights, restore/ios-1.0.1-build10]
+    paths: ['lib/**', 'ios/**', 'supabase/functions/send-ios-push/**', '.github/workflows/ios-push-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test APNs payloads and signatures
+        run: node --experimental-strip-types supabase/functions/send-ios-push/core_test.ts
+      - name: Install Flutter stable
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/services/ios_push_service.dart
+      - name: Build iOS simulator without signing or publishing
+        run: flutter build ios --simulator --debug --no-codesign

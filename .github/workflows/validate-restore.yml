@@ -1,0 +1,20 @@
+name: Validate AUTOMOTORS iOS build 10
+on:
+  push:
+    branches: [restore/ios-1.0.1-build10]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flutter-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: flutter test
+      - run: flutter build web --release --base-href /automotors-app/

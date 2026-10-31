@@ -1,0 +1,9 @@
+[functions.verify-store-purchase]
+verify_jwt = true
+
+[functions.app-store-server-notifications]
+verify_jwt = false
+
+[functions.send-ios-push]
+# The worker validates its private scheduler credential through a service-only RPC.
+verify_jwt = false
