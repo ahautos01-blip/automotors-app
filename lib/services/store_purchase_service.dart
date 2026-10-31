@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'store_verification_message.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -174,7 +176,7 @@ class StorePurchaseService {
           data['verified'] == true;
       if (!verified) {
         _messages.add(
-          'La tienda recibió la compra, pero AUTOMOTORS aún no ha podido verificarla.',
+          storeVerificationMessage(response.status, data),
         );
         return;
       }
@@ -186,10 +188,10 @@ class StorePurchaseService {
         await _store.completePurchase(purchase);
       }
       _messages.add('Suscripción verificada por el servidor.');
+    } on FunctionException catch (error) {
+      _messages.add(storeVerificationMessage(error.status, error.details));
     } catch (_) {
-      _messages.add(
-        'No se ha podido verificar la compra. No se ha concedido acceso.',
-      );
+      _messages.add(storeVerificationMessage(0, null));
     }
   }
 
