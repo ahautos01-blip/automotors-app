@@ -152,6 +152,11 @@ class AutomotorsSupportPage extends StatelessWidget {
             ),
             _section(
               context,
+              'Moderación automática',
+              "Para la moderación automática se envían a OpenAI el texto público y las fotografías del anuncio. No se envían documentos de verificación ni datos de pago a este proveedor. Si se detecta contenido inapropiado, el anuncio queda en borrador y puede revisarlo el equipo de moderación.",
+            ),
+            _section(
+              context,
               "Proveedores",
               "Supabase proporciona autenticación, base de datos y almacenamiento. Apple procesa las compras y la entrega de notificaciones en iOS. AUTOMOTORS recibe los identificadores y el estado de la compra para verificar el acceso; no recibe los datos de tu tarjeta bancaria. Si abres servicios externos como WhatsApp, se aplican también sus propias condiciones y políticas.",
             ),

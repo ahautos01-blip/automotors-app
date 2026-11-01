@@ -4,37 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 const {PGlite}=await import(process.env.PGLITE_MODULE_PATH ? pathToFileURL(process.env.PGLITE_MODULE_PATH).href : '@electric-sql/pglite');
 const db=new PGlite();
-await db.exec(`
-create role anon;create role authenticated;create role service_role;
-create schema auth;create schema private;
-create table auth.users(id uuid primary key);
-create table auth.sessions(id uuid primary key,user_id uuid references auth.users on delete cascade,not_after timestamptz);
-create function auth.jwt() returns jsonb language sql stable as $$select jsonb_build_object('session_id',current_setting('test.session_id',true))$$;
-create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
-grant usage on schema auth,private to authenticated;
-create table private.account_deletions(user_id uuid references auth.users on delete cascade);
-create function private.current_account_active() returns boolean language sql stable security definer set search_path='' as $$
-select auth.uid() is not null and exists(select 1 from auth.users where id=auth.uid()) and not exists(select 1 from private.account_deletions where user_id=auth.uid())$$;
-revoke all on function private.current_account_active() from public,anon;grant execute on function private.current_account_active() to authenticated;
-create table public.vehicle_listings(id uuid primary key,owner_id uuid references auth.users on delete set null,status text default 'published',year int default 2020,version text default 'Car',description text default 'A vehicle',price numeric default 10000);
-create table public.vehicle_photos(id int generated always as identity,listing_id uuid references vehicle_listings on delete cascade,storage_path text,position int);
-create table public.chat_conversations(id bigint generated always as identity primary key,listing_id uuid references vehicle_listings on delete cascade,buyer_id uuid references auth.users on delete cascade,seller_id uuid references auth.users on delete cascade,check(buyer_id<>seller_id),unique(listing_id,buyer_id,seller_id));
-create table public.chat_messages(id bigint generated always as identity primary key,conversation_id bigint references chat_conversations on delete cascade,sender_id uuid references auth.users on delete cascade,body text,created_at timestamptz default now(),read_at timestamptz);
-create table public.vehicle_listing_reports(id uuid primary key default gen_random_uuid(),reporter_id uuid references auth.users on delete cascade,listing_id uuid references vehicle_listings on delete cascade,reason text,details text default '',status text default 'pending',created_at timestamptz default now());
-alter table public.vehicle_listings enable row level security;
-alter table public.chat_conversations enable row level security;
-alter table public.chat_messages enable row level security;
-create policy listing_read on public.vehicle_listings for select to anon,authenticated using(status in ('published','reserved','sold') or owner_id=auth.uid());
-create policy listing_update on public.vehicle_listings for update to authenticated using(owner_id=auth.uid()) with check(owner_id=auth.uid());
-create policy conversation_create on public.chat_conversations for insert to authenticated with check(buyer_id=auth.uid() and buyer_id<>seller_id);
-create policy conversation_read on public.chat_conversations for select to authenticated using(auth.uid() in (buyer_id,seller_id));
-create policy message_create on public.chat_messages for insert to authenticated with check(sender_id=auth.uid() and exists(select 1 from chat_conversations where id=conversation_id and auth.uid() in (buyer_id,seller_id)));
-create policy message_read on public.chat_messages for select to authenticated using(exists(select 1 from chat_conversations where id=conversation_id and auth.uid() in (buyer_id,seller_id)));
-create policy message_read_receipt on public.chat_messages for update to authenticated using(sender_id<>auth.uid() and exists(select 1 from chat_conversations where id=conversation_id and auth.uid() in (buyer_id,seller_id))) with check(sender_id<>auth.uid() and exists(select 1 from chat_conversations where id=conversation_id and auth.uid() in (buyer_id,seller_id)));
-grant select on vehicle_listings to anon,authenticated;grant update on vehicle_listings to authenticated;
-grant select,insert on chat_conversations,chat_messages to authenticated;grant update(read_at) on chat_messages to authenticated;
-grant usage on all sequences in schema public to authenticated;
-`);
+await db.exec(await readFile(new URL('./fixtures/community_schema.sql',import.meta.url),'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/20261101205245_chat_safety_and_moderation.sql',import.meta.url),'utf8'));
 const buyer=randomUUID(),seller=randomUUID(),outsider=randomUUID(),mod=randomUUID();
 for(const id of [buyer,seller,outsider,mod]) {await db.query('insert into auth.users values($1)',[id]);await db.query('insert into auth.sessions values($1,$1,null)',[id]);}

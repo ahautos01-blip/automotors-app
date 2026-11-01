@@ -1,3 +1,4 @@
+import 'services/content_publication_service.dart';
 import 'community_moderation_page.dart';
 import 'chat_safety_controls.dart';
 import 'services/chat_safety_controller.dart';
@@ -4725,7 +4726,13 @@ class _GaragePageState extends State<GaragePage> {
     final rows = await supabase.from('vehicle_listings').select(
       'id,status,year,km,price,fuel,phone,description,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
     ).eq('owner_id', user.id).order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+    final listings=List<Map<String,dynamic>>.from(rows);
+    try {
+      final states=await supabase.rpc('my_listing_content_checks') as List;
+      final byId={for(final state in states) state['listing_id']:state};
+      for(final listing in listings) {listing['content_check_state']=byId[listing['id']]?['state'];}
+    } catch(_) {/* Listing management remains available if the status lookup fails. */}
+    return listings;
   }
 
   void refreshListings() => setState(() => listingsFuture = loadMyListings());
@@ -4762,6 +4769,11 @@ class _GaragePageState extends State<GaragePage> {
         if (sold != true || !mounted) return;
         ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Anuncio marcado como vendido."))));
         refreshListings();
+        return;
+      }
+      if (normalizedStatus=='published'||normalizedStatus=='reserved') {
+        final result=await ContentPublicationService().publish(listing['id'].toString(),targetStatus:normalizedStatus);
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,result.message))));refreshListings();}
         return;
       }
       final updated = await supabase
@@ -5015,6 +5027,8 @@ class _GaragePageState extends State<GaragePage> {
                     Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 5),
                     Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    if(listingContentStateMessage(listing['content_check_state']?.toString()).isNotEmpty)
+                      Text(uiText(context,listingContentStateMessage(listing['content_check_state']?.toString())),style:const TextStyle(color:Colors.orangeAccent)),
                     const SizedBox(height: 8),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: uiText(context, "Opciones del anuncio"), onSelected: (value) {
@@ -5589,8 +5603,15 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Revisa año, kilómetros y precio.")))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Anuncio actualizado.")))); Navigator.pop(context, true); }
+      await supabase.from('vehicle_listings').update({'status':'draft','year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      var saveMessage='Anuncio actualizado.';
+      final previousStatus=current['status']?.toString();
+      if(previousStatus=='published'||previousStatus=='reserved') {
+        final result=await ContentPublicationService().publish(widget.listingId,targetStatus:previousStatus!);
+        saveMessage=result.published?'Anuncio actualizado.':result.message;
+      }
+      if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,saveMessage))));Navigator.pop(context,true);}
+
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo guardar el anuncio: {0}", [e])))); }
     finally { if (mounted) setState(() => saving = false); }
   }
@@ -5625,6 +5646,8 @@ class _EditListingPageState extends State<EditListingPage> {
      Padding(padding: EdgeInsets.only(bottom: 8), child: Text(uiText(context, "Equipamiento"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
     ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(uiText(context, item)), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
     DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
+    Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
+    const SupportLinks(),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
@@ -6930,7 +6953,9 @@ class _AddCarPageState extends State<AddCarPage> {
     try {
       final selected = await imagePicker.pickMultiImage(
         limit: remaining,
-        imageQuality: 90,
+        imageQuality: 75,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
       if (!mounted || selected.isEmpty) return;
       setState(() => photos.addAll(selected.take(15 - photos.length)));
@@ -7145,6 +7170,8 @@ class _AddCarPageState extends State<AddCarPage> {
 
     setState(() => publishing = true);
     final uploadedPaths = <String>[];
+    final uploadedPhotoBytes=<Uint8List>[];
+    bool publishedOnServer=false;
     String? listingId;
 
     try {
@@ -7183,6 +7210,7 @@ class _AddCarPageState extends State<AddCarPage> {
       for (var i = 0; i < photos.length; i++) {
         final photo = photos[i];
         final bytes = await photo.readAsBytes();
+        uploadedPhotoBytes.add(bytes);
         final originalName = photo.name;
         final extension = originalName.contains('.')
             ? originalName.split('.').last.toLowerCase()
@@ -7203,16 +7231,14 @@ class _AddCarPageState extends State<AddCarPage> {
 
       await supabase.from('vehicle_photos').insert(photoRows);
 
-      await supabase
-          .from('vehicle_listings')
-          .update({'status': 'published'})
-          .eq('id', listingId)
-          .eq('owner_id', user.id);
-
-      final photoBytes = <Uint8List>[];
-      for (final photo in photos) {
-        photoBytes.add(await photo.readAsBytes());
+      final approval=await ContentPublicationService().publish(listingId);
+      if(!approval.published) {
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,approval.message)),duration:const Duration(seconds:8)));Navigator.pop(context);}
+        return; // Preserve the draft and photographs on rejection or provider failure.
       }
+
+      publishedOnServer=true;
+      final photoBytes=uploadedPhotoBytes;
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -7240,6 +7266,10 @@ class _AddCarPageState extends State<AddCarPage> {
         ),
       );
     } catch (error) {
+      if(publishedOnServer) {
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Tu anuncio se ha publicado. Actualiza el catálogo para verlo.'))));Navigator.pop(context);}
+        return; // A local display failure must never delete an approved publication.
+      }
       if (uploadedPaths.isNotEmpty) {
         try {
           await supabase.storage.from('vehicle-photos').remove(uploadedPaths);
@@ -7324,7 +7354,7 @@ class _AddCarPageState extends State<AddCarPage> {
             Expanded(child: FilledButton.icon(
               onPressed: publishing ? null : publishCar,
               icon: const Icon(Icons.add_circle_outline_rounded),
-              label: Text(publishing ? uiText(context, "Publicando…") : uiText(context, "Publicar gratis")),
+              label: Text(publishing ? uiText(context, "Comprobando y publicando…") : uiText(context, "Publicar gratis")),
               style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
             )),
           ]),
@@ -7353,6 +7383,8 @@ class _AddCarPageState extends State<AddCarPage> {
               ]),
             ),
             const SizedBox(height: 14),
+            Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
+            const SupportLinks(),
             buildListingQualityCard(),
             const SizedBox(height: 8),
             Align(

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -6,6 +8,7 @@ import 'l10n/ui_text.dart';
 import 'services/community_moderation_service.dart';
 
 const moderationActionLabels = <String, String>{
+  'approve_publication': 'Aprobar publicación tras revisar el contenido',
   'reviewing': 'Marcar en revisión',
   'resolve': 'Marcar como atendida',
   'dismiss': 'Descartar denuncia',
@@ -222,6 +225,7 @@ class CommunityReportPage extends StatefulWidget {
 
 class _CommunityReportPageState extends State<CommunityReportPage> {
   Map<String, dynamic>? detail;
+  final photoFutures = <String, Future<Uint8List>>{};
   bool busy = false,
       loading = false,
       failed = false,
@@ -297,12 +301,18 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
     if (note == null || !mounted) return;
     setState(() => busy = true);
     try {
-      final result = await widget.service.review(
-        widget.kind,
-        widget.reportId,
-        action,
-        note,
-      );
+      final result = action == 'approve_publication'
+          ? await widget.service.approvePublication(
+              widget.reportId,
+              detail!['automatic_fingerprint'] as String,
+              note,
+            )
+          : await widget.service.review(
+              widget.kind,
+              widget.reportId,
+              action,
+              note,
+            );
       if (!mounted) return;
       setState(() {
         detail = result;
@@ -330,16 +340,33 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
 
   Widget photo(String path) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Image.network(
-      Supabase.instance.client.storage
-          .from('vehicle-photos')
-          .getPublicUrl(path),
-      height: 220,
-      width: double.infinity,
-      fit: BoxFit.contain,
-      cacheWidth: 900,
-      errorBuilder: (context, error, stack) =>
-          Text(uiText(context, 'No se pudo cargar esta fotografía.')),
+    child: FutureBuilder<Uint8List>(
+      future: photoFutures.putIfAbsent(
+        path,
+        () => Supabase.instance.client.storage
+            .from('vehicle-photos')
+            .download(path),
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return Image.memory(
+            snapshot.data!,
+            height: 220,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            cacheWidth: 900,
+            errorBuilder: (context, error, stack) =>
+                Text(uiText(context, 'No se pudo cargar esta fotografía.')),
+          );
+        }
+        if (snapshot.hasError) {
+          return Text(uiText(context, 'No se pudo cargar esta fotografía.'));
+        }
+        return const SizedBox(
+          height: 100,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
     ),
   );
   @override
@@ -466,6 +493,23 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
                         ),
                       ),
                     ),
+                    if (widget.kind == 'listing' &&
+                        [
+                          'rejected',
+                          'error',
+                        ].contains(data['automatic_state']) &&
+                        data['automatic_fingerprint'] is String)
+                      FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () => review('approve_publication'),
+                        child: Text(
+                          uiText(
+                            context,
+                            moderationActionLabels['approve_publication']!,
+                          ),
+                        ),
+                      ),
                     for (final action in ['reviewing', 'resolve', 'dismiss'])
                       OutlinedButton(
                         onPressed: busy ? null : () => review(action),
@@ -531,6 +575,7 @@ class _ModerationActionDialogState extends State<ModerationActionDialog> {
         children: [
           Text(
             uiText(context, switch (widget.action) {
+              'approve_publication' => 'Confirma que has revisado el texto y todas las fotografías. La publicación conservará los límites del plan del vendedor.',
               'hide_listing' => 'El anuncio quedará oculto a otros usuarios. El vendedor podrá verlo, pero no editarlo mientras esté restringido.',
               'restore_listing' => 'El anuncio volverá a mostrarse según su estado de publicación.',
               'restrict_chat' => 'El usuario denunciado no podrá enviar ni recibir nuevos mensajes. Podrás retirar esta restricción después.',

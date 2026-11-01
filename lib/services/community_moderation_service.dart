@@ -59,4 +59,15 @@ class CommunityModerationService {
       'p_note': note,
     }) as Map,
   );
+  Future<Map<String, dynamic>> approvePublication(
+    String reportId,
+    String fingerprint,
+    String note,
+  ) async => Map<String, dynamic>.from(
+    await _request('community_approve_publication', {
+      'p_report_id': reportId,
+      'p_expected_fingerprint': fingerprint,
+      'p_note': note,
+    }) as Map,
+  );
 }

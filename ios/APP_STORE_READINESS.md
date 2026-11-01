@@ -100,7 +100,7 @@ Validación: 47 pruebas Flutter correctas; pruebas de permisos y eliminación en
 Avisos de Supabase: las tablas privadas de trabajo y los eventos de tienda tienen RLS sin políticas deliberadamente (ningún acceso de clientes). Sigue pendiente la protección contra contraseñas filtradas, que ya estaba desactivada: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
 
 Pendientes antes del envío público:
-- Filtro automático del contenido: el titular eligió integrar un proveedor automático, no revisión previa manual. Cuenta API de OpenAI creada; falta autorizar y guardar su credencial de servidor, integrar el filtro con comprobaciones que impidan saltárselo y verificar la clasificación real antes de activarlo.
+- Filtro automático del contenido: el titular eligió integrar un proveedor automático, no revisión previa manual. Cuenta API y secreto de servidor preparados; integración implementada y probada localmente. Quedan la autorización de despliegue, la conexión real y el cierre del acceso público a fotos antes de activar la exigencia global.
 - Revisar los textos legales, las condiciones de los proveedores, la conservación efectiva y las transferencias; publicar las URL estables e introducirlas en la ficha de Apple.
 - Completar ficha, privacidad de App Store, clasificación por edades, capturas y cuenta/instrucciones de revisión.
 - Pruebas físicas de registro, publicación, compras/restauración, mensajes y eliminación con una cuenta de prueba creada para ello.
@@ -134,3 +134,20 @@ La revisión automática bloqueó abrir el formulario de creación de la credenc
 La compilación web JavaScript de este lote terminó correctamente. La cuenta API de OpenAI del titular ya está creada, pero no existe todavía una credencial configurada para moderación. El filtro automático sigue sin implementar/activar; no desplegar un control solo en el cliente que pueda saltarse con llamadas directas a la API. Las aprobaciones futuras deben vincularse al contenido exacto del anuncio/fotos y a su propietario; contemplar cambios de texto o sustitución de fotos después de aprobarlas, fallos del proveedor y reintentos.
 
 Capacidad verificada en el panel de Supabase: 10,452 GB de Cached Egress sobre 5 GB incluidos (209 %), ciclo 23/10/2026–23/11/2026. El aviso indica posibles respuestas 402 a partir del 30/11/2026 si sigue excedido el límite. Almacenamiento de 0,062/1 GB, tamaño de base de datos 0,032/0,5 GB y Egress sin caché 0,206/5 GB. Antes del lanzamiento, reducir descargas repetidas de fotos y revisar la capacidad/plan con el titular. No se ha contratado un plan ni cambiado la facturación.
+
+
+## Moderación automática preparada — pendiente de despliegue
+
+El titular autorizó preparar una credencial restringida de moderación. Creó la clave personalmente y guardó OPENAI_API_KEY en el panel de secretos de Supabase; se verificó la presencia del nombre, sin incorporar el valor al código ni a los artefactos. No se ha verificado aún la conexión real con OpenAI.
+
+La migración 20261101213447_automatic_content_moderation.sql y moderate-listing están implementadas, sin desplegar. El servidor vincula cada aprobación al propietario, a una sesión vigente, al texto exacto y a las versiones de los archivos. Comprueba límites de intentos y del plan, invalida comprobaciones si cambia el contenido y conserva borradores ante rechazo o fallos. La revisión humana confirma la huella que se mostró al moderador y registra la acción. El proveedor recibe el texto público y fotos del anuncio, sin teléfono privado, documentos de verificación ni datos de pago. Modelo fijado: omni-moderation-2024-09-26.
+
+El nuevo cliente solicita la comprobación al publicar y al modificar anuncios publicados o reservados. Incluye avisos del proveedor, estados del borrador y textos en español, inglés y catalán. Las nuevas fotos se reducen a 1920 píxeles y calidad 75; esto no resuelve por sí solo el exceso de tráfico existente.
+
+Validación local: 68 pruebas Flutter correctas; compilación web de producción correcta; analizador sin avisos en los archivos Dart nuevos de moderación. Las pruebas PostgreSQL/HTTP simulado comprueban permisos, aprobación vinculada al contenido, sustitución de fotos, sesiones revocadas, límites, revisión humana, errores del proveedor y aislamiento de claves. La sonda sintética está probada con HTTP simulado, no contra OpenAI real.
+
+La revisión automática rechazó aplicar la migración en producción por añadir triggers, políticas RLS y reglas de publicación/visibilidad sin autorización explícita de ese despliegue. No se intentó eludir el bloqueo ni se desplegó la función. Se solicita aprobación del conjunto después de preparar el código y las pruebas.
+
+El despliegue previsto deja la exigencia global desactivada para conservar la compatibilidad con la build 13. Antes de activarla hay que distribuir y probar el cliente compatible, preparar los anuncios existentes y convertir el bucket de fotos público a privado mediante Storage, verificando las descargas autorizadas. Mientras el bucket sea público, las URL directas pueden seguir mostrando archivos sin las reglas de visibilidad del anuncio. No afirmar que el filtro está activo o que las fotos están protegidas globalmente.
+
+La última versión disponible en TestFlight sigue siendo 1.0.1 (13). No se ha enviado una nueva build ni publicado en App Store. Las páginas legales y el código permanecen en la propuesta de cambios para revisión.
