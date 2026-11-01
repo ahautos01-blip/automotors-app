@@ -58,6 +58,13 @@ void main() {
     expect(storeSubscriptionPeriod(unknown), isNull);
     expect(storePeriodMessage(unknown), isNull);
   });
+  test('a mismatched market currency never becomes a fabricated euro price', () {
+    final dollars = ProductDetails(id:'pro', title:'PRO', description:'', price:r'$179.00', rawPrice:179, currencyCode:'USD');
+    final euros = ProductDetails(id:'pro', title:'PRO', description:'', price:'199,00 €', rawPrice:199, currencyCode:'EUR');
+    expect(storeDisplayPrice(dollars, expectedCurrency:'EUR'), isNull);
+    expect(storeDisplayPrice(euros, expectedCurrency:'EUR'), '199,00 €');
+    expect(storeDisplayPrice(dollars), r'$179.00');
+  });
   for (final language in ['es', 'en', 'ca']) {
     String tr(String source) => translateUiMessage(source, language);
     testWidgets('support and privacy work without sign-in in $language', (

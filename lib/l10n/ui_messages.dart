@@ -362,6 +362,8 @@ const Map<String, List<String>> uiMessages = {
     "This listing cannot be reported from this page.",
     "No es pot denunciar aquest anunci des d'aquesta fitxa.",
   ],
+  "Consultar precio en Apple": ["Check price with Apple", "Consulta el preu a Apple"],
+  "Denunciar anuncio": ["Report listing", "Denunciar anunci"],
   "Reportar anuncio": ["Report listing", "Denunciar anunci"],
   "¿Qué problema has detectado?": [
     "What problem did you notice?",

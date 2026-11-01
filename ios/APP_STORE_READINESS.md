@@ -198,3 +198,14 @@ Apple terminó el procesamiento de la build 15, id 6f415325-ec60-41d3-b4e5-2e04a
 El titular informa de 179 $ en la tarjeta de AUTOMOTORS PRO y 199 € en la ventana de compra de Apple. Se comprobó en App Store Connect el producto automotors_pro_monthly_199: duración 1 mes, disponibilidad en un único país (España), tarifa actual para España (EUR) 199,00 €. La cuenta Sandbox existente también está configurada en España. No se modificaron tarifas ni regiones.
 
 _storePrice muestra product.price recibido de StoreKit sin convertir moneda. La diferencia apunta a metadatos de catálogo del entorno de pruebas; no se ha instrumentado todavía el dispositivo para confirmar la causa. No sustituir símbolos ni convertir cifras manualmente: 179 $ y 199 € son importes distintos. Queda pendiente recargar el catálogo desde una sesión de prueba correcta y comprobar coincidencia entre tarjeta y hoja de Apple antes del envío público. No afirmar que la incidencia está corregida ni garantizar que desaparezca por publicar.
+
+
+## Build 16 preparada: acceso a denuncia y moneda incoherente
+
+La función _reportListing existía sin un control que la invocase. Se añaden el icono de bandera en la cabecera y el botón Denunciar anuncio junto a las acciones de la ficha para anuncios persistidos. Muestra seis motivos traducidos, con desplazamiento en pantallas pequeñas. Se puede consultar el motivo antes del acceso; el envío exige sesión. Ambas etapas permiten cancelar sin insertar, los detalles son opcionales y se evita abrir envíos simultáneos. La edición de detalles conserva su controlador hasta completar la salida del diálogo.
+
+La discrepancia de PRO persiste tras reabrir la app, según el titular. Se añade una protección de presentación para el mercado actualmente disponible en App Store Connect (solo España): si StoreKit entrega moneda distinta de EUR en iOS, la tarjeta muestra Consultar precio en Apple en lugar de un importe incoherente. No convierte importes ni sustituye símbolos. Los precios EUR válidos y los de otras plataformas conservan los valores de tienda. La hoja nativa sigue confirmando importe, moneda y contratación. Si se amplía la disponibilidad geográfica, debe revisarse esta restricción de mercado. El fallo del proveedor de metadatos no se considera resuelto; este es un comportamiento alternativo para no anunciar 179 $ como precio español.
+
+Las pruebas de interfaz de denuncia usan únicamente cuentas, anuncios y respuestas HTTP ficticios; no crean denuncias reales. Se verifican motivos y envío en es/en/ca a 320x568 y cancelación en ambas etapas. Se añade una comprobación de monedas que rechaza presentar 179 USD como tarifa EUR y conserva 199 EUR. La versión preparada es 1.0.1 (16); la distribución se confirma por separado.
+
+Validación local del lote 16: 88 pruebas Flutter correctas y compilación web JavaScript de producción correcta. No se han creado denuncias reales ni cambiado tarifas de Apple durante estas comprobaciones.

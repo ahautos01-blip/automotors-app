@@ -2874,6 +2874,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   VoidCallback get onContact => widget.onContact;
   bool isFavorite = false;
   bool favoriteLoading = false;
+  bool reporting = false;
   int currentPhotoIndex = 0;
   late List<Uint8List> detailPhotos;
   late final Future<void> galleryReady;
@@ -2954,6 +2955,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   }
 
   Future<void> _reportListing() async {
+    if (reporting) return;
+    setState(() => reporting = true);
+    try { await _showListingReport(); }
+    finally { if (mounted) setState(() => reporting = false); }
+  }
+
+  Future<void> _showListingReport() async {
     final listingId = car.listingId;
     if (listingId == null || listingId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2961,8 +2969,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       );
       return;
     }
-    final loggedIn = await requireAutomotorsLogin(context);
-    if (!loggedIn || !mounted) return;
     final reasons = <String>[
       'Información falsa',
       'Precio sospechoso',
@@ -2975,7 +2981,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: panel,
-        title:  Text(uiText(context, "Reportar anuncio")),
+        title: Text(uiText(context, "Denunciar anuncio")),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2992,13 +2999,18 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             )),
           ],
         ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
+          child: Text(uiText(context, "Cancelar")))],
       ),
     );
     if (reason == null || !mounted) return;
+    final loggedIn = await requireAutomotorsLogin(context);
+    if (!loggedIn || !mounted) return;
+
 
     // Optional context helps the review team understand the report.
     final detailsController = TextEditingController();
-    final details = await showDialog<String>(
+    final detailsRoute = DialogRoute<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: panel,
@@ -3017,8 +3029,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, ''),
-            child:  Text(uiText(context, "Omitir")),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(uiText(context, "Cancelar")),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(
@@ -3030,6 +3042,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ],
       ),
     );
+    final details = await Navigator.of(context, rootNavigator: true).push(detailsRoute);
+    await detailsRoute.completed;
     detailsController.dispose();
     if (details == null || !mounted) return;
 
@@ -3599,6 +3613,15 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           )),
         ]),
+        if (car.listingId?.isNotEmpty == true) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('report-listing-button'),
+            onPressed: reporting ? null : _reportListing,
+            icon: const Icon(Icons.flag_outlined),
+            label: Text(uiText(context, "Denunciar anuncio")),
+          ),
+        ],
         const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
@@ -3846,6 +3869,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       appBar: AppBar(
         title: Text('${car.brand} ${car.model}'),
         actions: [
+          if (car.listingId?.isNotEmpty == true)
+            IconButton(
+              key: const Key('report-listing-action'),
+              tooltip: uiText(context, "Denunciar anuncio"),
+              onPressed: reporting ? null : _reportListing,
+              icon: const Icon(Icons.flag_outlined, color: gold),
+            ),
           IconButton(
             tooltip: isFavorite ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
             onPressed: favoriteLoading ? null : _toggleFavorite,
@@ -6367,12 +6397,16 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
   String _storePrice(String productId) {
     for (final product in _purchaseService.products) {
       if (product.id != productId) continue;
+      // App Store Connect currently makes these subscriptions available only in Spain.
+      final price = storeDisplayPrice(product,
+        expectedCurrency: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'EUR' : null);
+      if (price == null) return uiText(context, 'Consultar precio en Apple');
       final period = storeSubscriptionPeriod(product);
       final message = storePeriodMessage(product);
       if (period != null && message != null) {
-        return '${product.price} / ${uiText(context, message, [period.count])}';
+        return '$price / ${uiText(context, message, [period.count])}';
       }
-      return product.price;
+      return price;
     }
     return uiText(context, 'Consultar tienda');
   }

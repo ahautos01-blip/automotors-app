@@ -30,3 +30,12 @@ String? storePeriodMessage(ProductDetails product) {
   if (units == null) return null;
   return period.count == 1 ? units.$1 : '{0} ${units.$2}';
 }
+
+/// Never relabel or convert a store amount when its currency disagrees with the
+/// market configured in App Store Connect. The native purchase sheet is final.
+String? storeDisplayPrice(ProductDetails product, {String? expectedCurrency}) {
+  if (expectedCurrency != null && product.currencyCode != expectedCurrency) {
+    return null;
+  }
+  return product.price;
+}
