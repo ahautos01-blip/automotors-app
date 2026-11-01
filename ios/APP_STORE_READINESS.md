@@ -191,3 +191,10 @@ Validación local: 83 pruebas Flutter correctas. Las quince nuevas verifican las
 La compilación web JavaScript y la validación de Flutter en GitHub terminaron correctamente para dd389fd1b42f11792a7697554ac257fdb6144029. Codemagic compiló, firmó y subió 1.0.1 (15), confirmando UPLOAD SUCCEEDED with no errors a las 22:34:28 UTC: https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae7bd29efa74786046fe71b.
 
 Apple terminó el procesamiento de la build 15, id 6f415325-ec60-41d3-b4e5-2e04adc50571. El titular autorizó expresamente guardar para esta build «Ninguno de los algoritmos mencionados anteriormente». Se guardó y se añadió la build a AUTOMOTORS Sandbox. La página del grupo interno confirma 1.0.1 (15) «En pruebas», dos testers y caducidad de 90 días: disponible para actualizar desde TestFlight. Pendiente comprobar en el iPhone la visibilidad con otra cuenta y la galería. No se ha enviado a revisión pública ni activado la exigencia global del filtro.
+
+
+## Incidencia pendiente: moneda del catálogo de suscripciones en TestFlight
+
+El titular informa de 179 $ en la tarjeta de AUTOMOTORS PRO y 199 € en la ventana de compra de Apple. Se comprobó en App Store Connect el producto automotors_pro_monthly_199: duración 1 mes, disponibilidad en un único país (España), tarifa actual para España (EUR) 199,00 €. La cuenta Sandbox existente también está configurada en España. No se modificaron tarifas ni regiones.
+
+_storePrice muestra product.price recibido de StoreKit sin convertir moneda. La diferencia apunta a metadatos de catálogo del entorno de pruebas; no se ha instrumentado todavía el dispositivo para confirmar la causa. No sustituir símbolos ni convertir cifras manualmente: 179 $ y 199 € son importes distintos. Queda pendiente recargar el catálogo desde una sesión de prueba correcta y comprobar coincidencia entre tarjeta y hoja de Apple antes del envío público. No afirmar que la incidencia está corregida ni garantizar que desaparezca por publicar.
