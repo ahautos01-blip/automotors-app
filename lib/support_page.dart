@@ -147,6 +147,11 @@ class AutomotorsSupportPage extends StatelessWidget {
             ),
             _section(
               context,
+              'Seguridad y moderación',
+              "Los bloqueos impiden nuevos mensajes entre las cuentas afectadas. Si denuncias una conversación, el equipo autorizado podrá revisar sus mensajes y el contenido denunciado. Las medidas de moderación quedan registradas. Puedes solicitar una revisión escribiendo a soporte.",
+            ),
+            _section(
+              context,
               "Proveedores",
               "Supabase proporciona autenticación, base de datos y almacenamiento. Apple procesa las compras y la entrega de notificaciones en iOS. AUTOMOTORS recibe los identificadores y el estado de la compra para verificar el acceso; no recibe los datos de tu tarjeta bancaria. Si abres servicios externos como WhatsApp, se aplican también sus propias condiciones y políticas.",
             ),

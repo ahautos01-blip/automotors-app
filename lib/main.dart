@@ -1,3 +1,6 @@
+import 'community_moderation_page.dart';
+import 'chat_safety_controls.dart';
+import 'services/chat_safety_controller.dart';
 import 'delete_account_page.dart';
 import 'support_page.dart';
 import 'services/store_product_presentation.dart';
@@ -4666,6 +4669,7 @@ class PersonalAreaPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const InboxPage())),
           )),
+          const ModerationEntry(),
           const SizedBox(height: 12),
           ListTile(
             leading: const Icon(Icons.help_outline, color: gold),
@@ -5897,7 +5901,13 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
+  late final ChatSafetyController chatSafety;
+  void _safetyChanged() { if (mounted) setState(() {}); }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) chatSafety.load();
+  }
   final controller = TextEditingController();
   bool sending = false;
   bool markingRead = false;
@@ -5907,6 +5917,10 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    chatSafety = ChatSafetyController(conversationId: widget.conversationId);
+    chatSafety.addListener(_safetyChanged);
+    chatSafety.load();
     messagesStream = supabase
         .from('chat_messages')
         .stream(primaryKey: ['id'])
@@ -6034,7 +6048,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> sendMessage() async {
     final text = controller.text.trim();
     final user = supabase.auth.currentUser;
-    if (text.isEmpty || user == null || sending) return;
+    if (text.isEmpty || user == null || sending || !chatSafety.canMessage) return;
     setState(() => sending = true);
     try {
       await supabase.from('chat_messages').insert({
@@ -6044,9 +6058,10 @@ class _ChatPageState extends State<ChatPage> {
       });
       controller.clear();
     } catch (error) {
+      chatSafety.load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(uiText(context, "No se pudo enviar el mensaje: {0}", [error]))),
+          SnackBar(content: Text(uiText(context, "No se pudo enviar el mensaje. Comprueba el acceso al chat y vuelve a intentarlo."))),
         );
       }
     } finally {
@@ -6056,6 +6071,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    chatSafety.removeListener(_safetyChanged);
+    chatSafety.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -6065,11 +6083,12 @@ class _ChatPageState extends State<ChatPage> {
     final currentUserId = supabase.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
+        actions: [ChatSafetyControls(controller: chatSafety)],
         titleSpacing: 0,
         title: Row(
           children: [
             Tooltip(
-              message: 'Ver anuncio del vehículo',
+              message: uiText(context, 'Ver anuncio del vehículo'),
               child: InkWell(
                 onTap: openVehicleListing,
                 borderRadius: BorderRadius.circular(9),
@@ -6113,11 +6132,12 @@ class _ChatPageState extends State<ChatPage> {
               children:  [
                 Icon(Icons.directions_car_outlined, color: gold, size: 16),
                 SizedBox(width: 7),
-                Text(uiText(context, "Conversación sobre este vehículo"),
-                  style: TextStyle(color: Colors.white60, fontSize: 12)),
+                Expanded(child: Text(uiText(context, "Conversación sobre este vehículo"),
+                  style: TextStyle(color: Colors.white60, fontSize: 12))),
               ],
             ),
           ),
+          ChatSafetyBanner(controller: chatSafety),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: messagesStream,
@@ -6216,6 +6236,8 @@ class _ChatPageState extends State<ChatPage> {
                   Expanded(
                     child: TextField(
                       controller: controller,
+                      enabled: chatSafety.canMessage && !sending,
+                      maxLength: 5000,
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,
@@ -6239,7 +6261,7 @@ class _ChatPageState extends State<ChatPage> {
                         backgroundColor: gold,
                         foregroundColor: Colors.black,
                       ),
-                      onPressed: sending ? null : sendMessage,
+                      onPressed: sending || !chatSafety.canMessage ? null : sendMessage,
                       icon: sending
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2))

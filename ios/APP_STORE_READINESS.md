@@ -100,7 +100,7 @@ Validación: 47 pruebas Flutter correctas; pruebas de permisos y eliminación en
 Avisos de Supabase: las tablas privadas de trabajo y los eventos de tienda tienen RLS sin políticas deliberadamente (ningún acceso de clientes). Sigue pendiente la protección contra contraseñas filtradas, que ya estaba desactivada: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
 
 Pendientes antes del envío público:
-- Chat: bloqueo de usuarios, denuncias y circuito de moderación; filtrado y operación de las denuncias de contenido.
+- Filtro automático del contenido: el titular eligió integrar un proveedor automático, no revisión previa manual. Cuenta API de OpenAI creada; falta autorizar y guardar su credencial de servidor, integrar el filtro con comprobaciones que impidan saltárselo y verificar la clasificación real antes de activarlo.
 - Revisar los textos legales, las condiciones de los proveedores, la conservación efectiva y las transferencias; publicar las URL estables e introducirlas en la ficha de Apple.
 - Completar ficha, privacidad de App Store, clasificación por edades, capturas y cuenta/instrucciones de revisión.
 - Pruebas físicas de registro, publicación, compras/restauración, mensajes y eliminación con una cuenta de prueba creada para ello.
@@ -111,3 +111,26 @@ No se ha enviado esta preparación a revisión pública ni se ha reemplazado el 
 Se confirmó que faltaba seller_about_profiles en el servidor, lo que impedía completar el guardado de perfiles profesionales. Se creó únicamente esa tabla con permisos de escritura para el propio profesional, lectura pública y protección durante la eliminación. La prueba aislada verifica escritura propia, rechazo a otras cuentas y particulares, lectura pública y borrado en cascada. Esta política eleva a trece los controles restrictivos de cuenta activa.
 
 La compilación web de producción JavaScript terminó correctamente con --no-wasm-dry-run. Los archivos nuevos de Dart pasan el analizador sin avisos. El análisis global conserva 69 avisos anteriores de estilo/API obsoletas, sin errores. Las páginas legales siguen preparadas para revisión y no están publicadas.
+
+
+## Seguridad del chat y moderación — preparación posterior a la build 13
+
+El titular autorizó expresamente que abdelmounimtg94@gmail.com tenga permisos de moderación. La cuenta se incorporó a private.community_moderators, sin cambiar is_admin ni conceder acceso directo a tablas privadas. Las lecturas y acciones de moderación requieren una cuenta activa y una sesión existente y vigente en auth.sessions, además de ese rol.
+
+La migración chat_safety_and_moderation está aplicada en el servidor. Los bloqueos se comprueban en ambas direcciones, afectan a todas las conversaciones de la pareja e impiden crear otra conversación para evitarlos. La creación de chats también comprueba que el vendedor sea el propietario real de un anuncio publicado o reservado. El envío y los bloqueos usan el mismo bloqueo transaccional por pareja. Se conserva la lectura del historial y los recibos; el cliente ya no puede insertar fechas ni recibos falsos.
+
+Las denuncias de chat solo las pueden crear participantes reales. Su motivo y tamaño se validan en el servidor; una denuncia abierta no se duplica y se puede denunciar una incidencia nueva después de cerrar la anterior. Los datos de seguridad son privados y se eliminan en cascada cuando se elimina la cuenta o conversación relacionada.
+
+El panel preparado reúne denuncias de anuncios y conversaciones, con paginación. El moderador solo puede acceder a los mensajes mediante una denuncia existente; puede cargar páginas anteriores del caso, consultar las fotos del anuncio denunciado, registrar notas, cerrar o descartar casos, ocultar/restaurar anuncios y restringir/restablecer el chat del usuario denunciado. Cada acción requiere confirmación y queda auditada. El propietario conserva la lectura de su anuncio oculto, pero no puede editarlo para saltarse la medida; conserva la posibilidad de eliminar sus datos. Las restricciones de moderación y los bloqueos personales son independientes.
+
+Cliente: controles y explicaciones en español, inglés y catalán; avisos claros cuando el chat está bloqueado o no se ha podido comprobar el acceso; envío desactivado hasta recibir una comprobación válida. El estado se consulta de nuevo al volver a la app o si falla un envío.
+
+Validación: 61 pruebas Flutter correctas, incluidas catorce nuevas de controladores, confirmaciones, denuncias y acciones de moderación en tres idiomas. PostgreSQL en memoria cubre permisos reales, tipos bigint, bloqueos mutuos, ausencia de saltos por otro anuncio, propiedad del vendedor, conservación de evidencia, fechas no falsificables, denuncias privadas, auditoría, reversión de medidas, paginación de denuncias y mensajes, sesión revocada y borrado en cascada. Los archivos nuevos pasan el analizador sin avisos. La verificación remota confirma el rol autorizado, la ausencia de permisos de lectura directa de denuncias, de autoasignación del rol y de moderación anónima. No se han enviado mensajes, creado denuncias ni aplicado medidas a usuarios reales durante las pruebas.
+
+Estas pantallas aún no están distribuidas: la última build en TestFlight sigue siendo 1.0.1 (13). No afirmar que el filtro automático está activo. La API de moderación de OpenAI admite texto e imágenes y su endpoint figura como gratuito en la documentación oficial consultada; sigue sujeta a límites: https://developers.openai.com/api/docs/guides/moderation y https://developers.openai.com/api/docs/models/omni-moderation-latest.
+
+La revisión automática bloqueó abrir el formulario de creación de la credencial API porque requiere autorización explícita para generar una clave con acceso al proyecto. No se ha creado ni copiado ninguna clave. Las páginas de API keys y secretos de Supabase están abiertas para preparar una credencial limitada y guardarla como OPENAI_API_KEY; la clave privada debe introducirse directamente en el servidor, no en el chat.
+
+La compilación web JavaScript de este lote terminó correctamente. La cuenta API de OpenAI del titular ya está creada, pero no existe todavía una credencial configurada para moderación. El filtro automático sigue sin implementar/activar; no desplegar un control solo en el cliente que pueda saltarse con llamadas directas a la API. Las aprobaciones futuras deben vincularse al contenido exacto del anuncio/fotos y a su propietario; contemplar cambios de texto o sustitución de fotos después de aprobarlas, fallos del proveedor y reintentos.
+
+Capacidad verificada en el panel de Supabase: 10,452 GB de Cached Egress sobre 5 GB incluidos (209 %), ciclo 23/10/2026–23/11/2026. El aviso indica posibles respuestas 402 a partir del 30/11/2026 si sigue excedido el límite. Almacenamiento de 0,062/1 GB, tamaño de base de datos 0,032/0,5 GB y Egress sin caché 0,206/5 GB. Antes del lanzamiento, reducir descargas repetidas de fotos y revisar la capacidad/plan con el titular. No se ha contratado un plan ni cambiado la facturación.

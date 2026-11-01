@@ -24,3 +24,4 @@ jobs:
           node test/profile_authority.integration.mjs
           node test/account_deletion.integration.mjs
           node test/seller_about.integration.mjs
+          node test/chat_safety.integration.mjs
