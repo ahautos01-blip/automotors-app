@@ -174,3 +174,6 @@ La exigencia global de moderación sigue desactivada a la espera de pruebas de l
 
 
 Codemagic confirmó Version 1.0.1, Version code 14 y UPLOAD SUCCEEDED with no errors el 1/11/2026 a las 22:14:44 UTC. El procesamiento y la asignación en TestFlight todavía se deben confirmar. El titular autorizó expresamente guardar para esta build la respuesta «Ninguno de los algoritmos mencionados anteriormente» sobre cifrado. La sesión de App Store Connect caducó; se abrió una pestaña visible para que el titular vuelva a iniciar sesión. No afirmar disponibilidad hasta comprobarla en Apple.
+
+
+Apple terminó de procesar 1.0.1 (14), id 21eec1c0-38d0-4e8e-9408-6b9fa4aaf9a9. Tras la autorización expresa para esta build, se guardó «Ninguno de los algoritmos mencionados anteriormente» en la declaración de cifrado y se añadió a AUTOMOTORS Sandbox. La página del grupo interno confirma 1.0.1 (14) «En pruebas», con dos testers y caducidad de 90 días. Ya está disponible para actualizar desde TestFlight. La publicación pública y la activación global del filtro siguen pendientes de las pruebas físicas y restantes preparativos.
