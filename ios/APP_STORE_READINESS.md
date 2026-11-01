@@ -177,3 +177,12 @@ Codemagic confirmó Version 1.0.1, Version code 14 y UPLOAD SUCCEEDED with no er
 
 
 Apple terminó de procesar 1.0.1 (14), id 21eec1c0-38d0-4e8e-9408-6b9fa4aaf9a9. Tras la autorización expresa para esta build, se guardó «Ninguno de los algoritmos mencionados anteriormente» en la declaración de cifrado y se añadió a AUTOMOTORS Sandbox. La página del grupo interno confirma 1.0.1 (14) «En pruebas», con dos testers y caducidad de 90 días. Ya está disponible para actualizar desde TestFlight. La publicación pública y la activación global del filtro siguen pendientes de las pruebas físicas y restantes preparativos.
+
+
+## Build 15 preparada: visibilidad de identificación y carga de fotos
+
+Se corrige que la portada y la ficha desde el chat no consultaban los campos show_matricula_publicly/show_vin_publicly y descartaban el VIN o sus permisos. Todas las fichas de anuncios persistidos usan Car.fromListing; los datos públicos de identificación solo entran en ese objeto si su opción está activada. El resultado de publicar un anuncio conserva también esas opciones. Esta corrección de presentación no debe confundirse con una nueva protección de columnas de la API.
+
+La portada descarga únicamente la primera foto ordenada y conserva las rutas del resto. Al abrir una ficha se cargan las restantes sin volver a descargar una portada correcta; el contador conserva el total real, una foto fallida no oculta las demás y la galería completa espera la carga pendiente. No hay caché persistente ni se guardan credenciales. La mejora reduce solicitudes iniciales para anuncios con varias fotos; todavía no se ha medido el tráfico real y el exceso de cuota anterior no desaparece por este cambio.
+
+Validación local: 83 pruebas Flutter correctas. Las quince nuevas verifican las cuatro combinaciones de visibilidad en español, inglés y catalán, opciones ausentes, una sola descarga inicial, orden, reintentos y fotos fallidas. Se corrige además el desbordamiento del título técnico en inglés a 390 puntos. Versión preparada 1.0.1 (15); no afirmar distribución hasta comprobar compilación y Apple.

@@ -1,3 +1,4 @@
+import 'services/listing_photo_loader.dart';
 import 'services/content_publication_service.dart';
 import 'community_moderation_page.dart';
 import 'chat_safety_controls.dart';
@@ -493,6 +494,7 @@ class Car {
   final int? tankLiters;
   final List<String> equipment;
   final List<Uint8List> photos;
+  final List<String> photoPaths;
   final String? listingId;
   final String? ownerId;
   final String status;
@@ -534,11 +536,57 @@ class Car {
     this.tankLiters,
     this.equipment = const [],
     this.photos = const [],
+    this.photoPaths = const [],
     this.listingId,
     this.ownerId,
     this.status = 'published',
     this.isFeatured = false,
   });
+  int get photoCount => photoPaths.isNotEmpty ? photoPaths.length : photos.length;
+
+  factory Car.fromListing(Map<String, dynamic> raw, {
+    List<Uint8List> photos = const [], List<String> photoPaths = const [],
+    bool isFeatured = false,
+  }) {
+    final brandData = raw['vehicle_brands'];
+    final modelData = raw['vehicle_models'];
+    return Car(
+        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
+        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
+        year: (raw['year'] as num?)?.toInt() ?? 0,
+        km: (raw['km'] as num?)?.toInt() ?? 0,
+        price: (raw['price'] as num?)?.toDouble() ?? 0,
+        fuel: raw['fuel']?.toString() ?? '',
+        description: raw['description']?.toString() ?? '',
+        phone: raw['phone']?.toString() ?? '',
+        matricula: raw['show_matricula_publicly'] == true ? raw['matricula']?.toString() : null,
+        vin: raw['show_vin_publicly'] == true ? raw['vin']?.toString() : null,
+        showMatriculaPublicly: raw['show_matricula_publicly'] == true,
+        showVinPublicly: raw['show_vin_publicly'] == true,
+        cv: (raw['cv'] as num?)?.toInt(),
+        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
+        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
+        version: raw['version']?.toString(),
+        transmission: raw['transmission']?.toString(),
+        bodyType: raw['body_type']?.toString(),
+        doors: (raw['doors'] as num?)?.toInt(),
+        seats: (raw['seats'] as num?)?.toInt(),
+        color: raw['color']?.toString(),
+        torqueNm: (raw['torque_nm'] as num?)?.toInt(),
+        acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
+        maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
+        consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
+        emissionsStandard: raw['emissions_standard']?.toString(),
+        equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
+        photos: photos,
+        photoPaths: photoPaths,
+        isFeatured: isFeatured,
+        listingId: raw['id']?.toString(),
+        ownerId: raw['owner_id']?.toString(),
+        status: raw['status']?.toString() ?? 'published',
+      );
+  }
+
 }
 
 Future<Map<String, dynamic>> getOrCreateConversation({
@@ -1062,7 +1110,7 @@ class _HomePageState extends State<HomePage> {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
@@ -1078,8 +1126,6 @@ class _HomePageState extends State<HomePage> {
         // Si las promociones no están disponibles, mostramos los anuncios con normalidad.
       }
       for (final raw in List<Map<String, dynamic>>.from(rows)) {
-        final brandData = raw['vehicle_brands'];
-        final modelData = raw['vehicle_models'];
         final photoData = raw['vehicle_photos'];
         final photoRows = photoData is List
             ? List<Map<String, dynamic>>.from(photoData)
@@ -1087,56 +1133,13 @@ class _HomePageState extends State<HomePage> {
         photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
             .compareTo((b['position'] as num?)?.toInt() ?? 0));
 
-        // Descargar en paralelo las fotos de cada anuncio, manteniendo el
-        // orden de posición. Una foto fallida no debe ocultar el vehículo.
-        final downloadedPhotos = await Future.wait<Uint8List?>(
-          photoRows.map((photo) async {
-            final storagePath = photo['storage_path']?.toString();
-            if (storagePath == null || storagePath.isEmpty) return null;
-            try {
-              return await supabase.storage
-                  .from('vehicle-photos')
-                  .download(storagePath);
-            } catch (_) {
-              return null;
-            }
-          }),
-        );
-        final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
+        final photoPaths = photoRows.map((p) => p['storage_path']?.toString() ?? '')
+            .where((p) => p.isNotEmpty).toList();
+        final photoBytes = await loadListingCover(photoPaths,
+            (path) => supabase.storage.from('vehicle-photos').download(path));
 
-        loadedCars.add(Car(
-          brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-          model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-          year: (raw['year'] as num?)?.toInt() ?? 0,
-          km: (raw['km'] as num?)?.toInt() ?? 0,
-          price: (raw['price'] as num?)?.toDouble() ?? 0,
-          fuel: raw['fuel']?.toString() ?? '',
-          description: raw['description']?.toString() ?? '',
-          phone: raw['phone']?.toString() ?? '',
-          matricula: raw['matricula']?.toString(),
-          cv: (raw['cv'] as num?)?.toInt(),
-          cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-          etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-          version: raw['version']?.toString(),
-          transmission: raw['transmission']?.toString(),
-          bodyType: raw['body_type']?.toString(),
-          doors: (raw['doors'] as num?)?.toInt(),
-          seats: (raw['seats'] as num?)?.toInt(),
-          color: raw['color']?.toString(),
-          torqueNm: (raw['torque_nm'] as num?)?.toInt(),
-          acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
-          maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
-          consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
-          emissionsStandard: raw['emissions_standard']?.toString(),
-          equipment: raw['equipment'] is List
-              ? List<String>.from((raw['equipment'] as List).map((item) => item.toString()))
-              : const <String>[],
-          photos: photoBytes,
-          listingId: raw['id']?.toString(),
-          ownerId: raw['owner_id']?.toString(),
-          status: raw['status']?.toString() ?? 'published',
-          isFeatured: featuredIds.contains(raw['id']?.toString()),
-        ));
+        loadedCars.add(Car.fromListing(raw, photos: photoBytes, photoPaths: photoPaths,
+          isFeatured: featuredIds.contains(raw['id']?.toString())));
       }
 
       if (!mounted) return;
@@ -2224,7 +2227,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
                               child: Row(mainAxisSize: MainAxisSize.min, children: [
                                 const Icon(Icons.photo_camera_outlined, color: gold, size: 14),
                                 const SizedBox(width: 5),
-                                Text(AppLocalizations.of(context).photoCount(car.photos.length), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                                Text(AppLocalizations.of(context).photoCount(car.photoCount), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                               ]),
                             ),
                           ),
@@ -2851,12 +2854,14 @@ class CarDetailsPage extends StatefulWidget {
   final Car car;
   final String priceText;
   final VoidCallback onContact;
+  final ListingPhotoDownload? downloadPhoto;
 
   const CarDetailsPage({
     super.key,
     required this.car,
     required this.priceText,
     required this.onContact,
+    this.downloadPhoto,
   });
 
   @override
@@ -2870,6 +2875,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   bool isFavorite = false;
   bool favoriteLoading = false;
   int currentPhotoIndex = 0;
+  late List<Uint8List> detailPhotos;
+  late final Future<void> galleryReady;
   late final PageController _photoController = PageController();
 
   @override
@@ -2881,7 +2888,16 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   void initState() {
     super.initState();
+    detailPhotos = List.of(car.photos);
+    galleryReady = _loadGallery();
     _loadFavorite();
+  }
+
+  Future<void> _loadGallery() async {
+    if (car.photoPaths.isEmpty) return;
+    final loaded = await loadListingGallery(car.photoPaths, car.photos,
+      widget.downloadPhoto ?? (path) => Supabase.instance.client.storage.from('vehicle-photos').download(path));
+    if (mounted) setState(() => detailPhotos = loaded);
   }
 
   Future<void> _loadFavorite() async {
@@ -3194,11 +3210,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     }
   }
 
-  void _openFullScreenGallery(BuildContext context, int initialIndex) {
+  Future<void> _openFullScreenGallery(BuildContext context, int initialIndex) async {
+    await galleryReady;
+    if (!context.mounted || detailPhotos.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => FullScreenGalleryPage(
-          photos: car.photos,
+          photos: detailPhotos,
           initialIndex: initialIndex,
           title: '${car.brand} ${car.model}',
         ),
@@ -3250,12 +3268,12 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         border: Border.all(color: Colors.white12),
       ),
       clipBehavior: Clip.antiAlias,
-      child: car.photos.isNotEmpty
+      child: detailPhotos.isNotEmpty
           ? Stack(
               children: [
                 PageView.builder(
                   controller: _photoController,
-                  itemCount: car.photos.length,
+                  itemCount: detailPhotos.length,
                   onPageChanged: (index) {
                     if (mounted && currentPhotoIndex != index) {
                       setState(() => currentPhotoIndex = index);
@@ -3266,7 +3284,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Image.memory(
-                        car.photos[index],
+                        detailPhotos[index],
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.contain,
@@ -3275,7 +3293,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     ),
                   ),
                 ),
-                if (car.photos.length > 1)
+                if (detailPhotos.length > 1)
                   Positioned(
                     right: 12,
                     bottom: 12,
@@ -3300,7 +3318,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                               const Icon(Icons.photo_library_outlined, color: gold, size: 16),
                               const SizedBox(width: 7),
                               Text(
-                                uiText(context, "{0} / {1} fotos", [currentPhotoIndex + 1, car.photos.length]),
+                                uiText(context, "{0} / {1} fotos", [currentPhotoIndex + 1, detailPhotos.length]),
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(width: 6),
@@ -3331,19 +3349,19 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   }
 
   Widget _photoThumbnails() {
-    if (car.photos.length < 2) return const SizedBox.shrink();
+    if (detailPhotos.length < 2) return const SizedBox.shrink();
     return SizedBox(
       height: 74,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(top: 10),
-        itemCount: car.photos.length,
+        itemCount: detailPhotos.length,
         separatorBuilder: (_, __) => const SizedBox(width: 9),
         itemBuilder: (context, index) {
           final selected = currentPhotoIndex == index;
           return Semantics(
             button: true,
-            label: uiText(context, "Ver foto {0} de {1}", [index + 1, car.photos.length]),
+            label: uiText(context, "Ver foto {0} de {1}", [index + 1, detailPhotos.length]),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () {
@@ -3364,7 +3382,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Image.memory(car.photos[index], fit: BoxFit.cover),
+                child: Image.memory(detailPhotos[index], fit: BoxFit.cover),
               ),
             ),
           );
@@ -3650,7 +3668,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
          Row(children: [
           Icon(Icons.tune_rounded, color: gold, size: 22),
           SizedBox(width: 9),
-          Text(uiText(context, "Ficha técnica"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Expanded(child: Text(uiText(context, "Ficha técnica"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
         ]),
         const SizedBox(height: 14),
         if (car.version?.trim().isNotEmpty == true)
@@ -4039,8 +4057,6 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         );
         return;
       }
-      final brandData = raw['vehicle_brands'];
-      final modelData = raw['vehicle_models'];
       final photoData = raw['vehicle_photos'];
       final photoRows = photoData is List
           ? List<Map<String, dynamic>>.from(photoData)
@@ -4061,39 +4077,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         }),
       );
       final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car(
-        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (raw['year'] as num?)?.toInt() ?? 0,
-        km: (raw['km'] as num?)?.toInt() ?? 0,
-        price: (raw['price'] as num?)?.toDouble() ?? 0,
-        fuel: raw['fuel']?.toString() ?? '',
-        description: raw['description']?.toString() ?? '',
-        phone: raw['phone']?.toString() ?? '',
-        matricula: raw['matricula']?.toString(),
-        vin: raw['vin']?.toString(),
-        showMatriculaPublicly: raw['show_matricula_publicly'] == true,
-        showVinPublicly: raw['show_vin_publicly'] == true,
-        cv: (raw['cv'] as num?)?.toInt(),
-        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-        version: raw['version']?.toString(),
-        transmission: raw['transmission']?.toString(),
-        bodyType: raw['body_type']?.toString(),
-        doors: (raw['doors'] as num?)?.toInt(),
-        seats: (raw['seats'] as num?)?.toInt(),
-        color: raw['color']?.toString(),
-        torqueNm: (raw['torque_nm'] as num?)?.toInt(),
-        acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
-        maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
-        consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
-        emissionsStandard: raw['emissions_standard']?.toString(),
-        equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
-        photos: photoBytes,
-        listingId: raw['id']?.toString(),
-        ownerId: raw['owner_id']?.toString(),
-        status: raw['status']?.toString() ?? 'published',
-      );
+      final car = Car.fromListing(raw, photos: photoBytes);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -4847,25 +4831,7 @@ class _GaragePageState extends State<GaragePage> {
         }),
       );
       final photos = downloadedPhotos.whereType<Uint8List>().toList();
-      final brand = listing['vehicle_brands'];
-      final model = listing['vehicle_models'];
-      final car = Car(
-        brand: brand is Map ? (brand['name']?.toString() ?? 'Marca') : 'Marca',
-        model: model is Map ? (model['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (listing['year'] as num?)?.toInt() ?? 0,
-        km: (listing['km'] as num?)?.toInt() ?? 0,
-        price: (listing['price'] as num?)?.toDouble() ?? 0,
-        fuel: listing['fuel']?.toString() ?? '',
-        description: listing['description']?.toString() ?? '',
-        phone: listing['phone']?.toString() ?? '',
-        cv: (listing['cv'] as num?)?.toInt(),
-        cilindradaCc: (listing['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: listing['etiqueta_medioambiental']?.toString(),
-        vin: listing['vin']?.toString(),
-        photos: photos,
-        listingId: listing['id']?.toString(),
-        ownerId: listing['owner_id']?.toString(),
-      );
+      final car = Car.fromListing(listing, photos: photos);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => CarDetailsPage(
         car: car,
@@ -5962,7 +5928,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .maybeSingle();
       if (raw == null || !['published', 'reserved'].contains(raw['status']?.toString())) {
@@ -5973,8 +5939,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         }
         return;
       }
-      final brandData = raw['vehicle_brands'];
-      final modelData = raw['vehicle_models'];
       final photoData = raw['vehicle_photos'];
       final photoRows = photoData is List
           ? List<Map<String, dynamic>>.from(photoData)
@@ -5995,23 +5959,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         }),
       );
       final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car(
-        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (raw['year'] as num?)?.toInt() ?? 0,
-        km: (raw['km'] as num?)?.toInt() ?? 0,
-        price: (raw['price'] as num?)?.toDouble() ?? 0,
-        fuel: raw['fuel']?.toString() ?? '',
-        description: raw['description']?.toString() ?? '',
-        phone: raw['phone']?.toString() ?? '',
-        matricula: raw['matricula']?.toString(),
-        cv: (raw['cv'] as num?)?.toInt(),
-        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-        photos: photoBytes,
-        listingId: raw['id']?.toString(),
-        ownerId: raw['owner_id']?.toString(),
-      );
+      final car = Car.fromListing(raw, photos: photoBytes);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -7259,7 +7207,9 @@ class _AddCarPageState extends State<AddCarPage> {
           cv: int.tryParse(cv.text.trim()),
           cilindradaCc: int.tryParse(cilindradaCc.text.trim()),
           etiquetaMedioambiental: etiquetaMedioambiental,
-          // No se expone el VIN en el objeto que se muestra a visitantes.
+          vin: showVinPublicly ? vin.text.trim().toUpperCase() : null,
+          showMatriculaPublicly: showMatriculaPublicly,
+          showVinPublicly: showVinPublicly,
           photos: photoBytes,
           listingId: listingId,
           ownerId: user.id,
