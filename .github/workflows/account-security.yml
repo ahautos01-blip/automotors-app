@@ -1,0 +1,26 @@
+name: Account security
+on:
+  push:
+    branches: [restore/ios-1.0.1-build10]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-and-edge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install isolated test database
+        run: npm install --prefix "$RUNNER_TEMP/account-tests" --ignore-scripts --no-audit --no-fund @electric-sql/pglite@0.3.14
+      - name: Verify profile permissions and account deletion
+        env:
+          PGLITE_MODULE_PATH: ${{ runner.temp }}/account-tests/node_modules/@electric-sql/pglite/dist/index.js
+        run: |
+          node test/profile_authority.integration.mjs
+          node test/account_deletion.integration.mjs
+          node test/seller_about.integration.mjs

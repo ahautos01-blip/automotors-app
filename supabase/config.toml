@@ -7,3 +7,6 @@ verify_jwt = false
 [functions.send-ios-push]
 # The worker validates its private scheduler credential through a service-only RPC.
 verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true

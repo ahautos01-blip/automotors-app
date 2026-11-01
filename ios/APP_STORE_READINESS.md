@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La aplicación de prueba existente es AUTOMOTORS 1.0.1 (10), distribuida mediante TestFlight en el grupo interno AUTOMOTORS Sandbox. La actualización preparada es **1.0.1 (11)**.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (13)** en el grupo interno AUTOMOTORS Sandbox. Los cambios de preparación de App Store posteriores a la build 13 todavía no se han distribuido en una nueva build.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -72,3 +72,42 @@ Codemagic compilo, firmo y subio 1.0.1 (13) desde el commit a206ba46e43cf6e2d7cf
 https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae66cddefa74786046f95fb
 
 Apple termino de procesar la build 13 (1ccb1715-4e89-46ee-b940-b4971c029158). El titular autorizo expresamente guardar para esta build la respuesta "Ninguno de los algoritmos mencionados anteriormente" sobre cifrado. Se guardo y se asigno la build a AUTOMOTORS Sandbox. App Store Connect confirma 1.0.1 (13) "En pruebas", disponible para actualizar en TestFlight con el icono correcto. La publicacion publica sigue pendiente.
+
+
+## Preparación posterior a la build 13 — 1 de noviembre de 2026
+
+Datos confirmados por el titular: Abdelmounim Taghi; abdelmounimtg94@gmail.com;
+Carrer Pablo Iglesias 56, 08302 Mataró, España; 937212845.
+
+Cambios del cliente preparados:
+- Ayuda sin iniciar sesión, contacto copiable y apertura del correo con alternativa si falla.
+- Enlaces directos a privacidad y condiciones en el acceso y en los planes.
+- Precio y período obtenidos de StoreKit, conservando moneda y duración reales. No se deducen del identificador del producto. Si no llega el período, el botón de contratación permanece desactivado.
+- Información de renovación automática, restauración y gestión de suscripciones de Apple.
+- Eliminación desde Mi espacio: reconocimiento del aviso de suscripciones y segunda confirmación; errores visibles y reintentos. Borrar la cuenta no cancela la suscripción de Apple.
+- Textos en español, inglés y catalán. Páginas web estáticas equivalentes en web/support.html, web/privacy.html y web/terms.html, preparadas pero no publicadas. Se regeneran con tool/export_support_pages.py.
+
+Servidor activado:
+- protect_profile_authority y preserve_profile_default_status impiden que el cliente se conceda is_admin o apruebe su verificación. Conservan los valores predeterminados reales y las solicitudes de revisión existentes.
+- La revisión automática rechazó inicialmente el despliegue de eliminación por su alcance destructivo. Tras ver la función implementada y probada, el titular autorizó expresamente «Sí, activar la eliminación de cuentas». Entonces se aplicó account_deletion_and_session_guards y se desplegó delete-account versión 1 con verify_jwt=true.
+- El endpoint valida la identidad con Auth y vincula session_id al usuario en auth.sessions. No acepta un identificador de cuenta enviado por el cliente. Las RPC de preparación y limpieza solo admiten service_role.
+- Una marca privada suspende el acceso del usuario durante el borrado; doce políticas restrictivas complementan las reglas existentes. Las sesiones con JWT de una cuenta ya eliminada tampoco pueden volver a escribir.
+- Primero se eliminan archivos mediante la API de Storage, después se limpian relaciones heredadas y anuncios propios (su FK actual es SET NULL), y por último se elimina Auth mediante su API administrativa. El resto de relaciones y sesiones se eliminan en cascada. Los fallos dejan una marca duradera para reintentar, sin anunciar éxito parcial.
+- No se ha eliminado ninguna cuenta real durante las pruebas. Se comprobó que hay cero borrados pendientes y que el endpoint responde 401 sin autenticación.
+
+Validación: 47 pruebas Flutter correctas; pruebas de permisos y eliminación en PostgreSQL en memoria, más pruebas del endpoint con HTTP simulado. Se cubren autoasignación de privilegios, guardado normal y upsert, solicitudes de verificación, autenticación, sesión de otra cuenta, orden Storage/Auth, errores parciales, reintentos, claves foráneas heredadas y JWT de una cuenta eliminada. El workflow account-security.yml repite estas comprobaciones en CI.
+
+Avisos de Supabase: las tablas privadas de trabajo y los eventos de tienda tienen RLS sin políticas deliberadamente (ningún acceso de clientes). Sigue pendiente la protección contra contraseñas filtradas, que ya estaba desactivada: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
+
+Pendientes antes del envío público:
+- Chat: bloqueo de usuarios, denuncias y circuito de moderación; filtrado y operación de las denuncias de contenido.
+- Revisar los textos legales, las condiciones de los proveedores, la conservación efectiva y las transferencias; publicar las URL estables e introducirlas en la ficha de Apple.
+- Completar ficha, privacidad de App Store, clasificación por edades, capturas y cuenta/instrucciones de revisión.
+- Pruebas físicas de registro, publicación, compras/restauración, mensajes y eliminación con una cuenta de prueba creada para ello.
+- Compilar, firmar y distribuir una nueva build; comprobar su aceptación y disponibilidad real en TestFlight. La última build disponible sigue siendo 13.
+
+No se ha enviado esta preparación a revisión pública ni se ha reemplazado el verificador de compras desplegado.
+
+Se confirmó que faltaba seller_about_profiles en el servidor, lo que impedía completar el guardado de perfiles profesionales. Se creó únicamente esa tabla con permisos de escritura para el propio profesional, lectura pública y protección durante la eliminación. La prueba aislada verifica escritura propia, rechazo a otras cuentas y particulares, lectura pública y borrado en cascada. Esta política eleva a trece los controles restrictivos de cuenta activa.
+
+La compilación web de producción JavaScript terminó correctamente con --no-wasm-dry-run. Los archivos nuevos de Dart pasan el analizador sin avisos. El análisis global conserva 69 avisos anteriores de estilo/API obsoletas, sin errores. Las páginas legales siguen preparadas para revisión y no están publicadas.

@@ -1,3 +1,6 @@
+import 'delete_account_page.dart';
+import 'support_page.dart';
+import 'services/store_product_presentation.dart';
 import 'l10n/ui_text.dart';
 import 'l10n/app_localizations.dart';
 import 'services/automotors_locale_controller.dart';
@@ -436,6 +439,7 @@ class _LoginPageState extends State<LoginPage> {
                     }),
                     child: Text(creatingAccount ? uiText(context, "Ya tengo una cuenta · Iniciar sesión") : uiText(context, "¿No tienes cuenta? Crear cuenta")),
                   ),
+                  const SupportLinks(),
                   const SizedBox(height: 8),
                    Text(uiText(context, "Puedes seguir viendo los anuncios sin registrarte."), textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white60, fontSize: 12)),
@@ -4662,6 +4666,18 @@ class PersonalAreaPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const InboxPage())),
           )),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.help_outline, color: gold),
+            title: Text(uiText(context, 'Ayuda y privacidad')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => openAutomotorsSupport(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+            title: Text(uiText(context, 'Eliminar mi cuenta')),
+            onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const DeleteAccountPage())),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             onPressed: () => _signOut(context),
@@ -6356,20 +6372,14 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
   static const Color _panel = Color(0xFF111111);
 
   String _storePrice(String productId) {
-    // App Store Connect only makes these subscriptions available in Spain.
-    // StoreKit can still return the tester's account currency for the product
-    // metadata, while Apple's purchase sheet correctly localizes the charge.
-    const spainPrices = <String, String>{
-      'automotors_pack_10': '59,00 €',
-      'automotors_pack_15': '75,00 €',
-      'automotors_pack_20': '99,00 €',
-      'automotors_pro_monthly_199': '199,00 €',
-    };
-    final spainPrice = spainPrices[productId];
-    if (spainPrice != null) return spainPrice;
-
     for (final product in _purchaseService.products) {
-      if (product.id == productId) return product.price;
+      if (product.id != productId) continue;
+      final period = storeSubscriptionPeriod(product);
+      final message = storePeriodMessage(product);
+      if (period != null && message != null) {
+        return '${product.price} / ${uiText(context, message, [period.count])}';
+      }
+      return product.price;
     }
     return uiText(context, 'Consultar tienda');
   }
@@ -6447,7 +6457,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
                     'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
                   }) : null,
               onSelect: StorePurchaseService.checkoutEnabled &&
-                      _purchaseService.products.any((product) => product.id == switch (pack.title) {
+                      _purchaseService.products.any((product) => storePeriodMessage(product) != null && product.id == switch (pack.title) {
                         'PACK 10' => 'automotors_pack_10',
                         'PACK 15' => 'automotors_pack_15',
                         'PACK 20' => 'automotors_pack_20',
@@ -6470,6 +6480,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
             ),
             const SizedBox(height: 14),
           ],
+          const SubscriptionDisclosure(),
           TextButton.icon(
             onPressed: _purchaseService.restorePurchases,
             icon: const Icon(Icons.restore_rounded),
@@ -6516,8 +6527,9 @@ class _PublishPackCard extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(data.icon, color: gold, size: 32), const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? gold : Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12))]),),
-          const SizedBox(width: 8), Text(data.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
         ]),
+        const SizedBox(height: 10),
+        Text(data.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
         const SizedBox(height: 8), Padding(padding: const EdgeInsets.only(left: 44), child: Text(data.cars, style: const TextStyle(color: gold, fontWeight: FontWeight.w700))),
         const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
