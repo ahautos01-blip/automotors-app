@@ -29,7 +29,17 @@ export function listingModerationHandler(config:Config,fetcher:typeof fetch=fetc
     try {body=await request.json();} catch {return reply(400,{error:'invalid_request'});}
     if(body?.action==='probe') {
       // Only the existing server credential can run the harmless synthetic probe.
-      if(authorization!==serviceHeaders.Authorization||Object.keys(body).length!==1) return reply(403,{error:'service_required'});
+      if(Object.keys(body).length!==1) return reply(403,{error:'service_required'});
+      if(authorization!==serviceHeaders.Authorization) {
+        // Validate alternate existing server JWTs through a service-only RPC.
+        // PostgREST verifies the signature and database EXECUTE permission.
+        try {
+          const access=await call('/rest/v1/rpc/content_provider_probe_result',{method:'POST',
+            headers:{...serviceHeaders,Authorization:authorization},
+            body:JSON.stringify({p_result:{connected:false,error:'probe_started'}})});
+          if(!access.ok) return reply(403,{error:'service_required'});
+        } catch {return reply(403,{error:'service_required'});}
+      }
       let result;
       try {
         const text=await classify('Anuncio de un automÃ³vil de segunda mano en buen estado.',config.openaiKey,budgetFetch);

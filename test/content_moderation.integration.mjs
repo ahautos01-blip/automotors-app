@@ -94,6 +94,7 @@ function mock({provider=safe,change=false,errorAt=''}={}) {
    const where=new URL(url);calls.push({url,path:where.pathname,options});
    if(where.pathname===errorAt) return new Response('{}',{status:503});
    if(where.hostname==='api.openai.com') return Response.json(provider);
+   if(where.pathname.endsWith('/content_provider_probe_result')&&options.headers.Authorization!=='Bearer service-secret'&&options.headers.Authorization!=='Bearer alternate-service') return new Response('{}',{status:403});
    if(where.pathname==='/auth/v1/user') return Response.json({id:owner});
    if(where.pathname.endsWith('/prepare_listing_content_check')) return Response.json({lease_id:mod,text:'Fixture ad',photos:[{path}]});
    if(where.pathname.startsWith('/storage/')) return new Response(png);
@@ -104,7 +105,7 @@ function mock({provider=safe,change=false,errorAt=''}={}) {
  });return {handler,calls};
 }
 let m=mock();assert.equal((await m.handler(request({action:'publish',listing_id:listing},''))).status,401);assert.equal(m.calls.length,0);
-assert.equal((await m.handler(request({action:'probe'}))).status,403);assert.equal(m.calls.length,0);
+assert.equal((await m.handler(request({action:'probe'}))).status,403);assert.equal(m.calls.length,1);assert.equal(m.calls.some(x=>x.url.includes('api.openai.com')),false);
 assert.equal((await m.handler(request({action:'publish',listing_id:listing,approved:true}))).status,400);
 m=mock();let response=await m.handler(request({action:'publish',listing_id:listing}));assert.equal(response.status,200);assert.equal((await response.json()).published,true);
 assert.equal(m.calls.filter(x=>x.url.includes('api.openai.com')).length,2);
@@ -114,4 +115,5 @@ m=mock({change:true});assert.equal((await m.handler(request({action:'publish',li
 m=mock({errorAt:'/storage/v1/object/authenticated/vehicle-photos/'+path});assert.equal((await m.handler(request({action:'publish',listing_id:listing}))).status,503);
 assert.equal(JSON.parse(m.calls.at(-1).options.body).p_outcome,'error');
 m=mock();response=await m.handler(request({action:'probe'},'Bearer service-secret'));assert.equal(response.status,200);assert.equal((await response.json()).connected,true);
+m=mock();response=await m.handler(request({action:'probe'},'Bearer alternate-service'));assert.equal(response.status,200);assert.equal((await response.json()).connected,true);
 console.log('PASS: content-bound approvals, rollout guards, ownership/live sessions, photo replacement denial, changed/expired checks, rate limits, human appeal, provider failures, private-key isolation and synthetic connection probe.');

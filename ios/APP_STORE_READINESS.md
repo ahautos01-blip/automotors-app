@@ -151,3 +151,12 @@ La revisión automática rechazó aplicar la migración en producción por añad
 El despliegue previsto deja la exigencia global desactivada para conservar la compatibilidad con la build 13. Antes de activarla hay que distribuir y probar el cliente compatible, preparar los anuncios existentes y convertir el bucket de fotos público a privado mediante Storage, verificando las descargas autorizadas. Mientras el bucket sea público, las URL directas pueden seguir mostrando archivos sin las reglas de visibilidad del anuncio. No afirmar que el filtro está activo o que las fotos están protegidas globalmente.
 
 La última versión disponible en TestFlight sigue siendo 1.0.1 (13). No se ha enviado una nueva build ni publicado en App Store. Las páginas legales y el código permanecen en la propuesta de cambios para revisión.
+
+
+## Despliegue y conexión real verificados — 1 de noviembre de 2026
+
+Tras autorización expresa del titular, se aplicó automatic_content_moderation y se desplegó moderate-listing con verify_jwt=true. La primera prueba respondió 403 service_required. La revisión automática exigió una autorización adicional para incorporar y desplegar la corrección de validación de credenciales de servidor alternativas; el titular la concedió expresamente. La función versión 2 está ACTIVE y valida esas credenciales mediante firma de PostgREST y permiso EXECUTE del RPC content_provider_probe_result, reservado a service_role. Las pruebas aisladas confirman que las cuentas normales son rechazadas antes de llamar al proveedor.
+
+La prueba real devolvió HTTP 200: connected=true, text_checked=true, image_checked=true, modelo omni-moderation-2024-09-26. Se usaron exclusivamente una frase ficticia sobre un automóvil y una imagen gris generada. El registro privado last_probe confirma el resultado a las 22:06:45 UTC (23:06:45 en Madrid). No se procesaron anuncios ni fotos reales durante esta prueba. Se vaciaron las cabeceras del formulario y se cerró la pestaña de claves; no se guardaron credenciales en el repositorio.
+
+La consulta posterior confirma enabled=false. La exigencia global sigue pendiente del despliegue y prueba del cliente compatible y del cierre del acceso público al bucket de fotos. La última versión distribuida continúa siendo 1.0.1 (13). La revisión de seguridad mantiene únicamente los avisos conocidos: tablas privadas sin políticas deliberadamente y protección contra contraseñas filtradas desactivada.
