@@ -160,3 +160,14 @@ Tras autorización expresa del titular, se aplicó automatic_content_moderation 
 La prueba real devolvió HTTP 200: connected=true, text_checked=true, image_checked=true, modelo omni-moderation-2024-09-26. Se usaron exclusivamente una frase ficticia sobre un automóvil y una imagen gris generada. El registro privado last_probe confirma el resultado a las 22:06:45 UTC (23:06:45 en Madrid). No se procesaron anuncios ni fotos reales durante esta prueba. Se vaciaron las cabeceras del formulario y se cerró la pestaña de claves; no se guardaron credenciales en el repositorio.
 
 La consulta posterior confirma enabled=false. La exigencia global sigue pendiente del despliegue y prueba del cliente compatible y del cierre del acceso público al bucket de fotos. La última versión distribuida continúa siendo 1.0.1 (13). La revisión de seguridad mantiene únicamente los avisos conocidos: tablas privadas sin políticas deliberadamente y protección contra contraseñas filtradas desactivada.
+
+
+## Build 14 y acceso privado a fotos
+
+Se preparó 1.0.1 (14), commit dbba18b, y se inició la compilación firmada en Codemagic: https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae7b8adefa74786046fe5f4. Incluye ayuda/privacidad, suscripciones, eliminación de cuenta, chat seguro, panel de moderación y publicación comprobada. La disponibilidad en TestFlight debe confirmarse después de la subida y procesamiento.
+
+El bucket vehicle-photos se cambió a privado mediante el panel de Storage. La comprobación real detectó un fallo heredado: la política de lectura consultaba user_profiles, sin permiso para visitantes anónimos. La revisión automática bloqueó modificar esa política hasta recibir autorización explícita; el titular autorizó desplegar la corrección. Se aplicó 20261101221212_private_vehicle_photo_reads.sql: las lecturas dependen de la visibilidad RLS del anuncio, coinciden con su carpeta/propietario y permiten borradores propios sin consultar perfiles privados. La política independiente de acceso por denuncia para moderadores se conserva.
+
+Verificación HTTP posterior: descarga por la ruta usada por el SDK con clave publicable y sin sesión de usuario devuelve 200 image/jpeg para una foto publicada; la ruta pública directa devuelve Bucket not found/404 (respuesta HTTP 400 de Storage). Las pruebas PostgreSQL aisladas cubren acceso anónimo a publicados, borradores propios, rechazo de borradores ajenos, carpeta incorrecta y visibilidad restringida. No se han borrado ni movido archivos. Las copias previamente cacheadas en CDN pueden persistir; no se ha afirmado una purga retroactiva.
+
+La exigencia global de moderación sigue desactivada a la espera de pruebas de la build compatible y revisión de los anuncios existentes. Continúa pendiente reducir las descargas repetidas del catálogo y revisar capacidad. Esta preparación no constituye publicación pública.
