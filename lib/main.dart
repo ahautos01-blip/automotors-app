@@ -1,3 +1,4 @@
+import 'design/market_watchlists.dart';
 import 'design/market_comparison.dart';
 import 'design/market_search.dart';
 import 'services/vehicle_search.dart';
@@ -37,6 +38,8 @@ import 'package:automotors_base/services/ios_push_service.dart';
 const gold = marketGold;
 const black = marketPaper;
 const panel = marketSurface;
+
+const buyerListingProjection = 'id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
 
 final automotorsNavigatorKey = GlobalKey<NavigatorState>();
 late final IosPushService automotorsPush;
@@ -933,6 +936,12 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   final List<Car> cars = [];
   bool loadingCars = true;
   int unreadChatsCount = 0;
+  int unreadBuyerAlerts=0;
+  Future<void> loadUnreadBuyerAlerts() async {
+    final db=Supabase.instance.client;final uid=db.auth.currentUser?.id;
+    if(uid==null){if(mounted)setState(()=>unreadBuyerAlerts=0);return;}
+    try{final rows=await db.from('vehicle_search_alerts').select('id').eq('user_id',uid).isFilter('read_at',null).limit(100);if(mounted && db.auth.currentUser?.id==uid)setState(()=>unreadBuyerAlerts=rows.length);}catch(_){/* Keep search usable when alerts are offline. */}
+  }
   RealtimeChannel? _chatUnreadChannel;
 
   @override
@@ -1002,11 +1011,12 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   }
 
   Future<void> loadCars() async {
+    unawaited(loadUnreadBuyerAlerts());
     try {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select(buyerListingProjection)
           .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
@@ -1184,7 +1194,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text(uiText(context, "Búsqueda guardada en tu cuenta."))),
+         SnackBar(content: Text(uiText(context, "Búsqueda guardada en tu cuenta.")),action:SnackBarAction(label:uiText(context,'Ver búsquedas'),onPressed:_openSavedSearches)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -1540,10 +1550,11 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                 final loggedIn = await requireAutomotorsLogin(context);
                 if (!loggedIn || !mounted) return;
               }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const VehicleSearchAlertsPage()));
+              if (!context.mounted) return;
+              await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => VehicleSearchAlertsPage(onOpenCar: openCarDetails)));
+              if(mounted)await loadUnreadBuyerAlerts();
             },
-            icon: const Icon(Icons.notifications_active_outlined, color: marketAccent),
+            icon: Badge(isLabelVisible:unreadBuyerAlerts>0,label:Text(unreadBuyerAlerts>=100 ? '99+' : '$unreadBuyerAlerts'),child:const Icon(Icons.notifications_active_outlined,color:marketAccent)),
           ),
           const SizedBox(width: 6),
         ],
@@ -1754,6 +1765,9 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             const SizedBox(height: 24),
             Text(uiText(context, 'Tu próxima búsqueda'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -.5)),
             const SizedBox(height: 12),
+            MarketQuickLink(title: 'Mis favoritos', subtitle: 'Sigue los coches que te interesan', icon: Icons.favorite_border_rounded,
+              onTap: () async {if(!await requireAutomotorsLogin(context) || !context.mounted)return;await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>SavedVehiclesPage(cars:cars,onOpenCar:openCarDetails)));}),
+            const SizedBox(height: 10),
             MarketQuickLink(title: 'Tus búsquedas', subtitle: 'Recupera tus filtros guardados',
               icon: Icons.bookmark_outline_rounded, onTap: _openSavedSearches),
             const SizedBox(height: 10),
@@ -2142,98 +2156,258 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
 }
 
 class VehicleSearchAlertsPage extends StatefulWidget {
-  const VehicleSearchAlertsPage({super.key});
+  final ValueChanged<Car> onOpenCar;
+  const VehicleSearchAlertsPage({super.key, required this.onOpenCar});
   @override
-  State<VehicleSearchAlertsPage> createState() => _VehicleSearchAlertsPageState();
+  State<VehicleSearchAlertsPage> createState() =>
+      _VehicleSearchAlertsPageState();
 }
+
 class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
   bool loading = true;
   String? error;
   List<Map<String, dynamic>> alerts = [];
   @override
-  void initState() { super.initState(); loadAlerts(); }
+  void initState() {
+    super.initState();
+    loadAlerts();
+  }
+
   Future<void> loadAlerts() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        setState(() { loading = false; error = 'Inicia sesión para consultar tus alertas.'; });
+        setState(() {
+          loading = false;
+          error = 'Inicia sesión para consultar tus alertas.';
+        });
         return;
       }
-      final rows = await Supabase.instance.client.from('vehicle_search_alerts')
-          .select('id, search_id, listing_id, alert_type, title, message, created_at, read_at')
-          .eq('user_id', user.id).order('created_at', ascending: false).limit(100);
+      final rows = await Supabase.instance.client
+          .from('vehicle_search_alerts')
+          .select(
+            'id, search_id, listing_id, alert_type, title, message, created_at, read_at, previous_price, current_price',
+          )
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(100);
       if (!mounted) return;
-      setState(() { alerts = List<Map<String, dynamic>>.from(rows); loading = false; });
+      setState(() {
+        alerts = List<Map<String, dynamic>>.from(rows);
+        loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { loading = false; error = 'No se pudieron cargar las alertas. Comprueba la conexión e inténtalo de nuevo.'; });
+      setState(() {
+        loading = false;
+        error = 'No se pudieron cargar las alertas. Comprueba la conexión e inténtalo de nuevo.';
+      });
     }
   }
+
   Future<void> markRead(Map<String, dynamic> alert) async {
     if (alert['read_at'] != null) return;
     try {
       final now = DateTime.now().toUtc().toIso8601String();
-      await Supabase.instance.client.from('vehicle_search_alerts').update({'read_at': now}).eq('id', alert['id']);
+      await Supabase.instance.client
+          .from('vehicle_search_alerts')
+          .update({'read_at': now})
+          .eq('id', alert['id']);
       if (!mounted) return;
       setState(() => alert['read_at'] = now);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "No se pudo marcar la alerta como leída."))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            uiText(context, "No se pudo marcar la alerta como leída."),
+          ),
+        ),
+      );
     }
   }
+
   Future<void> openAlert(Map<String, dynamic> alert) async {
     await markRead(alert);
-    if (!mounted || alert['alert_type'] != 'review_requested') return;
+    if (!mounted) return;
+    if (alert['alert_type'] != 'review_requested') {
+      try {
+        final raw = await Supabase.instance.client
+            .from('vehicle_listings')
+            .select(buyerListingProjection)
+            .eq('id', alert['listing_id'])
+            .maybeSingle();
+        if (raw == null) throw StateError('unavailable');
+        final car = await buyerCarFromListing(raw);
+        if (mounted) widget.onOpenCar(car);
+      } catch (_) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                uiText(context, 'Este aviso ya no está disponible.'),
+              ),
+            ),
+          );
+      }
+      return;
+    }
     final listingId = alert['listing_id']?.toString();
     if (listingId == null || listingId.isEmpty) return;
-    await Navigator.push<void>(context, MaterialPageRoute(
-      builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
-    ));
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
+      ),
+    );
     if (mounted) await loadAlerts();
   }
+
   @override
   Widget build(BuildContext context) {
     final unread = alerts.where((a) => a['read_at'] == null).length;
     return Scaffold(
-      appBar: AppBar(title:  Text(uiText(context, "Notificaciones")), actions: [
-        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: marketAccent)),
-      ]),
+      appBar: AppBar(
+        title: Text(uiText(context, "Notificaciones")),
+        actions: [
+          IconButton(
+            tooltip: uiText(context, "Actualizar"),
+            onPressed: loadAlerts,
+            icon: const Icon(Icons.refresh_rounded, color: marketAccent),
+          ),
+        ],
+      ),
       body: loading
-        ? const Center(child: CircularProgressIndicator(color: marketAccent))
-        : error != null
-          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.notifications_off_outlined, color: marketAccent, size: 40), const SizedBox(height: 12),
-              Text(uiText(context, error!), textAlign: TextAlign.center), const SizedBox(height: 14),
-              FilledButton(onPressed: loadAlerts, child:  Text(uiText(context, "Reintentar"))),
-            ])))
+          ? const Center(child: CircularProgressIndicator(color: marketAccent))
+          : error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.notifications_off_outlined,
+                      color: marketAccent,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(uiText(context, error!), textAlign: TextAlign.center),
+                    const SizedBox(height: 14),
+                    FilledButton(
+                      onPressed: loadAlerts,
+                      child: Text(uiText(context, "Reintentar")),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : alerts.isEmpty
-            ? Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.notifications_none_rounded, size: 54, color: marketAccent), const SizedBox(height: 14),
-                 Text(uiText(context, "Todavía no tienes alertas"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                 Text(uiText(context, "Aquí verás las invitaciones para valorar tus compras y las alertas de tus búsquedas guardadas."),
-                  textAlign: TextAlign.center, style: TextStyle(color: marketMuted)),
-              ])))
-            : ListView(padding: const EdgeInsets.all(16), children: [
-                Text(uiText(context, "{0} sin leer · {1} alertas", [unread, alerts.length]), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 54,
+                      color: marketAccent,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      uiText(context, "Todavía no tienes alertas"),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      uiText(
+                        context,
+                        "Aquí verás las invitaciones para valorar tus compras y las alertas de tus búsquedas guardadas.",
+                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: marketMuted),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  uiText(context, "{0} sin leer · {1} alertas", [
+                    unread,
+                    alerts.length,
+                  ]),
+                  style: const TextStyle(
+                    color: marketAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 for (final alert in alerts)
                   Card(
-                    color: alert['read_at'] == null ? const Color(0xFFFFFFFF) : const Color(0xFFFFFFFF),
+                    color: alert['read_at'] == null
+                        ? const Color(0xFFFFFFFF)
+                        : const Color(0xFFFFFFFF),
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
-                      leading: Icon(alert['alert_type'] == 'review_requested' ? Icons.rate_review_outlined : alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
-                        color: alert['read_at'] == null ? gold : marketMuted),
-                      title: Text(alert['title']?.toString() ?? uiText(context, 'Alerta'), style: const TextStyle(fontWeight: FontWeight.w800)),
-                      subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(alert['message']?.toString() ?? '')),
+                      leading: Icon(
+                        alert['alert_type'] == 'review_requested'
+                            ? Icons.rate_review_outlined
+                            : alert['alert_type'] == 'price_drop'
+                            ? Icons.trending_down_rounded
+                            : Icons.directions_car_filled_rounded,
+                        color: alert['read_at'] == null ? gold : marketMuted,
+                      ),
+                      title: Text(
+                        alert['title']?.toString() ?? uiText(context, 'Alerta'),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(alert['message']?.toString() ?? ''),
+                            if (alert['previous_price'] is num &&
+                                alert['current_price'] is num)
+                              Text(
+                                '${watchPrice(alert['previous_price'] as num)} → ${watchPrice(alert['current_price'] as num)}',
+                                style: const TextStyle(
+                                  color: marketAccent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                       trailing: alert['read_at'] == null
-                        ? IconButton(tooltip: uiText(context, "Marcar como leída"), onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: marketAccent))
-                        : const Icon(Icons.check_circle_outline, color: marketMuted),
+                          ? IconButton(
+                              tooltip: uiText(context, "Marcar como leída"),
+                              onPressed: () => markRead(alert),
+                              icon: const Icon(
+                                Icons.mark_email_read_outlined,
+                                color: marketAccent,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.check_circle_outline,
+                              color: marketMuted,
+                            ),
                       onTap: () => openAlert(alert),
                     ),
                   ),
-              ]),
+              ],
+            ),
     );
   }
 }
@@ -2303,6 +2477,18 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "No se pudo eliminar la búsqueda."))));
     }
+  }
+
+  final updatingSearches=<String>{};
+  Future<void> updatePreference(Map<String,dynamic> item,String key,bool value) async {
+    final db=Supabase.instance.client;final uid=db.auth.currentUser?.id;
+    final id=item['id'].toString();if(uid==null || updatingSearches.contains(id))return;
+    setState(()=>updatingSearches.add(id));
+    try{
+      final row=await db.from('saved_vehicle_searches').update({key:value}).eq('id',id).eq('user_id',uid).select('notify_new_listings,notify_price_drops').single();
+      if(mounted && db.auth.currentUser?.id==uid)setState(()=>item.addAll(row));
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo guardar la preferencia. Inténtalo de nuevo.'))));}
+    finally{if(mounted)setState(()=>updatingSearches.remove(id));}
   }
 
   String criteriaSummary(Map<String, dynamic> criteria) {
@@ -2383,6 +2569,8 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                               ]),
                               const SizedBox(height: 6),
                               Text(criteriaSummary(criteria), style: TextStyle(color: marketInk.withValues(alpha: .72), height: 1.4)),
+                              MarketAlertPreferences(newListings:item['notify_new_listings']==true,priceDrops:item['notify_price_drops']==true,busy:updatingSearches.contains(item['id'].toString()),onNewListings:(v)=>updatePreference(item,'notify_new_listings',v),onPriceDrops:(v)=>updatePreference(item,'notify_price_drops',v)),
+                              Text(uiText(context,'Avisos en el buzón de la app'),style:const TextStyle(color:marketMuted,fontSize:12)),
                               const SizedBox(height: 12),
                               SizedBox(width: double.infinity, child: FilledButton.icon(
                                 onPressed: () {
@@ -2608,11 +2796,36 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
   );
 }
 
+Future<Car> buyerCarFromListing(Map<String, dynamic> raw) async {
+  final photoRows = raw['vehicle_photos'] is List
+      ? List<Map<String, dynamic>>.from(raw['vehicle_photos'])
+      : <Map<String, dynamic>>[];
+  photoRows.sort(
+    (a, b) => ((a['position'] as num?)?.toInt() ?? 0).compareTo(
+      (b['position'] as num?)?.toInt() ?? 0,
+    ),
+  );
+  final paths = photoRows
+      .map((p) => p['storage_path']?.toString() ?? '')
+      .where((p) => p.isNotEmpty)
+      .toList();
+  final photos = await loadListingCover(
+    paths,
+    (path) =>
+        Supabase.instance.client.storage.from('vehicle-photos').download(path),
+  );
+  return Car.fromListing(raw, photos: photos, photoPaths: paths);
+}
+
 class SavedVehiclesPage extends StatefulWidget {
   final List<Car> cars;
   final void Function(Car) onOpenCar;
 
-  const SavedVehiclesPage({super.key, required this.cars, required this.onOpenCar});
+  const SavedVehiclesPage({
+    super.key,
+    required this.cars,
+    required this.onOpenCar,
+  });
 
   @override
   State<SavedVehiclesPage> createState() => _SavedVehiclesPageState();
@@ -2621,8 +2834,9 @@ class SavedVehiclesPage extends StatefulWidget {
 class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   bool loading = true;
   String? error;
-  List<Car> savedCars = [];
-
+  List<Map<String, dynamic>> favorites = [];
+  Map<String, Car> cars = {};
+  final busy = <String>{};
   @override
   void initState() {
     super.initState();
@@ -2630,57 +2844,165 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   }
 
   Future<void> loadFavorites() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        setState(() { loading = false; error = 'Inicia sesión para consultar tus favoritos.'; });
-        return;
-      }
-      final rows = await Supabase.instance.client.from('saved_vehicles')
-          .select('listing_id').eq('user_id', user.id).order('created_at', ascending: false);
-      final ids = List<Map<String, dynamic>>.from(rows)
-          .map((row) => row['listing_id'].toString()).toSet();
-      if (mounted) setState(() {
-        savedCars = widget.cars.where((car) => car.listingId != null && ids.contains(car.listingId)).toList();
+      final db = Supabase.instance.client;
+      final uid = db.auth.currentUser?.id;
+      if (uid == null) throw StateError('login');
+      final rows = await db
+          .from('saved_vehicles')
+          .select('listing_id,reference_price,notify_price_drops')
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+      final records = List<Map<String, dynamic>>.from(rows);
+      final ids = records.map((f) => f['listing_id'].toString()).toList();
+      final listings = ids.isEmpty
+          ? <Map<String, dynamic>>[]
+          : List<Map<String, dynamic>>.from(
+              await db
+                  .from('vehicle_listings')
+                  .select(buyerListingProjection)
+                  .inFilter('id', ids),
+            );
+      final fresh = await Future.wait(listings.map(buyerCarFromListing));
+      if (!mounted || db.auth.currentUser?.id != uid) return;
+      setState(() {
+        favorites = records;
+        cars = {for (final car in fresh) car.listingId!: car};
         loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() { loading = false; error = 'No se pudieron cargar los favoritos. Desliza para reintentar.'; });
+      if (mounted) {
+        setState(() {
+          loading = false;
+          error =
+              'No se pudieron cargar los favoritos. Desliza para reintentar.';
+        });
+      }
     }
   }
 
-  String _price(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+  Future<void> changeFavorite(
+    Map<String, dynamic> item, {
+    bool? watch,
+    bool remove = false,
+  }) async {
+    final id = item['listing_id'].toString();
+    if (busy.contains(id)) return;
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) return;
+    setState(() => busy.add(id));
+    try {
+      if (remove) {
+        await db
+            .from('saved_vehicles')
+            .delete()
+            .eq('user_id', uid)
+            .eq('listing_id', id);
+      } else {
+        final updated = await db
+            .from('saved_vehicles')
+            .update({'notify_price_drops': watch})
+            .eq('user_id', uid)
+            .eq('listing_id', id)
+            .select('reference_price,notify_price_drops')
+            .single();
+        item.addAll(updated);
+      }
+      if (mounted && db.auth.currentUser?.id == uid) {
+        setState(() {
+          if (remove) favorites.remove(item);
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              uiText(
+                context,
+                'No se pudo actualizar favoritos. Inténtalo de nuevo.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy.remove(id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title:  Text(uiText(context, "Mis favoritos"))),
+    appBar: AppBar(
+      title: Text(uiText(context, 'Mis favoritos')),
+      actions: [
+        IconButton(
+          tooltip: uiText(context, 'Actualizar'),
+          onPressed: loadFavorites,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
     body: RefreshIndicator(
-      color: marketAccent,
       onRefresh: loadFavorites,
-      child: loading
-        ? ListView(children: const [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
-        : error != null
-          ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(uiText(context, error!), textAlign: TextAlign.center)))])
-          : savedCars.isEmpty
-            ? ListView(children:  [SizedBox(height: 100), Icon(Icons.favorite_border_rounded, size: 56, color: marketAccent), SizedBox(height: 16), Center(child: Text(uiText(context, "Aún no tienes coches favoritos."), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))), SizedBox(height: 8), Center(child: Text(uiText(context, "Abre un anuncio y pulsa “Guardar en favoritos”."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted)))])
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: savedCars.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final car = savedCars[index];
-                  return Card(color: panel, clipBehavior: Clip.antiAlias, child: ListTile(
-                    onTap: () => widget.onOpenCar(car),
-                    leading: SizedBox(width: 76, height: 62, child: car.photos.isNotEmpty
-                      ? Image.memory(car.photos.first, fit: BoxFit.cover)
-                      : const Icon(Icons.directions_car_rounded, color: marketAccent, size: 38)),
-                    title: Text('${car.brand} ${car.model}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text(uiText(context, "{0} · {1} km", [car.year, car.km])),
-                    trailing: Text(_price(car.price), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w900)),
-                  ));
-                },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.all(60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (error != null)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(uiText(context, error!), textAlign: TextAlign.center),
+            )
+          else if (favorites.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                uiText(context, 'Aún no tienes coches favoritos.'),
+                textAlign: TextAlign.center,
               ),
+            )
+          else
+            ...favorites.map((item) {
+              final id = item['listing_id'].toString();
+              final car = cars[id];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: MarketFavoriteCard(
+                  title: car == null
+                      ? uiText(context, 'Anuncio no disponible')
+                      : '${car.brand} ${car.model}',
+                  details: car == null
+                      ? ''
+                      : '${car.year} · ${car.km} km · ${uiText(context, car.fuel)}',
+                  price: car?.price ?? 0,
+                  referencePrice: item['reference_price'] as num?,
+                  photo: car?.photos.firstOrNull,
+                  watching: item['notify_price_drops'] == true,
+                  busy: busy.contains(id),
+                  available:
+                      car != null &&
+                      ['published', 'reserved'].contains(car.status),
+                  onOpen: () {
+                    if (car != null) widget.onOpenCar(car);
+                  },
+                  onRemove: () => changeFavorite(item, remove: true),
+                  onWatch: (value) => changeFavorite(item, watch: value),
+                ),
+              );
+            }),
+        ],
+      ),
     ),
   );
 }

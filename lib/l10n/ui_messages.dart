@@ -1,5 +1,16 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Ver búsquedas": ["View searches", "Veure cerques"],
+  "Sigue los coches que te interesan": ["Follow the cars you like", "Segueix els cotxes que t’interessen"],
+  "Anuncios nuevos": ["New listings", "Anuncis nous"],
+  "Bajadas de precio": ["Price drops", "Baixades de preu"],
+  "Avisarme si baja": ["Alert me if the price drops", "Avisa’m si baixa"],
+  "Avisos en el buzón de la app": ["Alerts in your app inbox", "Avisos a la bústia de l’app"],
+  "Anuncio no disponible": ["Listing unavailable", "Anunci no disponible"],
+  "Referencia: {0}": ["Reference: {0}", "Referència: {0}"],
+  "Ha bajado {0}": ["Down {0}", "Ha baixat {0}"],
+  "No se pudo guardar la preferencia. Inténtalo de nuevo.": ["Could not save your preference. Try again.", "No s’ha pogut desar la preferència. Torna-ho a provar."],
+
   "Solo diferencias": ["Differences only", "Només diferències"],
   "{0} campos diferentes": ["{0} differing fields", "{0} camps diferents"],
   "Datos publicados. “No indicado” no significa que el vehículo no lo tenga.": ["Published details. “Not specified” does not mean the vehicle lacks the feature.", "Dades publicades. “No indicat” no vol dir que el vehicle no ho tingui."],

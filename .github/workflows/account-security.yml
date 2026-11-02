@@ -27,3 +27,4 @@ jobs:
           node test/chat_safety.integration.mjs
           node test/content_moderation.integration.mjs
           node test/private_photo_reads.integration.mjs
+          node test/buyer_watchlists.integration.mjs
