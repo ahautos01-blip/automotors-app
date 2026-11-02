@@ -1,3 +1,5 @@
+import 'design/market_vehicle_card.dart';
+import 'design/market_theme.dart';
 import 'services/listing_photo_loader.dart';
 import 'services/content_publication_service.dart';
 import 'community_moderation_page.dart';
@@ -28,9 +30,9 @@ import 'package:automotors_base/sold_reviews_features.dart';
 import 'package:automotors_base/vehicle_feature_control.dart';
 import 'package:automotors_base/services/ios_push_service.dart';
 
-const gold = Color(0xFFD4AF37);
-const black = Color(0xFF0D0D0F);
-const panel = Color(0xFF1A1A1D);
+const gold = marketGold;
+const black = marketPaper;
+const panel = marketSurface;
 
 final automotorsNavigatorKey = GlobalKey<NavigatorState>();
 late final IosPushService automotorsPush;
@@ -194,11 +196,11 @@ class EnvironmentalSticker extends StatelessWidget {
         : value == 'C' ? const Color(0xFF63B900) : const Color(0xFFFFD400);
     return SizedBox(width: size, height: size, child: DecoratedBox(
       decoration: BoxDecoration(shape: BoxShape.circle, color: base,
-        border: Border.all(color: Colors.white, width: size * .025),
+        border: Border.all(color: marketInk, width: size * .025),
         boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(1, 2))]),
       child: ClipOval(child: Stack(children: [
         Positioned(left: size*.07, top: size*.12, child: Container(
-          width: size*.13, height: size*.42, color: Colors.white,
+          width: size*.13, height: size*.42, color: marketInk,
           child: Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(11, (_) => Container(height: size*.012, color: Colors.black))))),
         Positioned(right: size*.13, top: size*.16, child: _StickerQr(size: size*.23)),
@@ -209,7 +211,7 @@ class EnvironmentalSticker extends StatelessWidget {
           height:size*.14,color:const Color(0xFFBFC0C0),alignment:Alignment.center,
           child:Text(uiText(context, "DGT"),style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900,
             fontStyle:FontStyle.italic,fontSize:size*.13)))),
-        Positioned(left:size*.1,right:size*.1,bottom:size*.045,child:Container(height:size*.025,color:Colors.white70)),
+        Positioned(left:size*.1,right:size*.1,bottom:size*.045,child:Container(height:size*.025,color:marketMuted)),
       ])),
     ));
   }
@@ -219,7 +221,7 @@ class _StickerQr extends StatelessWidget {
   const _StickerQr({required this.size});
   @override
   Widget build(BuildContext context) => Container(width:size,height:size,padding:EdgeInsets.all(size*.08),
-    color:Colors.white,child:CustomPaint(painter:_QrPatternPainter()));
+    color:marketInk,child:CustomPaint(painter:_QrPatternPainter()));
 }
 class _QrPatternPainter extends CustomPainter {
   @override
@@ -391,7 +393,7 @@ class _LoginPageState extends State<LoginPage> {
                   const AutomotorsBrandMark(size: 112),
                   const SizedBox(height: 12),
                    Text(uiText(context, "AUTOMOTORS"), textAlign: TextAlign.center,
-                    style: TextStyle(color: gold, fontSize: 26, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: marketAccent, fontSize: 26, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text(creatingAccount ? uiText(context, "Crea tu cuenta para publicar y contactar.") : uiText(context, "Inicia sesión para publicar y contactar."),
                     textAlign: TextAlign.center),
@@ -448,7 +450,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SupportLinks(),
                   const SizedBox(height: 8),
                    Text(uiText(context, "Puedes seguir viendo los anuncios sin registrarte."), textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white60, fontSize: 12)),
+                    style: TextStyle(color: marketMuted, fontSize: 12)),
                 ],
               ),
             ),
@@ -639,14 +641,14 @@ class _CarFeaturePill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
     decoration: BoxDecoration(
-      color: const Color(0xFF202830),
+      color: const Color(0xFFFFFFFF),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xFF34414B)),
+      border: Border.all(color: const Color(0xFFE4E5DF)),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 13, color: gold),
+      Icon(icon, size: 13, color: marketAccent),
       const SizedBox(width: 5),
-      Text(uiText(context, label), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+      Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 11, fontWeight: FontWeight.w600)),
     ]),
   );
 }
@@ -750,7 +752,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
         if (_selectedForComparison.isNotEmpty)
           Center(child: Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Text('${_selectedForComparison.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+            child: Text('${_selectedForComparison.length}/3', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w800)),
           )),
       ],
     ),
@@ -758,7 +760,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
       ? SafeArea(child: Padding(
           padding: const EdgeInsets.all(12),
           child: FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk, padding: const EdgeInsets.symmetric(vertical: 15)),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison)),
             )),
@@ -769,18 +771,18 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
       : null,
     body: widget.cars.isEmpty
       ?  Center(child: Padding(padding: EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.search_off_rounded, size: 54, color: gold), SizedBox(height: 14),
+          Icon(Icons.search_off_rounded, size: 54, color: marketAccent), SizedBox(height: 14),
           Text(uiText(context, "No hay vehículos con estos filtros"), textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-          SizedBox(height: 8), Text(uiText(context, "Cambia o limpia alguno de los filtros e inténtalo de nuevo."), textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)),
+          SizedBox(height: 8), Text(uiText(context, "Cambia o limpia alguno de los filtros e inténtalo de nuevo."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted)),
         ])))
       : Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(children: [
-              Expanded(child: Text(uiText(context, "{0} vehículos encontrados", [widget.cars.length]), style: const TextStyle(color: Colors.white70))),
-              const Icon(Icons.compare_arrows_rounded, color: gold, size: 18),
+              Expanded(child: Text(uiText(context, "{0} vehículos encontrados", [widget.cars.length]), style: const TextStyle(color: marketMuted))),
+              const Icon(Icons.compare_arrows_rounded, color: marketAccent, size: 18),
               const SizedBox(width: 6),
-               Flexible(child: Text(uiText(context, "Selecciona hasta 3 para comparar"), style: TextStyle(color: gold, fontSize: 12))),
+               Flexible(child: Text(uiText(context, "Selecciona hasta 3 para comparar"), style: TextStyle(color: marketAccent, fontSize: 12))),
             ]),
           ),
           Expanded(child: ListView.separated(
@@ -791,16 +793,16 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
               final car = widget.cars[index];
               final isSelected = _selectedForComparison.contains(car);
               return Card(color: panel, clipBehavior: Clip.antiAlias, child: Row(children: [
-                SizedBox(width: 112, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFF292929), child: const Icon(Icons.directions_car, size: 42, color: gold))),
+                SizedBox(width: 112, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFFFFFFFF), child: const Icon(Icons.directions_car, size: 42, color: marketAccent))),
                 Expanded(child: InkWell(
                   onTap: () => widget.onOpenCar(car),
                   child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    if (car.isFeatured)  Padding(padding: EdgeInsets.only(bottom: 5), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: gold, size: 15), SizedBox(width: 4), Text(uiText(context, "DESTACADO"), style: TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .7))])),
+                    if (car.isFeatured)  Padding(padding: EdgeInsets.only(bottom: 5), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: marketAccent, size: 15), SizedBox(width: 4), Text(uiText(context, "DESTACADO"), style: TextStyle(color: marketAccent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .7))])),
                     Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                     const SizedBox(height: 6),
-                    Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
+                    Text(priceText(car.price), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w900, fontSize: 18)),
                     const SizedBox(height: 6),
-                    Text(uiText(context, "{0} · {1} km · {2}", [car.year, car.km, car.fuel]), style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(uiText(context, "{0} · {1} km · {2}", [car.year, car.km, car.fuel]), style: const TextStyle(color: marketMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ])),
                 )),
                 Checkbox(value: isSelected, activeColor: gold, checkColor: black, onChanged: (_) => _toggleComparison(car)),
@@ -849,28 +851,28 @@ class VehicleComparisonPage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
           child: Text(uiText(context, "Compara los datos publicados de {0} vehículos. Los campos sin información aparecen como “No indicado”.", [cars.length]),
-            style: const TextStyle(color: Colors.white70)),
+            style: const TextStyle(color: marketMuted)),
         ),
         Expanded(child: SingleChildScrollView(
           padding: const EdgeInsets.all(12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFF242B32)),
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFFFFFFF)),
               dataRowMinHeight: 48,
               dataRowMaxHeight: 110,
               columns: [
-                 DataColumn(label: Text(uiText(context, "Característica"), style: TextStyle(color: gold, fontWeight: FontWeight.w800))),
+                 DataColumn(label: Text(uiText(context, "Característica"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w800))),
                 ...cars.map((car) => DataColumn(label: SizedBox(
                   width: 165,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                     if (car.photos.isNotEmpty) ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.memory(car.photos.first, width: 145, height: 78, fit: BoxFit.cover),
-                    ) else const Icon(Icons.directions_car, size: 40, color: gold),
+                    ) else const Icon(Icons.directions_car, size: 40, color: marketAccent),
                     const SizedBox(height: 5),
                     Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    Text('${car.year}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    Text('${car.year}', style: const TextStyle(color: marketMuted, fontSize: 12)),
                   ]),
                 ))),
               ],
@@ -917,96 +919,7 @@ class _AutomotorsAppState extends State<AutomotorsApp> {
       navigatorKey: automotorsNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: black,
-        canvasColor: black,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: gold,
-          brightness: Brightness.dark,
-          surface: panel,
-        ).copyWith(
-          primary: gold,
-          secondary: const Color(0xFFBFA45A),
-          surface: panel,
-          onSurface: const Color(0xFFF1F5FA),
-          outline: const Color(0xFF4A4130),
-        ),
-        dividerColor: const Color(0xFF34312A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: black,
-          foregroundColor: Color(0xFFF1F5FA),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: false,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF18181B),
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-            side: BorderSide(color: Color(0xFF34312A)),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: panel,
-          hintStyle: const TextStyle(color: Color(0xFFAAA6A0)),
-          labelStyle: const TextStyle(color: Color(0xFFD0CBC2)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF3B362B)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: gold, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFFF6B81)),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFFF6B81), width: 1.5),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: gold,
-            foregroundColor: const Color(0xFF06111B),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            textStyle: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: gold,
-            side: const BorderSide(color: Color(0xFF6A5728)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF151518),
-          indicatorColor: gold.withValues(alpha: .16),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-            color: states.contains(WidgetState.selected) ? gold : const Color(0xFFAAA6A0),
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
-            fontSize: 12,
-          )),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: const Color(0xFF29292D),
-          contentTextStyle: const TextStyle(color: Color(0xFFF1F5FA)),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
+      theme: automotorsMarketTheme(),
       home: const HomePage(),
     );
   }
@@ -1097,7 +1010,7 @@ class _HomePageState extends State<HomePage> {
       label: Text(
         unreadChatsCount > 99 ? '99+' : '$unreadChatsCount',
         style: const TextStyle(
-          color: Colors.white,
+          color: marketInk,
           fontSize: 10,
           fontWeight: FontWeight.w900,
         ),
@@ -1324,7 +1237,7 @@ class _HomePageState extends State<HomePage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF151518),
+      backgroundColor: const Color(0xFFFFFFFF),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1343,7 +1256,7 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       width: 42, height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: marketLine,
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -1353,7 +1266,7 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 5),
                    Text(uiText(context, "Encuentra el coche que encaja contigo."),
-                    style: TextStyle(color: Colors.white60)),
+                    style: TextStyle(color: marketMuted)),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(isExpanded: true,
                     value: brands.contains(brand) ? brand : 'Todas',
@@ -1610,7 +1523,7 @@ class _HomePageState extends State<HomePage> {
                     )),
                 Text(uiText(context, "MOTOR MARKET"),
                     style: TextStyle(
-                      color: gold, fontSize: 9, letterSpacing: 2.1,
+                      color: marketAccent, fontSize: 9, letterSpacing: 2.1,
                       fontWeight: FontWeight.w700,
                     )),
               ],
@@ -1628,7 +1541,7 @@ class _HomePageState extends State<HomePage> {
               PopupMenuItem(value: 'en', child: Text(uiText(context, "English"))),
               PopupMenuItem(value: 'ca', child: Text(uiText(context, "Català"))),
             ],
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: gold, size: 19), const SizedBox(width: 4), Text(AutomotorsLocaleController.instance.locale.languageCode.toUpperCase(), style: const TextStyle(color: gold, fontWeight: FontWeight.w900))])),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: marketAccent, size: 19), const SizedBox(width: 4), Text(AutomotorsLocaleController.instance.locale.languageCode.toUpperCase(), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w900))])),
           ),
           IconButton(
             tooltip: appText('Alertas de búsqueda', 'Search alerts'),
@@ -1641,13 +1554,13 @@ class _HomePageState extends State<HomePage> {
               if (!mounted) return;
               Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const VehicleSearchAlertsPage()));
             },
-            icon: const Icon(Icons.notifications_active_outlined, color: gold),
+            icon: const Icon(Icons.notifications_active_outlined, color: marketAccent),
           ),
           const SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(
-        color: gold,
+        color: marketAccent,
         onRefresh: loadCars,
         child: ListView(
           padding: EdgeInsets.fromLTRB(isWide ? 28 : 16, 10, isWide ? 28 : 16, 28),
@@ -1655,11 +1568,11 @@ class _HomePageState extends State<HomePage> {
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(appText('Encuentra tu próximo coche.', 'Find your next car.'),
-                  style: const TextStyle(fontSize: 28, height: 1.15, fontWeight: FontWeight.w800, letterSpacing: -.8)),
+                Text(uiText(context, 'Un coche.\nMil posibilidades.'),
+                  style: const TextStyle(fontSize: 34, height: 1.06, fontWeight: FontWeight.w800, letterSpacing: -1.3)),
                 const SizedBox(height: 8),
-                Text(appText('Vehículos de particulares y profesionales.', 'Cars from private sellers and professionals.'),
-                  style: const TextStyle(color: Colors.white60, fontSize: 14, height: 1.4)),
+                Text(uiText(context, 'Encuentra el que encaja contigo.'),
+                  style: const TextStyle(color: marketMuted, fontSize: 14, height: 1.4)),
               ]),
             ),
             Row(
@@ -1698,7 +1611,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
                         filled: true,
-                        fillColor: const Color(0xFF1A1A1D),
+                        fillColor: const Color(0xFFFFFFFF),
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -1709,7 +1622,7 @@ class _HomePageState extends State<HomePage> {
                     optionsViewBuilder: (context, onSelected, options) => Align(
                       alignment: Alignment.topLeft,
                       child: Material(
-                        color: const Color(0xFF202024),
+                        color: const Color(0xFFFFFFFF),
                         elevation: 8,
                         borderRadius: BorderRadius.circular(14),
                         child: ConstrainedBox(
@@ -1719,7 +1632,7 @@ class _HomePageState extends State<HomePage> {
                             shrinkWrap: true,
                             children: options.map((option) => ListTile(
                               dense: true,
-                              leading: const Icon(Icons.search, color: gold, size: 19),
+                              leading: const Icon(Icons.search, color: marketAccent, size: 19),
                               title: Text(option.toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
                               onTap: () => onSelected(option),
                             )).toList(),
@@ -1737,19 +1650,19 @@ class _HomePageState extends State<HomePage> {
                     onPressed: openFilters,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.zero,
-                      side: BorderSide(color: activeFilterCount > 0 ? gold : Colors.white24),
+                      side: BorderSide(color: activeFilterCount > 0 ? gold : marketLine),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Icon(Icons.tune_rounded, color: gold),
+                        const Icon(Icons.tune_rounded, color: marketAccent),
                         if (activeFilterCount > 0)
                           Positioned(
                             right: -9, top: -9,
                             child: Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                              decoration: const BoxDecoration(color: marketAccent, shape: BoxShape.circle),
                               child: Text('$activeFilterCount',
                                 style: const TextStyle(color: Colors.black, fontSize: 10,
                                   fontWeight: FontWeight.w900)),
@@ -1787,15 +1700,15 @@ class _HomePageState extends State<HomePage> {
                 TextButton(onPressed: () => Navigator.push<void>(context,
                   MaterialPageRoute(builder: (_) => AllVehiclesPage(
                     cars: List<Car>.from(filtered), onOpenCar: openCarDetails))),
-                  child:  Text(uiText(context, "Ver todos  →"), style: TextStyle(color: gold, fontWeight: FontWeight.w800))),
+                  child:  Text(uiText(context, "Ver todos  →"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w800))),
               ],
             ),
             const SizedBox(height: 10),
             if (loadingCars)
-              const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: gold)))
+              const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: marketAccent)))
             else if (filtered.isNotEmpty)
               SizedBox(
-                height: 292,
+                height: 342,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: filtered.length > 8 ? 8 : filtered.length,
@@ -1803,21 +1716,18 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final car = filtered[index];
                     return SizedBox(
-                      width: MediaQuery.sizeOf(context).width < 360 ? 258 : 292,
-                      child: Card(
-                        color: const Color(0xFF171717), margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.white.withValues(alpha: .10))),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), Positioned(left: 8, bottom: 8, child: _VehicleStatusBadge(status: car.status)), Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car))]))),
-                          Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
-                            Text(uiText(context, "{0} · {1} km · {2}", [car.year, car.km, car.fuel]), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-                            const SizedBox(height: 4), Text(euros(car.price), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-                          ])),
-                        ])),
+                      width: MediaQuery.sizeOf(context).width < 760 ? MediaQuery.sizeOf(context).width - 48 : 340,
+                      child: MarketVehicleCard(
+                        title: '${car.brand} ${car.model}',
+                        price: euros(car.price),
+                        details: '${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context, car.fuel)}',
+                        version: car.version,
+                        photo: car.photos.isEmpty ? null : car.photos.first,
+                        favorite: SaveVehicleButton(car: car),
+                        status: car.status == 'reserved' || car.status == 'sold' ? _VehicleStatusBadge(status: car.status) : null,
+                        onTap: () => openCarDetails(car),
                       ),
+
                     );
                   },
                 ),
@@ -1825,25 +1735,25 @@ class _HomePageState extends State<HomePage> {
             if (!loadingCars && filtered.isEmpty)
               Padding(padding: const EdgeInsets.symmetric(vertical: 28),
                 child: Text(AppLocalizations.of(context).noVehiclesFound,
-                  textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70))),
+                  textAlign: TextAlign.center, style: const TextStyle(color: marketMuted))),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF282319), Color(0xFF0D0D0F)])),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: marketAccent.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFFAF9F6)])),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                  Text(uiText(context, "¿Tienes un vehículo?"), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 5),
-                 Text(uiText(context, "Publica tu anuncio y llega a miles de compradores."), style: TextStyle(color: Colors.white70)),
+                 Text(uiText(context, "Publica tu anuncio y llega a miles de compradores."), style: TextStyle(color: marketMuted)),
                 const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w900)))),
+                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w900)))),
               ]),
             ),
             const SizedBox(height: 12),
-            Card(color: const Color(0xFF0D0D0F), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
-              leading: const Icon(Icons.diamond_outlined, color: gold, size: 34),
+            Card(color: const Color(0xFFFAF9F6), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: marketAccent.withValues(alpha: .35))), child: ListTile(
+              leading: const Icon(Icons.diamond_outlined, color: marketAccent, size: 34),
               title:  Text(uiText(context, "Packs y suscripción"), style: TextStyle(fontWeight: FontWeight.w900)),
-              subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: Colors.white70)),
-              trailing: const Icon(Icons.chevron_right_rounded, color: gold),
+              subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: marketMuted)),
+              trailing: const Icon(Icons.chevron_right_rounded, color: marketAccent),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PublishOptionsPage())),
             )),
 
@@ -1851,7 +1761,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF151518),
+        backgroundColor: const Color(0xFFFFFFFF),
         indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -1900,24 +1810,24 @@ class _HomePageState extends State<HomePage> {
       label: Text(uiText(context, fuel)),
       selected: selected,
       onSelected: (_) => setState(() => selectedFuel = fuel),
-      selectedColor: gold,
-      backgroundColor: const Color(0xFF1B1E24),
+      selectedColor: marketInk,
+      backgroundColor: const Color(0xFFFFFFFF),
       labelStyle: TextStyle(
-        color: selected ? Colors.black : Colors.white70,
+        color: selected ? marketSurface : marketMuted,
         fontSize: 12,
         fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
       ),
-      side: BorderSide(color: selected ? gold : Colors.white12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+      side: BorderSide(color: selected ? marketInk : marketLine),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       showCheckmark: false,
     );
   }
 
   Widget _carMeta(IconData icon, String label) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 14, color: Colors.white54),
+      Icon(icon, size: 14, color: marketMuted),
       const SizedBox(width: 4),
-      Text(uiText(context, label), style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 11)),
     ]);
   }
 
@@ -2012,11 +1922,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   });
 
   Widget rangeField(String label, int value, int min, int max, ValueChanged<int> onChanged) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(children: [Expanded(child: Text(uiText(context, label))), Text(number(value), style: const TextStyle(color: gold, fontWeight: FontWeight.bold))]),
+    Row(children: [Expanded(child: Text(uiText(context, label))), Text(number(value), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.bold))]),
     Slider(value: value.clamp(min, max).toDouble(), min: min.toDouble(), max: max.toDouble(), divisions: 100, activeColor: gold, onChanged: (v) => onChanged(v.round())),
   ]);
   Widget priceRange() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(children: [Expanded(child: Text(AppLocalizations.of(context).priceEuros)), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: gold, fontSize: 12))]),
+    Row(children: [Expanded(child: Text(AppLocalizations.of(context).priceEuros)), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: marketAccent, fontSize: 12))]),
     RangeSlider(values: RangeValues(minPrice.clamp(0, 200000).toDouble(), maxPrice.clamp(0, 200000).toDouble()), min: 0, max: 200000, divisions: 200, activeColor: gold, onChanged: (v) => setState(() { minPrice = v.start; maxPrice = v.end; })),
   ]);
 
@@ -2024,30 +1934,30 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   Widget build(BuildContext context) {
     final found = results;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0F12),
+      backgroundColor: const Color(0xFFFAF9F6),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF151518),
+        backgroundColor: const Color(0xFFFFFFFF),
         title: Text(AppLocalizations.of(context).viewVehicles, style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           if (_comparisonIds.isNotEmpty)
             Center(child: Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+              child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w800)),
             )),
           if (_comparisonIds.isNotEmpty)
             IconButton(
               tooltip: AppLocalizations.of(context).clearComparison,
               onPressed: _clearComparison,
-              icon: const Icon(Icons.clear_all_rounded, color: gold),
+              icon: const Icon(Icons.clear_all_rounded, color: marketAccent),
             ),
-          IconButton(tooltip: AppLocalizations.of(context).resetFilters, onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
+          IconButton(tooltip: AppLocalizations.of(context).resetFilters, onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: marketAccent)),
         ],
       ),
       bottomNavigationBar: _comparisonIds.length >= 2
         ? SafeArea(child: Padding(
             padding: const EdgeInsets.all(12),
             child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk, padding: const EdgeInsets.symmetric(vertical: 15)),
               onPressed: () {
                 final selected = widget.cars.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
                 if (selected.length >= 2) {
@@ -2064,11 +1974,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 12, runSpacing: 4, children: [
-              Text(AppLocalizations.of(context).vehiclesFound(found.length), style: const TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context).vehiclesFound(found.length), style: const TextStyle(color: marketMuted)),
               OutlinedButton.icon(onPressed: () {
                 FocusScope.of(context).unfocus();
                 setState(() => showFilters = !showFilters);
-              }, icon: const Icon(Icons.tune, color: gold),
+              }, icon: const Icon(Icons.tune, color: marketAccent),
                 label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters)),
             ])),
         if (!showFilters)
@@ -2078,7 +1988,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             value: sortOrder,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context).sortVehicles,
-              prefixIcon: const Icon(Icons.sort_rounded, color: gold),
+              prefixIcon: const Icon(Icons.sort_rounded, color: marketAccent),
               isDense: true,
             ),
             items: [
@@ -2134,15 +2044,15 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           child: SingleChildScrollView(child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.search_off_rounded, color: gold, size: 48),
+              const Icon(Icons.search_off_rounded, color: marketAccent, size: 48),
               const SizedBox(height: 12),
-              Text(AppLocalizations.of(context).noVehiclesFound, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context).noVehiclesFound, textAlign: TextAlign.center, style: const TextStyle(color: marketMuted)),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.restart_alt),
                 label: Text(AppLocalizations.of(context).resetFilters),
-                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
+                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk),
               ),
             ]),
           ),
@@ -2155,135 +2065,27 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 16,
-              mainAxisExtent: columns == 1 ? 420 : 410,
+              mainAxisExtent: columns == 1 ? 370 : 360,
             ),
             itemBuilder: (context, index) {
               final car = found[index];
               final compareId = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
               final isCompared = _comparisonIds.contains(compareId);
-              return Card(
-                color: const Color(0xFF1A1A1D),
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.white.withValues(alpha: .10)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => widget.onOpenCar(car),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Stack(fit: StackFit.expand, children: [
-                          car.photos.isNotEmpty
-                              ? Image.memory(car.photos.first, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, color: gold, size: 64)))
-                              : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
-                          Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car)),
-                          Positioned(
-                            left: 10, top: 10,
-                            child: Material(
-                              color: Colors.black.withValues(alpha: .72),
-                              borderRadius: BorderRadius.circular(10),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(10),
-                                onTap: () => _toggleCompare(car),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                    Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined, color: gold, size: 18),
-                                    const SizedBox(width: 5),
-                                    Text(isCompared ? AppLocalizations.of(context).compare : AppLocalizations.of(context).add, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                                  ]),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 10, bottom: 12,
-                            child: _VehicleStatusBadge(status: car.status),
-                          ),
-                          Positioned(
-                            right: 12, bottom: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .82), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withValues(alpha: .55))),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                const Icon(Icons.photo_camera_outlined, color: gold, size: 14),
-                                const SizedBox(width: 5),
-                                Text(AppLocalizations.of(context).photoCount(car.photoCount), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                              ]),
-                            ),
-                          ),
-                        ]),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 12, 15, 13),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white)),
-                        const SizedBox(height: 9),
-                        Wrap(spacing: 7, runSpacing: 6, children: [
-                          _CarFeaturePill(icon: Icons.calendar_month_outlined, label: '${car.year}'),
-                          _CarFeaturePill(icon: Icons.speed_rounded, label: uiText(context, "{0} km", [number(car.km)])),
-                          if (car.cv != null) _CarFeaturePill(icon: Icons.bolt_rounded, label: uiText(context, "{0} CV", [car.cv])),
-                          _CarFeaturePill(icon: Icons.local_gas_station_outlined, label: car.fuel),
-                        ]),
-                        const SizedBox(height: 11),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: gold.withValues(alpha: .07),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: gold.withValues(alpha: .24)),
-                          ),
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    uiText(context, "PRECIO"),
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: .62),
-                                      fontSize: 10,
-                                      letterSpacing: 1.1,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    euros(car.price),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: gold,
-                                      fontSize: 23,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: gold.withValues(alpha: .12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.arrow_forward_rounded, color: gold, size: 19),
-                            ),
-                          ]),
-                        ),
-                      ]),
-                    ),
-                  ]),
-                ),
+              return MarketVehicleCard(
+                title: '${car.brand} ${car.model}', price: euros(car.price),
+                details: '${car.year} · ${number(car.km)} km · ${uiText(context, car.fuel)}',
+                version: car.version, photo: car.photos.isEmpty ? null : car.photos.first,
+                favorite: SaveVehicleButton(car: car),
+                comparison: Material(color: marketSurface, borderRadius: BorderRadius.circular(12),
+                  child: IconButton(
+                    tooltip: AppLocalizations.of(context).compare,
+                    onPressed: () => _toggleCompare(car),
+                    icon: Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined,
+                      color: isCompared ? marketAccent : marketInk))),
+                status: car.status == 'reserved' || car.status == 'sold' ? _VehicleStatusBadge(status: car.status) : null,
+                onTap: () => widget.onOpenCar(car),
               );
+
             },
           );
         })),
@@ -2348,39 +2150,39 @@ class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
     final unread = alerts.where((a) => a['read_at'] == null).length;
     return Scaffold(
       appBar: AppBar(title:  Text(uiText(context, "Notificaciones")), actions: [
-        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: gold)),
+        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: marketAccent)),
       ]),
       body: loading
-        ? const Center(child: CircularProgressIndicator(color: gold))
+        ? const Center(child: CircularProgressIndicator(color: marketAccent))
         : error != null
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.notifications_off_outlined, color: gold, size: 40), const SizedBox(height: 12),
+              const Icon(Icons.notifications_off_outlined, color: marketAccent, size: 40), const SizedBox(height: 12),
               Text(uiText(context, error!), textAlign: TextAlign.center), const SizedBox(height: 14),
               FilledButton(onPressed: loadAlerts, child:  Text(uiText(context, "Reintentar"))),
             ])))
           : alerts.isEmpty
             ? Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.notifications_none_rounded, size: 54, color: gold), const SizedBox(height: 14),
+                const Icon(Icons.notifications_none_rounded, size: 54, color: marketAccent), const SizedBox(height: 14),
                  Text(uiText(context, "Todavía no tienes alertas"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                  Text(uiText(context, "Aquí verás las invitaciones para valorar tus compras y las alertas de tus búsquedas guardadas."),
-                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+                  textAlign: TextAlign.center, style: TextStyle(color: marketMuted)),
               ])))
             : ListView(padding: const EdgeInsets.all(16), children: [
-                Text(uiText(context, "{0} sin leer · {1} alertas", [unread, alerts.length]), style: const TextStyle(color: gold, fontWeight: FontWeight.w700)),
+                Text(uiText(context, "{0} sin leer · {1} alertas", [unread, alerts.length]), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 for (final alert in alerts)
                   Card(
-                    color: alert['read_at'] == null ? const Color(0xFF25231C) : const Color(0xFF18181B),
+                    color: alert['read_at'] == null ? const Color(0xFFFFFFFF) : const Color(0xFFFFFFFF),
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
                       leading: Icon(alert['alert_type'] == 'review_requested' ? Icons.rate_review_outlined : alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
-                        color: alert['read_at'] == null ? gold : Colors.white54),
+                        color: alert['read_at'] == null ? gold : marketMuted),
                       title: Text(alert['title']?.toString() ?? uiText(context, 'Alerta'), style: const TextStyle(fontWeight: FontWeight.w800)),
                       subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(alert['message']?.toString() ?? '')),
                       trailing: alert['read_at'] == null
-                        ? IconButton(tooltip: uiText(context, "Marcar como leída"), onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: gold))
-                        : const Icon(Icons.check_circle_outline, color: Colors.white38),
+                        ? IconButton(tooltip: uiText(context, "Marcar como leída"), onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: marketAccent))
+                        : const Icon(Icons.check_circle_outline, color: marketMuted),
                       onTap: () => openAlert(alert),
                     ),
                   ),
@@ -2483,15 +2285,15 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title:  Text(uiText(context, "Búsquedas guardadas")), actions: [
-        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: gold)),
+        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: marketAccent)),
       ]),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: gold))
+          ? const Center(child: CircularProgressIndicator(color: marketAccent))
           : error != null
               ? Center(child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.lock_outline_rounded, color: gold, size: 38),
+                    const Icon(Icons.lock_outline_rounded, color: marketAccent, size: 38),
                     const SizedBox(height: 12),
                     Text(uiText(context, error!), textAlign: TextAlign.center),
                     const SizedBox(height: 14),
@@ -2502,7 +2304,7 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                   ? Center(child: Padding(
                       padding: const EdgeInsets.all(28),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.bookmark_border_rounded, size: 52, color: gold),
+                        const Icon(Icons.bookmark_border_rounded, size: 52, color: marketAccent),
                         const SizedBox(height: 14),
                          Text(uiText(context, "Todavía no tienes búsquedas guardadas"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800), textAlign: TextAlign.center),
                         const SizedBox(height: 8),
@@ -2519,21 +2321,21 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                         final criteria = rawCriteria is Map ? Map<String, dynamic>.from(rawCriteria) : <String, dynamic>{};
                         return Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1D),
+                            color: const Color(0xFFFFFFFF),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: gold.withValues(alpha: .35)),
+                            border: Border.all(color: marketAccent.withValues(alpha: .35)),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                const Icon(Icons.bookmark_rounded, color: gold),
+                                const Icon(Icons.bookmark_rounded, color: marketAccent),
                                 const SizedBox(width: 10),
                                 Expanded(child: Text(item['name']?.toString() ?? uiText(context, 'Búsqueda guardada'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
                                 IconButton(tooltip: uiText(context, "Eliminar búsqueda"), onPressed: () => deleteSearch(item), icon: const Icon(Icons.delete_outline_rounded)),
                               ]),
                               const SizedBox(height: 6),
-                              Text(criteriaSummary(criteria), style: TextStyle(color: Colors.white.withValues(alpha: .72), height: 1.4)),
+                              Text(criteriaSummary(criteria), style: TextStyle(color: marketInk.withValues(alpha: .72), height: 1.4)),
                               const SizedBox(height: 12),
                               SizedBox(width: double.infinity, child: FilledButton.icon(
                                 onPressed: () {
@@ -2634,14 +2436,14 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.black.withValues(alpha: .68),
+    color: marketSurface,
     shape: const CircleBorder(),
     child: IconButton(
       tooltip: isSaved ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
       onPressed: loading ? null : _toggle,
       icon: loading
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: gold))
-          : Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isSaved ? Colors.redAccent : gold),
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent))
+          : Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isSaved ? Colors.redAccent : marketInk),
     ),
   );
 }
@@ -2737,7 +2539,7 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.black.withValues(alpha: .72),
+    color: marketSurface,
     shape: const CircleBorder(),
     child: IconButton(
       tooltip: isSaved ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
@@ -2747,11 +2549,11 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+              child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent),
             )
           : Icon(
               isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: isSaved ? Colors.redAccent : gold,
+              color: isSaved ? Colors.redAccent : marketInk,
               size: 21,
             ),
     ),
@@ -2806,14 +2608,14 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title:  Text(uiText(context, "Mis favoritos"))),
     body: RefreshIndicator(
-      color: gold,
+      color: marketAccent,
       onRefresh: loadFavorites,
       child: loading
         ? ListView(children: const [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
         : error != null
           ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(uiText(context, error!), textAlign: TextAlign.center)))])
           : savedCars.isEmpty
-            ? ListView(children:  [SizedBox(height: 100), Icon(Icons.favorite_border_rounded, size: 56, color: gold), SizedBox(height: 16), Center(child: Text(uiText(context, "Aún no tienes coches favoritos."), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))), SizedBox(height: 8), Center(child: Text(uiText(context, "Abre un anuncio y pulsa “Guardar en favoritos”."), textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)))])
+            ? ListView(children:  [SizedBox(height: 100), Icon(Icons.favorite_border_rounded, size: 56, color: marketAccent), SizedBox(height: 16), Center(child: Text(uiText(context, "Aún no tienes coches favoritos."), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))), SizedBox(height: 8), Center(child: Text(uiText(context, "Abre un anuncio y pulsa “Guardar en favoritos”."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted)))])
             : ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: savedCars.length,
@@ -2824,10 +2626,10 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
                     onTap: () => widget.onOpenCar(car),
                     leading: SizedBox(width: 76, height: 62, child: car.photos.isNotEmpty
                       ? Image.memory(car.photos.first, fit: BoxFit.cover)
-                      : const Icon(Icons.directions_car_rounded, color: gold, size: 38)),
+                      : const Icon(Icons.directions_car_rounded, color: marketAccent, size: 38)),
                     title: Text('${car.brand} ${car.model}', style: const TextStyle(fontWeight: FontWeight.w800)),
                     subtitle: Text(uiText(context, "{0} · {1} km", [car.year, car.km])),
-                    trailing: Text(_price(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
+                    trailing: Text(_price(car.price), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w900)),
                   ));
                 },
               ),
@@ -2978,7 +2780,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             const SizedBox(height: 10),
             ...reasons.map((item) => ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.flag_outlined, color: gold),
+              leading: const Icon(Icons.flag_outlined, color: marketAccent),
               title: Text(uiText(context, item)),
               onTap: () => Navigator.pop(dialogContext, item),
             )),
@@ -3234,11 +3036,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: gold, size: 21),
+          Icon(icon, color: marketAccent, size: 21),
           const SizedBox(width: 12),
           Expanded(
             child: Text(uiText(context, label),
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: const TextStyle(color: marketMuted, fontSize: 14),
             ),
           ),
           const SizedBox(width: 12),
@@ -3247,7 +3049,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               value,
               textAlign: TextAlign.end,
               style: const TextStyle(
-                color: Colors.white,
+                color: marketInk,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -3262,9 +3064,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF181818),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: marketLine),
       ),
       clipBehavior: Clip.antiAlias,
       child: detailPhotos.isNotEmpty
@@ -3297,7 +3099,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     right: 12,
                     bottom: 12,
                     child: Material(
-                      color: Colors.black.withValues(alpha: 0.82),
+                      color: marketSurface,
                       borderRadius: BorderRadius.circular(20),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
@@ -3309,19 +3111,19 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: gold.withValues(alpha: 0.65)),
+                            border: Border.all(color: marketAccent.withValues(alpha: 0.65)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.photo_library_outlined, color: gold, size: 16),
+                              const Icon(Icons.photo_library_outlined, color: marketAccent, size: 16),
                               const SizedBox(width: 7),
                               Text(
                                 uiText(context, "{0} / {1} fotos", [currentPhotoIndex + 1, detailPhotos.length]),
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.open_in_full, color: Colors.white70, size: 13),
+                              const Icon(Icons.open_in_full, color: marketMuted, size: 13),
                             ],
                           ),
                         ),
@@ -3342,7 +3144,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ],
             )
           : const Center(
-              child: Icon(Icons.directions_car, size: 100, color: gold),
+              child: Icon(Icons.directions_car, size: 100, color: marketAccent),
             ),
     );
   }
@@ -3376,7 +3178,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: selected ? gold : Colors.white24,
+                    color: selected ? gold : marketLine,
                     width: selected ? 2 : 1,
                   ),
                 ),
@@ -3412,9 +3214,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: gold),
+          Icon(icon, size: 18, color: marketAccent),
           const SizedBox(width: 10),
-          Expanded(child: Text(uiText(context, message), style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13, height: 1.4))),
+          Expanded(child: Text(uiText(context, message), style: TextStyle(color: marketInk.withValues(alpha: 0.88), fontSize: 13, height: 1.4))),
         ],
       ),
     );
@@ -3426,7 +3228,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       child: Text(
         uiText(context, label).toUpperCase(),
         style: TextStyle(
-          color: gold,
+          color: marketAccent,
           fontSize: 11,
           letterSpacing: 1.05,
           fontWeight: FontWeight.w800,
@@ -3439,22 +3241,23 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF20252A),
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: marketLine),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: gold),
+          Icon(icon, size: 15, color: marketAccent),
           const SizedBox(width: 6),
-          Text(uiText(context, label),
+          Flexible(child: Text(uiText(context, label),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Colors.white,
+              color: marketInk,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -3511,11 +3314,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: gold.withValues(alpha: 0.08),
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: gold.withValues(alpha: 0.38)),
+            border: const Border(bottom: BorderSide(color: marketLine)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3523,7 +3326,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               Text(
                 uiText(context, "PRECIO ANUNCIADO"),
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.68),
+                  color: marketInk.withValues(alpha: 0.68),
                   fontSize: 11,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w700,
@@ -3533,8 +3336,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               Text(
                 priceText,
                 style: const TextStyle(
-                  color: gold,
-                  fontSize: 30,
+                  color: marketInk,
+                  fontSize: 34,
                   height: 1.1,
                   fontWeight: FontWeight.w900,
                 ),
@@ -3546,17 +3349,21 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
          Text(
           uiText(context, "DATOS PRINCIPALES"),
           style: TextStyle(
-            color: Colors.white70,
+            color: marketMuted,
             fontSize: 11,
             letterSpacing: 1.15,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 9),
-        // Resumen visual de los datos clave del vehículo.
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        // Spacious two-column overview, with all source values preserved.
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 2.4 / MediaQuery.textScalerOf(context).scale(1),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
           children: [
             if (car.year > 0)
               _quickSpec(Icons.calendar_today_outlined, '${car.year}'),
@@ -3576,8 +3383,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             icon: const Icon(Icons.ios_share_rounded, size: 18),
             label:  Text(uiText(context, "Compartir anuncio")),
             style: OutlinedButton.styleFrom(
-              foregroundColor: gold,
-              side: BorderSide(color: gold.withValues(alpha: 0.65)),
+              foregroundColor: marketAccent,
+              side: BorderSide(color: marketAccent.withValues(alpha: 0.65)),
               padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -3591,7 +3398,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     color: isFavorite ? Colors.pinkAccent : gold, size: 18),
             label: Text(isFavorite ? AppLocalizations.of(context).saved : AppLocalizations.of(context).favorites),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: marketInk,
               side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .65)),
               padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -3613,15 +3420,15 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF24231F), Color(0xFF171717)]),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)]),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: gold.withValues(alpha: 0.42)),
+              border: const Border.fromBorderSide(BorderSide(color: marketLine)),
               boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6))],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [const Icon(Icons.notes_rounded, color: gold, size: 21), const SizedBox(width: 9),  Expanded(child: Text(uiText(context, "Descripción"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))), const SizedBox(width: 8), Container(width: 26, height: 3, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(4)))]),
+              Row(children: [const Icon(Icons.notes_rounded, color: marketAccent, size: 21), const SizedBox(width: 9),  Expanded(child: Text(uiText(context, "Descripción"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))), const SizedBox(width: 8), Container(width: 26, height: 3, decoration: BoxDecoration(color: marketAccent, borderRadius: BorderRadius.circular(4)))]),
               const SizedBox(height: 12),
-              SelectableText(car.description.trim(), style: TextStyle(fontSize: 15, height: 1.65, color: Colors.white.withValues(alpha: 0.92))),
+              SelectableText(car.description.trim(), style: TextStyle(fontSize: 15, height: 1.65, color: marketInk.withValues(alpha: 0.92))),
             ]),
           ),
           const SizedBox(height: 20),
@@ -3631,7 +3438,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: Colors.white10),
+            side: const BorderSide(color: marketLine),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -3650,19 +3457,19 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   uiText(context, "Marca y modelo"),
                   '${car.brand} ${car.model}',
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.calendar_today_outlined,
                   uiText(context, "Año"),
                   car.year > 0 ? '${car.year}' : uiText(context, "No indicado"),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.speed,
                   uiText(context, "Kilómetros"),
                   uiText(context, "{0} km", [_formatKm(car.km)]),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.local_gas_station_outlined,
                   uiText(context, "Combustible"),
@@ -3674,7 +3481,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ),
         const SizedBox(height: 20),
          Row(children: [
-          Icon(Icons.tune_rounded, color: gold, size: 22),
+          Icon(Icons.tune_rounded, color: marketAccent, size: 22),
           SizedBox(width: 9),
           Expanded(child: Text(uiText(context, "Ficha técnica"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
         ]),
@@ -3713,14 +3520,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         if (car.equipment.isNotEmpty) ...[
           const SizedBox(height: 20),
            Row(children: [
-            Icon(Icons.checklist_rounded, color: gold, size: 22),
+            Icon(Icons.checklist_rounded, color: marketAccent, size: 22),
             SizedBox(width: 9),
             Text(uiText(context, "Equipamiento"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ]),
           const SizedBox(height: 5),
           Text(
             uiText(context, "{0} elementos indicados en el anuncio", [car.equipment.length]),
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+            style: TextStyle(color: marketInk.withValues(alpha: 0.65), fontSize: 12),
           ),
           const SizedBox(height: 10),
           Container(
@@ -3729,7 +3536,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             decoration: BoxDecoration(
               color: panel,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: marketLine),
             ),
             child: Wrap(
               spacing: 8,
@@ -3737,14 +3544,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               children: car.equipment.map((item) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
                 decoration: BoxDecoration(
-                  color: gold.withValues(alpha: 0.07),
+                  color: marketAccent.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: gold.withValues(alpha: 0.25)),
+                  border: Border.all(color: marketAccent.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_outline, size: 17, color: gold),
+                    const Icon(Icons.check_circle_outline, size: 17, color: marketAccent),
                     const SizedBox(width: 7),
                     Flexible(child: Text(uiText(context, item), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
                   ],
@@ -3758,15 +3565,15 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF171715),
+            color: const Color(0xFFFFFFFF),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: gold.withValues(alpha: 0.42)),
+            border: const Border.fromBorderSide(BorderSide(color: marketLine)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
                Row(children: [
-                Icon(Icons.shield_outlined, color: gold, size: 22),
+                Icon(Icons.shield_outlined, color: marketAccent, size: 22),
                 SizedBox(width: 9),
                 Expanded(child: Text(uiText(context, "Consejos para comprar con seguridad"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
               ]),
@@ -3776,7 +3583,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               _safetyTip(Icons.payments_outlined, uiText(context, "No envíes anticipos ni claves bancarias si no has comprobado al vendedor y la operación.")),
               _safetyTip(Icons.handshake_outlined, uiText(context, "Deja por escrito el precio, las condiciones y los datos de comprador y vendedor.")),
               const SizedBox(height: 4),
-              Text(uiText(context, "AUTOMOTORS recomienda estas precauciones; no constituyen una verificación del vehículo ni del vendedor."), style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 11, height: 1.4)),
+              Text(uiText(context, "AUTOMOTORS recomienda estas precauciones; no constituyen una verificación del vehículo ni del vendedor."), style: TextStyle(color: marketInk.withValues(alpha: 0.62), fontSize: 11, height: 1.4)),
             ],
           ),
         ),
@@ -3793,12 +3600,12 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 ),
               );
             },
-            icon: const Icon(Icons.account_circle_outlined, color: gold),
+            icon: const Icon(Icons.account_circle_outlined, color: marketAccent),
             label:  Text(uiText(context, "Ver perfil del vendedor")),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: gold),
-              foregroundColor: Colors.white,
+              side: const BorderSide(color: marketAccent),
+              foregroundColor: marketInk,
             ),
           ),
           const SizedBox(height: 10),
@@ -3812,7 +3619,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Container(
       key: const Key('vehicle-contact-bar'),
       decoration: BoxDecoration(color: panel,
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: .10)))),
+        border: Border(top: BorderSide(color: marketInk.withValues(alpha: .10)))),
       child: SafeArea(top: false,
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -3821,10 +3628,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: car.status.toLowerCase() == 'sold'
-                  ? Colors.white24
+                  ? marketLine
                   : gold,
               foregroundColor: car.status.toLowerCase() == 'sold'
-                  ? Colors.white70
+                  ? marketMuted
                   : Colors.black,
               minimumSize: const Size.fromHeight(50),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -3847,8 +3654,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF25D366),
-                side: const BorderSide(color: Color(0xFF25D366)),
+                foregroundColor: const Color(0xFF1B7647),
+                side: const BorderSide(color: Color(0xFF1B7647)),
                 minimumSize: const Size.fromHeight(48),
               ),
               onPressed: () => openWhatsAppForCar(context, car),
@@ -3875,7 +3682,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               key: const Key('report-listing-action'),
               tooltip: uiText(context, "Denunciar anuncio"),
               onPressed: reporting ? null : _reportListing,
-              icon: const Icon(Icons.flag_outlined, color: gold),
+              icon: const Icon(Icons.flag_outlined, color: marketAccent),
             ),
           IconButton(
             tooltip: isFavorite ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
@@ -3884,11 +3691,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent),
                   )
                 : Icon(
                     isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFavorite ? Colors.redAccent : gold,
+                    color: isFavorite ? Colors.redAccent : marketInk,
                   ),
           ),
         ],
@@ -4161,14 +3968,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
 
   Widget profileStat(String value, String label) => Expanded(
     child: Column(children: [
-      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: marketInk)),
       const SizedBox(height: 3),
-      Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: Colors.white70), textAlign: TextAlign.center),
+      Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center),
     ]),
   );
 
   Widget profileStatWidget(Widget value, String label) => Expanded(
-    child: Column(children: [value, const SizedBox(height: 3), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: Colors.white70), textAlign: TextAlign.center)]),
+    child: Column(children: [value, const SizedBox(height: 3), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center)]),
   );
 
   Widget profileVehicleGrid(List<Map<String, dynamic>> rows, {required bool sold}) {
@@ -4178,7 +3985,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         child: Text(
           sold ? uiText(context, "Este vendedor todavía no tiene vehículos vendidos.") : uiText(context, "Este vendedor no tiene anuncios disponibles."),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70, fontSize: 15),
+          style: const TextStyle(color: marketMuted, fontSize: 15),
         ),
       ));
     }
@@ -4205,12 +4012,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           final isReserved = listing['status']?.toString() == 'reserved';
           final label = listing['etiqueta_medioambiental']?.toString();
           return Card(
-            color: const Color(0xFF10171D),
+            color: const Color(0xFFFFFFFF),
             clipBehavior: Clip.antiAlias,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: Color(0xFF29323A)),
+              side: const BorderSide(color: Color(0xFFE4E5DF)),
             ),
             child: InkWell(
               onTap: () => openListingDetails(listing),
@@ -4218,7 +4025,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [
                   photo is Uint8List
                       ? Image.memory(photo, fit: BoxFit.cover)
-                      : const Center(child: Icon(Icons.directions_car, color: gold, size: 42)),
+                      : const Center(child: Icon(Icons.directions_car, color: marketAccent, size: 42)),
                   if (sold) Positioned.fill(child: Container(color: Colors.black.withValues(alpha: .15))),
                   if ((label ?? '').isNotEmpty && label!.toLowerCase() != 'sin etiqueta' && !sold)
                     Positioned(left: 5, top: 5, child: EnvironmentalSticker(label: label, size: 34)),
@@ -4249,15 +4056,15 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(9, 9, 9, 11),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: marketInk)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "{0} · {1} km", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0)]), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(uiText(context, "{0} · {1} km", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0)]), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketMuted, fontSize: 11)),
                     const SizedBox(height: 7),
-                    Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w900)),
+                    Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketAccent, fontSize: 15, fontWeight: FontWeight.w900)),
                     if (isOwnProfile && !sold) ...[
                       const SizedBox(height: 10),
                       Row(children: [
-                        Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label:  Text(uiText(context, "Editar")), style: OutlinedButton.styleFrom(foregroundColor: gold, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label:  Text(uiText(context, "Editar")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
                         Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? uiText(context, "Quitar reserva") : uiText(context, "Reservar"), maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF64B5F6), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
@@ -4276,10 +4083,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF080D11),
+    backgroundColor: const Color(0xFFFAF9F6),
     appBar: AppBar(
-      backgroundColor: const Color(0xFF080D11),
-      foregroundColor: gold,
+      backgroundColor: const Color(0xFFFAF9F6),
+      foregroundColor: marketAccent,
       automaticallyImplyLeading: true,
       title: null,
       centerTitle: false,
@@ -4288,7 +4095,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       future: dataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: gold));
+          return const Center(child: CircularProgressIndicator(color: marketAccent));
         }
         if (snapshot.hasError) {
           return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(
@@ -4310,20 +4117,20 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final profileTabs = <String>['Anuncios', 'Vendidos', if (isProfessional) 'Sobre nosotros', 'Valoraciones'];
         final profileTabChildren = <Widget>[
           Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos disponibles"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))), Text('${listings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))])),
-             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Anuncios publicados y reservados actualmente"), style: TextStyle(color: Colors.white60, fontSize: 12)))),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos disponibles"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: marketInk))), Text('${listings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Anuncios publicados y reservados actualmente"), style: TextStyle(color: marketMuted, fontSize: 12)))),
             profileVehicleGrid(listings, sold: false),
           ]),
           Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos vendidos"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))), Text('${soldListings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))])),
-             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Historial de vehículos vendidos por este vendedor"), style: TextStyle(color: Colors.white60, fontSize: 12)))),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos vendidos"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: marketInk))), Text('${soldListings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Historial de vehículos vendidos por este vendedor"), style: TextStyle(color: marketMuted, fontSize: 12)))),
             profileVehicleGrid(soldListings, sold: true),
           ]),
           if (isProfessional) ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
-             Text(uiText(context, "Sobre nosotros"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+             Text(uiText(context, "Sobre nosotros"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: marketInk)),
             const SizedBox(height: 12),
-            if (aboutUs.trim().isNotEmpty) Text(aboutUs, style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5)),
-            if (aboutUs.trim().isEmpty) Text('$displayType · ${isVerifiedBusiness ? 'Profesional verificado' : 'Vendedor profesional'}', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+            if (aboutUs.trim().isNotEmpty) Text(aboutUs, style: const TextStyle(color: marketMuted, fontSize: 15, height: 1.5)),
+            if (aboutUs.trim().isEmpty) Text('$displayType · ${isVerifiedBusiness ? 'Profesional verificado' : 'Vendedor profesional'}', style: const TextStyle(color: marketMuted, fontSize: 16)),
             finalCity(profile),
             if (isOwnProfile) Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(onPressed: () async { await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())); if (mounted) await refreshSeller(); }, icon: const Icon(Icons.edit), label:  Text(uiText(context, "Editar Sobre nosotros")))),
           ]),
@@ -4352,13 +4159,13 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 else
                   Container(
                     decoration: const BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF25211A), Color(0xFF080D11)]),
+                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFAF9F6)]),
                     ),
-                    child: const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 72)),
+                    child: const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 72)),
                   ),
                 Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: .12), Colors.black.withValues(alpha: .82)]))),
                 Positioned(left: 18, right: 18, bottom: 18, child: Row(children: [
-                  const Icon(Icons.directions_car_filled, color: gold, size: 30),
+                  const Icon(Icons.directions_car_filled, color: Colors.white, size: 30),
                   const SizedBox(width: 10),
                   Expanded(child: Text(name.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.1))),
                 ])),
@@ -4375,23 +4182,23 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Container(
                     padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: gold, boxShadow: [BoxShadow(color: gold.withValues(alpha: .22), blurRadius: 14)]),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: marketAccent, boxShadow: [BoxShadow(color: marketAccent.withValues(alpha: .22), blurRadius: 14)]),
                     child: CircleAvatar(
                       radius: 42,
-                      backgroundColor: const Color(0xFF15191D),
+                      backgroundColor: const Color(0xFFFFFFFF),
                       backgroundImage: avatar == null ? null : NetworkImage(avatar),
                       onBackgroundImageError: avatar == null ? null : (_, __) {},
-                      child: avatar == null ? const Icon(Icons.person, color: gold, size: 42) : null,
+                      child: avatar == null ? const Icon(Icons.person, color: marketAccent, size: 42) : null,
                     ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+                      Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: marketInk))),
                       if (isVerifiedBusiness) const Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.verified, color: Color(0xFF168BFF), size: 20)),
                     ]),
                     const SizedBox(height: 3),
-                    Text(displayType, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    Text(displayType, style: const TextStyle(color: marketMuted, fontSize: 14)),
                     finalCity(profile),
                   ])),
 
@@ -4399,9 +4206,9 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 const SizedBox(height: 19),
                 Row(children: [
                   profileStat('${listings.length}', uiText(context, "Anuncios")),
-                  Container(width: 1, height: 34, color: const Color(0xFF29323A)),
+                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
                   profileStat('${soldListings.length}', uiText(context, "Vendidos")),
-                  Container(width: 1, height: 34, color: const Color(0xFF29323A)),
+                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
                   profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
@@ -4419,8 +4226,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                       icon: const Icon(Icons.manage_accounts_outlined),
                       label:  Text(uiText(context, "Mis datos y editar perfil")),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: gold,
-                        side: const BorderSide(color: gold),
+                        foregroundColor: marketAccent,
+                        side: const BorderSide(color: marketAccent),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                       ),
                     ),
@@ -4432,7 +4239,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   if (digits != null)
                     Container(
                       decoration: const BoxDecoration(
-                        color: Color(0xFF25D366),
+                        color: Color(0xFF1B7647),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -4441,7 +4248,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                           final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         },
-                        icon: const Icon(Icons.chat, color: Colors.white, size: 25),
+                        icon: const Icon(Icons.chat, color: marketInk, size: 25),
                         iconSize: 28,
                         padding: const EdgeInsets.all(13),
                       ),
@@ -4492,7 +4299,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             ),
           ),
           Container(
-            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF29323A)))),
+            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE4E5DF)))),
             child: Row(children: [
               for (var i = 0; i < profileTabs.length; i++) _profileTabButton(profileTabs[i], i),
             ]),
@@ -4515,7 +4322,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 3),
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selectedProfileTab == index ? const Color(0xFF168BFF) : Colors.transparent, width: 3))),
         child: Text(uiText(context, label), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w900 : FontWeight.w500, color: selectedProfileTab == index ? Colors.white : Colors.white60)),
+          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w900 : FontWeight.w500, color: selectedProfileTab == index ? marketInk : marketMuted)),
       ),
     ),
   );
@@ -4524,7 +4331,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     final city = profile?['city']?.toString() ?? '';
     final province = profile?['province']?.toString() ?? '';
     final location = [city, province].where((v) => v.trim().isNotEmpty).join(', ');
-    return location.isEmpty ? const SizedBox.shrink() : Text(location, style: const TextStyle(color: Colors.white70));
+    return location.isEmpty ? const SizedBox.shrink() : Text(location, style: const TextStyle(color: marketMuted));
   }
 }
 
@@ -4639,16 +4446,16 @@ class PersonalAreaPage extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF34302A), Color(0xFF17181B), Color(0xFF111214)],
+                colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
               ),
-              border: Border.all(color: gold.withValues(alpha: .48)),
+              border: Border.all(color: marketAccent.withValues(alpha: .48)),
               boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 18, offset: Offset(0, 8))],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                Row(children: [
-                Icon(Icons.workspace_premium, color: gold),
+                Icon(Icons.workspace_premium, color: marketAccent),
                 SizedBox(width: 8),
-                Text(uiText(context, "TU ESPACIO AUTOMOTORS"), style: TextStyle(color: gold, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w900)),
+                Text(uiText(context, "TU ESPACIO AUTOMOTORS"), style: TextStyle(color: marketAccent, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w900)),
               ]),
               const SizedBox(height: 14),
               FutureBuilder<Map<String, dynamic>?>(
@@ -4660,7 +4467,7 @@ class PersonalAreaPage extends StatelessWidget {
                   final fullName = profile['full_name']?.toString().trim() ?? '';
                   final displayName = business.isNotEmpty ? business : (fullName.isNotEmpty ? fullName : 'Conductor');
                   return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                     Text(uiText(context, "Bienvenido"), style: TextStyle(color: Colors.white70, fontSize: 14)),
+                     Text(uiText(context, "Bienvenido"), style: TextStyle(color: marketMuted, fontSize: 14)),
                     const SizedBox(height: 3),
                     Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: -.4)),
@@ -4668,7 +4475,7 @@ class PersonalAreaPage extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 8),
-               Text(uiText(context, "Tu garaje, tus conversaciones y tus oportunidades, en un solo lugar."), style: TextStyle(color: Colors.white70, height: 1.4)),
+               Text(uiText(context, "Tu garaje, tus conversaciones y tus oportunidades, en un solo lugar."), style: TextStyle(color: marketMuted, height: 1.4)),
               const SizedBox(height: 20),
               Row(children: [
                 Expanded(child: _PersonalQuickStat(icon: Icons.directions_car_filled_rounded, label: uiText(context, "MI GARAJE"), value: 'Gestiona tus coches', onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const GaragePage())))),
@@ -4679,7 +4486,7 @@ class PersonalAreaPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Card(color: panel, child: ListTile(
-            leading: const Icon(Icons.chat_bubble_outline, color: gold),
+            leading: const Icon(Icons.chat_bubble_outline, color: marketAccent),
             title:  Text(uiText(context, "Mis mensajes")),
             subtitle:  Text(uiText(context, "Consulta tus conversaciones con compradores y vendedores")),
             trailing: const Icon(Icons.chevron_right),
@@ -4688,7 +4495,7 @@ class PersonalAreaPage extends StatelessWidget {
           const ModerationEntry(),
           const SizedBox(height: 12),
           ListTile(
-            leading: const Icon(Icons.help_outline, color: gold),
+            leading: const Icon(Icons.help_outline, color: marketAccent),
             title: Text(uiText(context, 'Ayuda y privacidad')),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => openAutomotorsSupport(context),
@@ -4913,12 +4720,12 @@ class _GaragePageState extends State<GaragePage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title:  Text(uiText(context, "Gestiona tu garaje")),
-      actions: [IconButton(onPressed: refreshListings, tooltip: uiText(context, "Actualizar anuncios"), icon: const Icon(Icons.refresh_rounded, color: gold))],
+      actions: [IconButton(onPressed: refreshListings, tooltip: uiText(context, "Actualizar anuncios"), icon: const Icon(Icons.refresh_rounded, color: marketAccent))],
     ),
     body: FutureBuilder<List<Map<String, dynamic>>>(
       future: listingsFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: gold));
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: marketAccent));
         if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(uiText(context, "No se pudieron cargar tus anuncios: {0}", [snapshot.error]))));
         final rows = snapshot.data ?? [];
         if (rows.isEmpty) return  Center(child: Padding(padding: EdgeInsets.all(24), child: Text(uiText(context, "Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí."))));
@@ -4949,7 +4756,7 @@ class _GaragePageState extends State<GaragePage> {
             TextField(
               decoration: InputDecoration(
                 hintText: uiText(context, "Buscar en mis anuncios…"),
-                prefixIcon: const Icon(Icons.search, color: gold),
+                prefixIcon: const Icon(Icons.search, color: marketAccent),
                 suffixIcon: searchQuery.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), tooltip: uiText(context, "Borrar búsqueda"), onPressed: () => setState(() => searchQuery = '')),
                 filled: true,
                 fillColor: panel,
@@ -4965,17 +4772,17 @@ class _GaragePageState extends State<GaragePage> {
                 child: ChoiceChip(
                   label: Text('${entry.key} (${entry.value})'),
                   selected: statusFilter == entry.key,
-                  selectedColor: gold,
-                  labelStyle: TextStyle(color: statusFilter == entry.key ? Colors.black : Colors.white, fontWeight: FontWeight.w700),
+                  selectedColor: marketInk,
+                  labelStyle: TextStyle(color: statusFilter == entry.key ? marketSurface : marketInk, fontWeight: FontWeight.w700),
                   onSelected: (_) => setState(() => statusFilter = entry.key),
                 ),
               )).toList()),
             ),
             const SizedBox(height: 12),
-            Text(uiText(context, "{0} de {1} anuncios", [visibleRows.length, rows.length]), style: const TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w700)),
+            Text(uiText(context, "{0} de {1} anuncios", [visibleRows.length, rows.length]), style: const TextStyle(color: marketMuted, fontSize: 12, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             if (visibleRows.isEmpty)
-               Padding(padding: EdgeInsets.symmetric(vertical: 36), child: Column(children: [Icon(Icons.search_off_rounded, size: 42, color: Colors.white38), SizedBox(height: 10), Text(uiText(context, "No hay anuncios que coincidan con estos filtros."), textAlign: TextAlign.center, style: TextStyle(color: Colors.white70))]))
+               Padding(padding: EdgeInsets.symmetric(vertical: 36), child: Column(children: [Icon(Icons.search_off_rounded, size: 42, color: marketMuted), SizedBox(height: 10), Text(uiText(context, "No hay anuncios que coincidan con estos filtros."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted))]))
             else ...visibleRows.map((listing) {
               final status = listing['status']?.toString() ?? 'published';
               final isReserved = status == 'reserved';
@@ -5000,7 +4807,7 @@ class _GaragePageState extends State<GaragePage> {
                       border: Border(
                         top: BorderSide(color: isReserved ? const Color(0xFF83D8FF) : const Color(0xFFFFA4A8), width: 1),
                         bottom: BorderSide(color: isReserved ? const Color(0xFF041D52) : const Color(0xFF5D0610), width: 1),
-                        left: BorderSide(color: Colors.white.withValues(alpha: .7), width: 1),
+                        left: BorderSide(color: marketInk.withValues(alpha: .7), width: 1),
                       ),
                       borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
                       boxShadow: [
@@ -5008,10 +4815,10 @@ class _GaragePageState extends State<GaragePage> {
                       ],
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isReserved ? Icons.lock_rounded : Icons.verified_rounded, size: 15, color: Colors.white),
+                      Icon(isReserved ? Icons.lock_rounded : Icons.verified_rounded, size: 15, color: marketInk),
                       const SizedBox(width: 7),
                       Text(isReserved ? uiText(context, "RESERVADO") : uiText(context, "VENDIDO"), style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1,
+                        color: marketInk, fontWeight: FontWeight.w900, letterSpacing: 1.1,
                         shadows: [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1))],
                       )),
                     ]),
@@ -5021,9 +4828,9 @@ class _GaragePageState extends State<GaragePage> {
                   Expanded(child: InkWell(onTap: () => openDetails(listing), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(listingName(listing), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: Colors.white70)),
+                    Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: marketMuted)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : marketMuted)),
                     if(listingContentStateMessage(listing['content_check_state']?.toString()).isNotEmpty)
                       Text(uiText(context,listingContentStateMessage(listing['content_check_state']?.toString())),style:const TextStyle(color:Colors.orangeAccent)),
                     const SizedBox(height: 8),
@@ -5037,7 +4844,7 @@ class _GaragePageState extends State<GaragePage> {
                     PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? uiText(context, "No editable: vendido") : uiText(context, "Editar")))),
                     PopupMenuItem(value: 'pause', enabled: status != 'reserved' && status != 'sold', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? uiText(context, "Pausar") : uiText(context, "Activar")))),
                      PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text(uiText(context, "Eliminar")))),
-                  ], icon: const Icon(Icons.more_vert, color: gold)),
+                  ], icon: const Icon(Icons.more_vert, color: marketAccent)),
                 ])),
                 Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 14), child: Row(children: [
                   Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline), label:  Text(uiText(context, "Vendido")))),
@@ -5047,7 +4854,7 @@ class _GaragePageState extends State<GaragePage> {
               ]));
             }),
           ]),
-          if (busy) const Align(alignment: Alignment.topCenter, child: LinearProgressIndicator(color: gold)),
+          if (busy) const Align(alignment: Alignment.topCenter, child: LinearProgressIndicator(color: marketAccent)),
         ]);
       },
     ),
@@ -5077,10 +4884,10 @@ class _GarageListingPhotoState extends State<GarageListingPhoto> {
   }
   @override
   Widget build(BuildContext context) => Container(
-    color: const Color(0xFF15171B), width: double.infinity,
+    color: const Color(0xFFFFFFFF), width: double.infinity,
     child: bytes == null
-      ? const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 64))
-      : Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 64))),
+      ? const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 64))
+      : Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 64))),
   );
 }
 
@@ -5098,10 +4905,10 @@ class _PersonalQuickStat extends StatelessWidget {
       onTap: onTap, borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: .22), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white12)),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: .22), borderRadius: BorderRadius.circular(14), border: Border.all(color: marketLine)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: gold, size: 20), const SizedBox(height: 8),
-          Text(uiText(context, label), style: const TextStyle(color: gold, fontSize: 9, letterSpacing: .7, fontWeight: FontWeight.w900)),
+          Icon(icon, color: marketAccent, size: 20), const SizedBox(height: 8),
+          Text(uiText(context, label), style: const TextStyle(color: marketAccent, fontSize: 9, letterSpacing: .7, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4), Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
         ]),
       ),
@@ -5415,7 +5222,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _readOnlyRow(String label, String value) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
-    return ListTile(contentPadding: EdgeInsets.zero, title: Text(uiText(context, label), style: const TextStyle(color: Colors.white60, fontSize: 13)), subtitle: Text(value, style: const TextStyle(fontSize: 16)));
+    return ListTile(contentPadding: EdgeInsets.zero, title: Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 13)), subtitle: Text(value, style: const TextStyle(fontSize: 16)));
   }
 
   @override
@@ -5426,21 +5233,21 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: Row(children: [const AutomotorsBrandMark(size: 30), const SizedBox(width: 10),  Text(uiText(context, "Mi perfil"))]),
-        actions: [if (!loading) IconButton(tooltip: editing ? uiText(context, "Cancelar edición") : uiText(context, "Editar perfil"), icon: Icon(editing ? Icons.close : Icons.edit_outlined, color: gold), onPressed: () => setState(() => editing = !editing))],
+        actions: [if (!loading) IconButton(tooltip: editing ? uiText(context, "Cancelar edición") : uiText(context, "Editar perfil"), icon: Icon(editing ? Icons.close : Icons.edit_outlined, color: marketAccent), onPressed: () => setState(() => editing = !editing))],
       ),
-      body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : editing
+      body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : editing
         ? Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
             if (isVerifiedProfessional) ...[
-              GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: true), child: Container(height: 140, decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(12), image: pickedCoverPhotoBytes != null ? DecorationImage(image: MemoryImage(pickedCoverPhotoBytes!), fit: BoxFit.cover) : (coverUrl != null ? DecorationImage(image: NetworkImage(coverUrl), fit: BoxFit.cover) : null)), child:  Center(child: Text(uiText(context, "Cambiar foto de portada"), style: TextStyle(backgroundColor: Colors.black54))))),
+              GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: true), child: Container(height: 140, decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(12), image: pickedCoverPhotoBytes != null ? DecorationImage(image: MemoryImage(pickedCoverPhotoBytes!), fit: BoxFit.cover) : (coverUrl != null ? DecorationImage(image: NetworkImage(coverUrl), fit: BoxFit.cover) : null)), child:  Center(child: Text(uiText(context, "Cambiar foto de portada"), style: TextStyle(color: Colors.white, backgroundColor: Colors.black54))))),
               const SizedBox(height: 12),
             ],
             Center(child: GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: false), child: CircleAvatar(radius: 48, backgroundColor: gold, backgroundImage: pickedProfilePhotoBytes != null ? MemoryImage(pickedProfilePhotoBytes!) : (profileUrl != null ? NetworkImage(profileUrl) : null) as ImageProvider?, child: (pickedProfilePhotoBytes == null && profileUrl == null) ? const Icon(Icons.add_a_photo, color: Colors.black, size: 28) : null))),
             const SizedBox(height: 8),  Center(child: Text(uiText(context, "Pulsa la foto para cambiarla"))),
             const SizedBox(height: 16),
-             Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: gold, fontWeight: FontWeight.bold)),
-            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.email_outlined, color: gold), title:  Text(uiText(context, "Correo electrónico")), subtitle: Text(email)),
+             Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)),
+            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.email_outlined, color: marketAccent), title:  Text(uiText(context, "Correo electrónico")), subtitle: Text(email)),
             DropdownButtonFormField<String>(isExpanded: true, value: accountType, decoration:  InputDecoration(labelText: uiText(context, "Tipo de cuenta")), items:  [DropdownMenuItem(value: 'particular', child: Text(uiText(context, "Particular"))), DropdownMenuItem(value: 'autonomo', child: Text(uiText(context, "Autónomo"))), DropdownMenuItem(value: 'empresa', child: Text(uiText(context, "Empresa")))], onChanged: saving ? null : (value) { if (value != null) setState(() => accountType = value); }),
-            const SizedBox(height: 16),  Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
+            const SizedBox(height: 16),  Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
             field(accountType == 'empresa' ? 'Nombre y apellidos de la persona de contacto' : 'Nombre y apellidos', name, requiredField: true),
             if (accountType == 'empresa') field('Razón social de la empresa', businessName, requiredField: true),
             if (isProfessional) field('CIF/NIF o identificación fiscal', fiscalId, requiredField: true) else field('DNI/NIE (opcional)', fiscalId),
@@ -5448,7 +5255,7 @@ class _ProfilePageState extends State<ProfilePage> {
             if (isProfessional) ...[
               field(accountType == 'empresa' ? 'Dirección fiscal de la empresa' : 'Dirección fiscal o profesional', address, requiredField: true),
               Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: aboutUs, maxLines: 5, maxLength: 2000, decoration:  InputDecoration(labelText: uiText(context, "Sobre nosotros"), hintText: uiText(context, "Presenta tu negocio, experiencia y servicios.")))),
-              const SizedBox(height: 8),  Text(uiText(context, "VERIFICACIÓN DE CUENTA"), style: TextStyle(color: gold, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),  Text(uiText(context, "VERIFICACIÓN DE CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),  Text(uiText(context, "Adjunta documentación para solicitar la verificación. La portada solo se habilita cuando la cuenta profesional está aprobada.")),
               OutlinedButton.icon(onPressed: saving ? null : chooseDocument, icon: const Icon(Icons.upload_file), label: Text(documentName == null ? uiText(context, "Adjuntar documentación") : uiText(context, "Documento: {0}", [documentName]))),
               if (verificationStatus != null) Text(uiText(context, "Estado de verificación: {0}", [verificationStatus])),
@@ -5457,28 +5264,28 @@ class _ProfilePageState extends State<ProfilePage> {
           ]))
         : ListView(padding: const EdgeInsets.all(16), children: [
             Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: gold.withValues(alpha: .35))),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: marketAccent.withValues(alpha: .35))),
               clipBehavior: Clip.antiAlias,
               child: Column(children: [
-                if (coverUrl != null) SizedBox(height: 145, width: double.infinity, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF292929), alignment: Alignment.center, child: const Icon(Icons.landscape_outlined, color: gold, size: 34)))),
+                if (coverUrl != null) SizedBox(height: 145, width: double.infinity, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFFFFFFFF), alignment: Alignment.center, child: const Icon(Icons.landscape_outlined, color: marketAccent, size: 34)))),
                 Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 20), child: Column(children: [
                   CircleAvatar(radius: 48, backgroundColor: gold, backgroundImage: profileUrl == null ? null : NetworkImage(profileUrl), child: profileUrl == null ? const Icon(Icons.person, color: Colors.black, size: 42) : null),
                   const SizedBox(height: 12),
                   Text(name.text.isEmpty ? email : name.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 5),
-                  Text(accountType == 'autonomo' ? uiText(context, "AUTÓNOMO") : accountType == 'empresa' ? uiText(context, "EMPRESA") : uiText(context, "PARTICULAR"), style: const TextStyle(color: gold, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w900)),
+                  Text(accountType == 'autonomo' ? uiText(context, "AUTÓNOMO") : accountType == 'empresa' ? uiText(context, "EMPRESA") : uiText(context, "PARTICULAR"), style: const TextStyle(color: marketAccent, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w900)),
                   if (isVerifiedProfessional)  Padding(padding: EdgeInsets.only(top: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.verified, color: Color(0xFF2EAD67), size: 17), SizedBox(width: 5), Text(uiText(context, "Cuenta profesional verificada"), style: TextStyle(color: Color(0xFF2EAD67), fontSize: 12))])),
                   const SizedBox(height: 10),
-                   Text(uiText(context, "Tu identidad en AUTOMOTORS"), style: TextStyle(color: Colors.white60, fontSize: 12)),
+                   Text(uiText(context, "Tu identidad en AUTOMOTORS"), style: TextStyle(color: marketMuted, fontSize: 12)),
                 ])),
               ]),
             ),
             const SizedBox(height: 18),
-             Text(uiText(context, "TU INFORMACIÓN"), style: TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w900)),
+             Text(uiText(context, "TU INFORMACIÓN"), style: TextStyle(color: marketAccent, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            if (isVerifiedProfessional) Center(child: Text(uiText(context, "Verificación: {0}", [uiText(context, verificationStatus ?? 'No solicitada')]), style: const TextStyle(color: gold))),
-            const Divider(height: 28),  Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: gold, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Correo electrónico"), email),
-             Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: gold, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Nombre y apellidos"), name.text), _readOnlyRow(uiText(context, "Teléfono"), phone.text), _readOnlyRow(uiText(context, "Ciudad"), city.text), _readOnlyRow(uiText(context, "Provincia"), province.text),
+            if (isVerifiedProfessional) Center(child: Text(uiText(context, "Verificación: {0}", [uiText(context, verificationStatus ?? 'No solicitada')]), style: const TextStyle(color: marketAccent))),
+            const Divider(height: 28),  Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Correo electrónico"), email),
+             Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Nombre y apellidos"), name.text), _readOnlyRow(uiText(context, "Teléfono"), phone.text), _readOnlyRow(uiText(context, "Ciudad"), city.text), _readOnlyRow(uiText(context, "Provincia"), province.text),
             if (accountType == 'empresa') _readOnlyRow(uiText(context, "Razón social"), businessName.text),
             if (isProfessional) ...[_readOnlyRow(uiText(context, "Identificación fiscal"), fiscalId.text), _readOnlyRow(uiText(context, "Dirección fiscal"), address.text)],
             const SizedBox(height: 18),
@@ -5491,8 +5298,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 icon: const Icon(Icons.directions_car_outlined),
                 label:  Text(uiText(context, "Mis anuncios")),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: gold,
-                  side: BorderSide(color: gold.withValues(alpha: .65)),
+                  foregroundColor: marketAccent,
+                  side: BorderSide(color: marketAccent.withValues(alpha: .65)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
@@ -5634,7 +5441,7 @@ class _EditListingPageState extends State<EditListingPage> {
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
     textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
     DropdownButtonFormField<String>(isExpanded: true, value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration:  InputDecoration(labelText: uiText(context, "Combustible")), items:  [DropdownMenuItem(value:'Diésel',child:Text(uiText(context, "Diésel"))),DropdownMenuItem(value:'Gasolina',child:Text(uiText(context, "Gasolina"))),DropdownMenuItem(value:'Híbrido',child:Text(uiText(context, "Híbrido"))),DropdownMenuItem(value:'Eléctrico',child:Text(uiText(context, "Eléctrico")))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
     textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Norma de emisiones', emissionsStandard), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
@@ -5774,7 +5581,7 @@ class _InboxPageState extends State<InboxPage> {
         future: future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: gold));
+            return const Center(child: CircularProgressIndicator(color: marketAccent));
           }
           if (snapshot.hasError) {
             return Center(
@@ -5795,14 +5602,14 @@ class _InboxPageState extends State<InboxPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children:  [
-                    Icon(Icons.forum_outlined, size: 54, color: gold),
+                    Icon(Icons.forum_outlined, size: 54, color: marketAccent),
                     SizedBox(height: 14),
                     Text(uiText(context, "Todavía no tienes conversaciones"),
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                     SizedBox(height: 6),
                     Text(uiText(context, "Cuando contactes con un vendedor, tus mensajes aparecerán aquí."),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60)),
+                      style: TextStyle(color: marketMuted)),
                   ],
                 ),
               ),
@@ -5820,12 +5627,12 @@ class _InboxPageState extends State<InboxPage> {
               final photo = row['vehicle_photo'];
               final unreadCount = (row['unread_count'] as num?)?.toInt() ?? 0;
               return Card(
-                color: const Color(0xFF1B1E24),
+                color: const Color(0xFFFFFFFF),
                 margin: EdgeInsets.zero,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(17),
-                  side: BorderSide(color: Colors.white.withValues(alpha: .08)),
+                  side: BorderSide(color: marketInk.withValues(alpha: .08)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -5852,12 +5659,12 @@ class _InboxPageState extends State<InboxPage> {
                           child: Container(
                             width: 76,
                             height: 76,
-                            color: const Color(0xFF29292D),
+                            color: const Color(0xFFFFFFFF),
                             child: photo is Uint8List
                                 ? Image.memory(photo, fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.directions_car_filled, color: gold, size: 34))
-                                : const Icon(Icons.directions_car_filled, color: gold, size: 34),
+                                      Icons.directions_car_filled, color: marketAccent, size: 34))
+                                : const Icon(Icons.directions_car_filled, color: marketAccent, size: 34),
                           ),
                         ),
                         const SizedBox(width: 13),
@@ -5873,10 +5680,10 @@ class _InboxPageState extends State<InboxPage> {
                               Text(sellerName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: gold, fontSize: 13, fontWeight: FontWeight.w600)),
+                                style: const TextStyle(color: marketAccent, fontSize: 13, fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               Text(isBuyer ? uiText(context, "Vendedor") : uiText(context, "Comprador"),
-                                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                style: const TextStyle(color: marketMuted, fontSize: 11)),
                             ],
                           ),
                         ),
@@ -5885,12 +5692,12 @@ class _InboxPageState extends State<InboxPage> {
                           Container(
                             constraints: const BoxConstraints(minWidth: 23),
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                            decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                            decoration: const BoxDecoration(color: marketAccent, shape: BoxShape.circle),
                             child: Text('$unreadCount', textAlign: TextAlign.center,
                               style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900)),
                           ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right_rounded, color: gold),
+                        const Icon(Icons.chevron_right_rounded, color: marketAccent),
                       ],
                     ),
                   ),
@@ -6099,12 +5906,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                   child: Container(
                     width: 42,
                     height: 42,
-                    color: const Color(0xFF29292D),
+                    color: const Color(0xFFFFFFFF),
                     child: widget.vehiclePhoto != null
                         ? Image.memory(widget.vehiclePhoto!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
-                              Icons.directions_car_filled, color: gold, size: 24))
-                        : const Icon(Icons.directions_car_filled, color: gold, size: 24),
+                              Icons.directions_car_filled, color: marketAccent, size: 24))
+                        : const Icon(Icons.directions_car_filled, color: marketAccent, size: 24),
                   ),
                 ),
               ),
@@ -6127,15 +5934,15 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
-              color: Color(0xFF17191E),
-              border: Border(bottom: BorderSide(color: Colors.white10)),
+              color: Color(0xFFFFFFFF),
+              border: Border(bottom: BorderSide(color: marketLine)),
             ),
             child: Row(
               children:  [
-                Icon(Icons.directions_car_outlined, color: gold, size: 16),
+                Icon(Icons.directions_car_outlined, color: marketAccent, size: 16),
                 SizedBox(width: 7),
                 Expanded(child: Text(uiText(context, "Conversación sobre este vehículo"),
-                  style: TextStyle(color: Colors.white60, fontSize: 12))),
+                  style: TextStyle(color: marketMuted, fontSize: 12))),
               ],
             ),
           ),
@@ -6148,7 +5955,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                   return  Center(child: Text(uiText(context, "No se pueden cargar los mensajes.")));
                 }
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator(color: gold));
+                  return const Center(child: CircularProgressIndicator(color: marketAccent));
                 }
                 final messages = List<Map<String, dynamic>>.from(snapshot.data!);
                 messages.sort((a, b) {
@@ -6161,7 +5968,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 if (messages.isEmpty) {
                   return  Center(
                     child: Text(uiText(context, "Empieza la conversación sobre este vehículo."),
-                      style: TextStyle(color: Colors.white60)),
+                      style: TextStyle(color: marketMuted)),
                   );
                 }
                 return ListView.builder(
@@ -6179,8 +5986,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Center(child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(20)),
-                            child: Text(_dayLabel(sentAt), style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .7)),
+                            decoration: BoxDecoration(color: marketLine, borderRadius: BorderRadius.circular(20)),
+                            child: Text(_dayLabel(sentAt), style: const TextStyle(color: marketMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .7)),
                           )),
                         ),
                         Align(
@@ -6204,11 +6011,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                               children: [
                                 Align(alignment: Alignment.centerLeft, child: Text(
                                   message['body']?.toString() ?? '',
-                                  style: TextStyle(color: mine ? Colors.black : Colors.white, height: 1.35),
+                                  style: TextStyle(color: mine ? Colors.black : marketInk, height: 1.35),
                                 )),
                                 const SizedBox(height: 4),
                                 Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Text(_timeLabel(sentAt), style: TextStyle(color: mine ? Colors.black54 : Colors.white54, fontSize: 10)),
+                                  Text(_timeLabel(sentAt), style: TextStyle(color: mine ? Colors.black54 : marketMuted, fontSize: 10)),
                                   if (mine) ...[
                                     const SizedBox(width: 4),
                                     Icon(Icons.done_all, size: 14, color: message['read_at'] != null ? const Color(0xFF1565C0) : Colors.black54),
@@ -6229,8 +6036,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               decoration: const BoxDecoration(
-                color: Color(0xFF17191E),
-                border: Border(top: BorderSide(color: Colors.white10)),
+                color: Color(0xFFFFFFFF),
+                border: Border(top: BorderSide(color: marketLine)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -6391,9 +6198,9 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
     super.dispose();
   }
 
-  static const Color _gold = Color(0xFFFFC447);
-  static const Color _bg = Color(0xFF050505);
-  static const Color _panel = Color(0xFF111111);
+  static const Color _gold = marketAccent;
+  static const Color _bg = marketPaper;
+  static const Color _panel = Color(0xFFFFFFFF);
 
   String _storePrice(String productId) {
     for (final product in _purchaseService.products) {
@@ -6448,7 +6255,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFF5A4720)))),
+          decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFFE4E5DF)))),
           child: OutlinedButton.icon(
             onPressed: _openingPublication ? null : () => _openPublication(),
             icon: const Icon(Icons.sell_outlined), label: Text(appText('PUBLICAR GRATIS  →', 'LIST FOR FREE  →')),
@@ -6464,12 +6271,12 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: _gold.withValues(alpha: .5)),
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF33230B), Color(0xFF15120D), Color(0xFF080808)]),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF)]),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
               Text(appText('LLEGA A MÁS COMPRADORES', 'REACH MORE BUYERS'), style: const TextStyle(color: _gold, fontSize: 20, fontWeight: FontWeight.w900)),
               SizedBox(height: 8),
-              Text(appText('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', 'Choose the plan that suits you best.\nIncrease your listing visibility with our plans.'), style: TextStyle(color: Colors.white, height: 1.4)),
+              Text(appText('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', 'Choose the plan that suits you best.\nIncrease your listing visibility with our plans.'), style: TextStyle(color: marketInk, height: 1.4)),
             ]),
           ),
           const SizedBox(height: 16),
@@ -6520,7 +6327,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
           ],
           Text(appText('El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.',
             'Access is enabled after payment verification. You can restore purchases with the same account.'),
-            style: const TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
+            style: const TextStyle(color: marketMuted, fontSize: 12), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -6546,21 +6353,21 @@ class _PublishPackCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D0D0F), borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: data.popular ? gold : const Color(0xFF67532C), width: data.popular ? 2 : 1),
-        boxShadow: data.popular ? [BoxShadow(color: gold.withValues(alpha: .14), blurRadius: 16)] : null,
+        color: const Color(0xFFFAF9F6), borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: data.popular ? gold : const Color(0xFFE4E5DF), width: data.popular ? 2 : 1),
+        boxShadow: data.popular ? [BoxShadow(color: marketAccent.withValues(alpha: .14), blurRadius: 16)] : null,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (data.popular) Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(20)), child:  Text(uiText(context, "MÁS POPULAR"), style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900))),
+        if (data.popular) Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), decoration: BoxDecoration(color: marketAccent, borderRadius: BorderRadius.circular(20)), child:  Text(uiText(context, "MÁS POPULAR"), style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900))),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(data.icon, color: gold, size: 32), const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? gold : Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12))]),),
+          Icon(data.icon, color: marketAccent, size: 32), const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? marketAccent : marketInk, fontSize: 17, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: marketMuted, fontSize: 12))]),),
         ]),
         const SizedBox(height: 10),
         Text(data.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8), Padding(padding: const EdgeInsets.only(left: 44), child: Text(data.cars, style: const TextStyle(color: gold, fontWeight: FontWeight.w700))),
+        const SizedBox(height: 8), Padding(padding: const EdgeInsets.only(left: 44), child: Text(data.cars, style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700))),
         const SizedBox(height: 10),
-        for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
+        for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: marketAccent, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: marketMuted, fontSize: 13)))])),
         const SizedBox(height: 8),
         SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w900)))),
         if (onPublish != null) ...[
@@ -6569,7 +6376,7 @@ class _PublishPackCard extends StatelessWidget {
             onPressed: onPublish,
             icon: const Icon(Icons.add_circle_outline),
             label: Text(appText('Publicar vehículo', 'List vehicle')),
-            style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+            style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent)),
           )),
         ],
       ]),
@@ -7035,19 +6842,19 @@ class _AddCarPageState extends State<AddCarPage> {
       decoration: BoxDecoration(
         color: panel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gold.withValues(alpha: .45)),
+        border: Border.all(color: marketAccent.withValues(alpha: .45)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: gold),
+              const Icon(Icons.auto_awesome_rounded, color: marketAccent),
               const SizedBox(width: 8),
                Expanded(
                 child: Text(uiText(context, "Calidad de tu anuncio"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
               ),
-              Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
+              Text('$completed/${checks.length}', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 10),
@@ -7056,7 +6863,7 @@ class _AddCarPageState extends State<AddCarPage> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
-              backgroundColor: Colors.white12,
+              backgroundColor: marketLine,
               valueColor: const AlwaysStoppedAnimation<Color>(gold),
             ),
           ),
@@ -7065,7 +6872,7 @@ class _AddCarPageState extends State<AddCarPage> {
             completed == checks.length
                 ? uiText(context, "¡Excelente! Tu anuncio incluye la información clave para generar confianza.")
                 : uiText(context, "Completa estas recomendaciones para que los compradores conozcan mejor el vehículo."),
-            style: const TextStyle(color: Colors.white70, height: 1.35, fontSize: 12),
+            style: const TextStyle(color: marketMuted, height: 1.35, fontSize: 12),
           ),
           const SizedBox(height: 8),
           ...checks.map((item) => Padding(
@@ -7075,7 +6882,7 @@ class _AddCarPageState extends State<AddCarPage> {
                 Icon(
                   item.value ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                   size: 17,
-                  color: item.value ? gold : Colors.white38,
+                  color: item.value ? gold : marketMuted,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -7083,7 +6890,7 @@ class _AddCarPageState extends State<AddCarPage> {
                     uiText(context, item.key),
                     style: TextStyle(
                       fontSize: 12,
-                      color: item.value ? Colors.white : Colors.white70,
+                      color: item.value ? marketInk : marketMuted,
                     ),
                   ),
                 ),
@@ -7318,15 +7125,15 @@ class _AddCarPageState extends State<AddCarPage> {
         title: Text(AppLocalizations.of(context).publishVehicle, style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(tooltip: uiText(context, "Planes y packs"), onPressed: showPackages,
-            icon: const Icon(Icons.workspace_premium_rounded, color: gold)),
+            icon: const Icon(Icons.workspace_premium_rounded, color: marketAccent)),
         ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: const BoxDecoration(
-            color: Color(0xFF17191E),
-            border: Border(top: BorderSide(color: Colors.white12)),
+            color: Color(0xFFFFFFFF),
+            border: Border(top: BorderSide(color: marketLine)),
           ),
           child: Row(children: [
             Expanded(child: FilledButton.icon(
@@ -7348,15 +7155,15 @@ class _AddCarPageState extends State<AddCarPage> {
               decoration: BoxDecoration(
                 color: panel,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: gold.withValues(alpha: .35)),
+                border: Border.all(color: marketAccent.withValues(alpha: .35)),
               ),
               child:  Row(children: [
-                Icon(Icons.directions_car_filled, color: gold, size: 30),
+                Icon(Icons.directions_car_filled, color: marketAccent, size: 30),
                 SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(uiText(context, "Publica tu vehículo"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                   SizedBox(height: 4),
-                  Text(uiText(context, "Completa los datos y añade fotografías. Los planes y packs se consultan por separado."), style: TextStyle(color: Colors.white70, height: 1.35)),
+                  Text(uiText(context, "Completa los datos y añade fotografías. Los planes y packs se consultan por separado."), style: TextStyle(color: marketMuted, height: 1.35)),
                 ])),
               ]),
             ),
@@ -7369,11 +7176,11 @@ class _AddCarPageState extends State<AddCarPage> {
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: showPackages,
-                icon: const Icon(Icons.workspace_premium, color: gold),
-                label:  Text(uiText(context, "Ver planes y packs"), style: TextStyle(color: gold, fontWeight: FontWeight.w800)),
+                icon: const Icon(Icons.workspace_premium, color: marketAccent),
+                label:  Text(uiText(context, "Ver planes y packs"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w800)),
               ),
             ),
-            const Divider(color: Color(0xFF5C4A22)),
+            const Divider(color: Color(0xFFE4E5DF)),
             const SizedBox(height: 12),
             if (loadingVehicleLookupAccess)
                Card(
@@ -7383,7 +7190,7 @@ class _AddCarPageState extends State<AddCarPage> {
                   child: Row(children: [
                     SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                     SizedBox(width: 12),
-                    Expanded(child: Text(uiText(context, "Comprobando acceso al autocompletado…"), style: TextStyle(color: Colors.white70))),
+                    Expanded(child: Text(uiText(context, "Comprobando acceso al autocompletado…"), style: TextStyle(color: marketMuted))),
                   ]),
                 ),
               )
@@ -7393,16 +7200,16 @@ class _AddCarPageState extends State<AddCarPage> {
                 decoration: BoxDecoration(
                   color: panel,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: gold.withValues(alpha: .45)),
+                  border: Border.all(color: marketAccent.withValues(alpha: .45)),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                    Row(children: [
-                    Icon(Icons.manage_search_rounded, color: gold),
+                    Icon(Icons.manage_search_rounded, color: marketAccent),
                     SizedBox(width: 8),
                     Expanded(child: Text(uiText(context, "Rellenar ficha automáticamente"), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
                   ]),
                   const SizedBox(height: 6),
-                   Text(uiText(context, "Función exclusiva de PACK 20 y AUTOMOTORS PRO. Introduce la matrícula o el VIN y revisa los datos técnicos antes de publicar."), style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 12)),
+                   Text(uiText(context, "Función exclusiva de PACK 20 y AUTOMOTORS PRO. Introduce la matrícula o el VIN y revisa los datos técnicos antes de publicar."), style: TextStyle(color: marketMuted, height: 1.35, fontSize: 12)),
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(child: TextField(
@@ -7437,22 +7244,22 @@ class _AddCarPageState extends State<AddCarPage> {
                 decoration: BoxDecoration(
                   color: panel,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: gold.withValues(alpha: .4)),
+                  border: Border.all(color: marketAccent.withValues(alpha: .4)),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                    Row(children: [
-                    Icon(Icons.lock_outline_rounded, color: gold),
+                    Icon(Icons.lock_outline_rounded, color: marketAccent),
                     SizedBox(width: 8),
                     Expanded(child: Text(uiText(context, "Autocompletado exclusivo"), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
                   ]),
                   const SizedBox(height: 6),
-                   Text(uiText(context, "La búsqueda por matrícula o VIN solo está disponible para clientes con PACK 20 activo o suscripción AUTOMOTORS PRO vigente. Puedes completar la ficha manualmente."), style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 12)),
+                   Text(uiText(context, "La búsqueda por matrícula o VIN solo está disponible para clientes con PACK 20 activo o suscripción AUTOMOTORS PRO vigente. Puedes completar la ficha manualmente."), style: TextStyle(color: marketMuted, height: 1.4, fontSize: 12)),
                   const SizedBox(height: 10),
                   SizedBox(width: double.infinity, child: OutlinedButton.icon(
                     onPressed: showPackages,
-                    icon: const Icon(Icons.workspace_premium_rounded, color: gold),
+                    icon: const Icon(Icons.workspace_premium_rounded, color: marketAccent),
                     label:  Text(uiText(context, "Ver packs y suscripción")),
-                    style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+                    style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent)),
                   )),
                 ]),
               ),
@@ -7535,7 +7342,7 @@ class _AddCarPageState extends State<AddCarPage> {
               key: const Key('optional-vehicle-specifications'),
               maintainState: true,
               tilePadding: EdgeInsets.zero,
-              leading: const Icon(Icons.tune_rounded, color: gold),
+              leading: const Icon(Icons.tune_rounded, color: marketAccent),
               title: Text(uiText(context, "Ficha técnica ampliada")),
               subtitle: Text(uiText(context, "Opcional")),
               children: [
@@ -7613,7 +7420,7 @@ class _AddCarPageState extends State<AddCarPage> {
               const SizedBox(height: 8),
                Text(
                 uiText(context, "La primera fotografía será la principal. Puedes elegir otra sin volver a subir las fotos."),
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: marketMuted, fontSize: 12),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -7684,9 +7491,9 @@ class _ProBenefit extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, color: gold, size: 25),
+      Icon(icon, color: marketAccent, size: 25),
       const SizedBox(width: 10),
-      Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+      Expanded(child: Text(text, style: const TextStyle(color: marketInk, fontSize: 13, fontWeight: FontWeight.w500))),
     ],
   );
 }
@@ -7708,7 +7515,7 @@ class _PublicationPackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xFF171717),
+    color: const Color(0xFFFFFFFF),
     borderRadius: BorderRadius.circular(17),
     child: InkWell(
       onTap: onTap,
@@ -7717,39 +7524,39 @@ class _PublicationPackCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: const Color(0xFF47423A)),
+          border: Border.all(color: const Color(0xFFE4E5DF)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.layers, color: gold, size: 25),
+            const Icon(Icons.layers, color: marketAccent, size: 25),
             const SizedBox(width: 10),
             Expanded(
               flex: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(packName, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                  Text(packName, style: const TextStyle(color: marketInk, fontSize: 14, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 3),
-                  Text(listingCount, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(listingCount, style: const TextStyle(color: marketMuted, fontSize: 11)),
                 ],
               ),
             ),
             const SizedBox(width: 6),
-            Text(price, style: const TextStyle(color: gold, fontSize: 20, fontWeight: FontWeight.w900)),
+            Text(price, style: const TextStyle(color: marketAccent, fontSize: 20, fontWeight: FontWeight.w900)),
             const SizedBox(width: 8),
-            Container(width: 1, height: 38, color: const Color(0xFF5B4A26)),
+            Container(width: 1, height: 38, color: const Color(0xFFE4E5DF)),
             const SizedBox(width: 8),
             Expanded(
               flex: 5,
               child: Row(
                 children: [
-                  const Icon(Icons.star, color: gold, size: 16),
+                  const Icon(Icons.star, color: marketAccent, size: 16),
                   const SizedBox(width: 5),
-                  Expanded(child: Text(featuredCount, style: const TextStyle(color: Colors.white, fontSize: 11, height: 1.25))),
+                  Expanded(child: Text(featuredCount, style: const TextStyle(color: marketInk, fontSize: 11, height: 1.25))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: gold, size: 22),
+            const Icon(Icons.chevron_right, color: marketAccent, size: 22),
           ],
         ),
       ),

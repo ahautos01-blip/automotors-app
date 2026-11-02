@@ -1,5 +1,7 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  'Un coche.\nMil posibilidades.': ['One car.\nEndless possibilities.', 'Un cotxe.\nMil possibilitats.'],
+
   'Opcional': ['Optional', 'Opcional'],
   'Usar como principal': ['Use as cover', 'Fes-la principal'],
   'La primera fotografía será la principal. Puedes elegir otra sin volver a subir las fotos.': ['The first photo is the cover. You can choose another without uploading the photos again.', 'La primera fotografia és la principal. Pots triar-ne una altra sense tornar a pujar les fotos.'],

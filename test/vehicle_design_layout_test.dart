@@ -1,3 +1,4 @@
+import 'package:automotors_base/design/market_theme.dart';
 import 'package:automotors_base/main.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ void main() {
       var contacts = 0;
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.dark(),
+          theme: automotorsMarketTheme(),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: CarDetailsPage(
@@ -96,7 +97,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: Locale(code),
-          theme: ThemeData.dark(),
+          theme: automotorsMarketTheme(),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: AllVehiclesPage(cars: const [], onOpenCar: (_) {}),
@@ -130,7 +131,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('es'),
-          theme: ThemeData.dark(),
+          theme: automotorsMarketTheme(),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: const AddCarPage(),
