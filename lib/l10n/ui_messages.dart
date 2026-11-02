@@ -1,5 +1,21 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Solo diferencias": ["Differences only", "Només diferències"],
+  "{0} campos diferentes": ["{0} differing fields", "{0} camps diferents"],
+  "Datos publicados. “No indicado” no significa que el vehículo no lo tenga.": ["Published details. “Not specified” does not mean the vehicle lacks the feature.", "Dades publicades. “No indicat” no vol dir que el vehicle no ho tingui."],
+  "Desliza para ver todos los vehículos": ["Swipe to see all vehicles", "Llisca per veure tots els vehicles"],
+  "No hay diferencias en los datos publicados.": ["No differences in the published details.", "No hi ha diferències en les dades publicades."],
+  "Diferente": ["Different", "Diferent"],
+  "Anunciado": ["Listed", "Anunciat"],
+  "Equipamiento anunciado": ["Listed equipment", "Equipament anunciat"],
+  "{0} elementos": ["{0} items", "{0} elements"],
+  "Ver anuncio": ["View listing", "Veure anunci"],
+  "Hasta 20.000 €": ["Up to €20,000", "Fins a 20.000 €"],
+  "Búsquedas recientes": ["Recent searches", "Cerques recents"],
+  "Solo en este dispositivo": ["Only on this device", "Només en aquest dispositiu"],
+  "Borrar historial": ["Clear history", "Esborra historial"],
+  "Tus próximas búsquedas aparecerán aquí.": ["Your next searches will appear here.", "Les teves pròximes cerques apareixeran aquí."],
+
   'Precio no disponible': ['Price unavailable', 'Preu no disponible'],
 
   'BUSCA. COMPARA. DECIDE.': ['SEARCH. COMPARE. DECIDE.', 'CERCA. COMPARA. DECIDEIX.'],

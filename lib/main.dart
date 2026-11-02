@@ -1,3 +1,6 @@
+import 'design/market_comparison.dart';
+import 'design/market_search.dart';
+import 'services/vehicle_search.dart';
 import 'design/market_details.dart';
 import 'design/market_vehicle_card.dart';
 import 'design/market_theme.dart';
@@ -763,7 +766,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
           child: FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk, padding: const EdgeInsets.symmetric(vertical: 15)),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison)),
+              builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison), onOpenCar: widget.onOpenCar),
             )),
             icon: const Icon(Icons.compare_arrows_rounded),
             label: Text(uiText(context, "Comparar {0} coches", [_selectedForComparison.length])),
@@ -816,16 +819,14 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
 
 class VehicleComparisonPage extends StatelessWidget {
   final List<Car> cars;
-  const VehicleComparisonPage({super.key, required this.cars});
-
-  String _price(double value) =>
-      '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
-  String _value(Object? value, [String suffix = '']) =>
-      value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
-
+  final ValueChanged<Car>? onOpenCar;
+  const VehicleComparisonPage({super.key, required this.cars, this.onOpenCar});
+  String _price(double value) => value <= 0 ? 'No indicado' : '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+  String _value(Object? value, [String suffix = '']) => value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
   @override
   Widget build(BuildContext context) {
     final rows = <List<String>>[
+      ['Modelo', ...cars.map((c) => '${c.brand} ${c.model}')],
       ['Precio', ...cars.map((c) => _price(c.price))],
       ['Año', ...cars.map((c) => _value(c.year == 0 ? null : c.year))],
       ['Kilometraje', ...cars.map((c) => '${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
@@ -845,46 +846,26 @@ class VehicleComparisonPage extends StatelessWidget {
       ['Plazas', ...cars.map((c) => _value(c.seats))],
       ['Equipamiento', ...cars.map((c) => c.equipment.isEmpty ? 'No indicado' : c.equipment.map((item) => uiText(context, item)).join(', '))],
     ];
-
-    return Scaffold(
-      appBar: AppBar(title:  Text(uiText(context, "Comparar vehículos"))),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text(uiText(context, "Compara los datos publicados de {0} vehículos. Los campos sin información aparecen como “No indicado”.", [cars.length]),
-            style: const TextStyle(color: marketMuted)),
-        ),
-        Expanded(child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFFFFFFFF)),
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 110,
-              columns: [
-                 DataColumn(label: Text(uiText(context, "Característica"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w800))),
-                ...cars.map((car) => DataColumn(label: SizedBox(
-                  width: 165,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (car.photos.isNotEmpty) ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(car.photos.first, width: 145, height: 78, fit: BoxFit.cover),
-                    ) else const Icon(Icons.directions_car, size: 40, color: marketAccent),
-                    const SizedBox(height: 5),
-                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    Text('${car.year}', style: const TextStyle(color: marketMuted, fontSize: 12)),
-                  ]),
-                ))),
-              ],
-              rows: rows.map((row) => DataRow(cells: [
-                DataCell(SizedBox(width: 115, child: Text(uiText(context, row[0]), style: const TextStyle(fontWeight: FontWeight.w700)))),
-                ...row.skip(1).map((value) => DataCell(SizedBox(width: 165, child: Text(value == 'No indicado' || row[0] == 'Combustible' || row[0] == 'Cambio' || row[0] == 'Carrocería' || row[0] == 'Etiqueta DGT' ? uiText(context, value) : value, softWrap: true)))),
-              ])).toList(),
-            ),
-          ),
-        )),
-      ]),
+    final fields = rows.where((row) => row.first != 'Equipamiento').map((row) => MarketComparisonField(
+      row.first, row.skip(1).map((value) => value == 'No indicado' ? null : value).toList())).toList();
+    final equipmentNames = <String, String>{};
+    for (final car in cars) {
+      for (final item in car.equipment) {
+        final normalized = normalizeVehicleSearch(item);
+        if (normalized.isNotEmpty) equipmentNames.putIfAbsent(normalized, () => item.trim());
+      }
+    }
+    fields.add(MarketComparisonField('Equipamiento anunciado', cars.map((car) => car.equipment.isEmpty ? null : uiText(context, '{0} elementos', [car.equipment.length])).toList()));
+    final sortedEquipment = equipmentNames.keys.toList()..sort();
+    for (final name in sortedEquipment) {
+      fields.add(MarketComparisonField(equipmentNames[name]!, cars.map((car) => car.equipment.any((item) => normalizeVehicleSearch(item) == name) ? 'Anunciado' : null).toList(), equipment: true));
+    }
+    return MarketComparisonView(
+      cars: cars.map((car) => MarketComparisonCar(title: '${car.brand} ${car.model}',
+        price: _price(car.price) == 'No indicado' ? uiText(context, 'No indicado') : _price(car.price),
+        year: car.year, photo: car.photos.isEmpty ? null : car.photos.first)).toList(),
+      fields: fields,
+      onOpen: onOpenCar == null ? null : (index) => onOpenCar!(cars[index]),
     );
   }
 }
@@ -933,7 +914,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePage> {
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
   String selectedFuel = 'Todos';
@@ -1098,7 +1079,7 @@ class _HomePageState extends State<HomePage> {
     final query = searchController.text.toLowerCase().trim();
     return cars.where((car) {
       final matchesSearch =
-          '${car.brand} ${car.model}'.toLowerCase().contains(query);
+          matchesVehicleSearch(query, [car.brand, car.model, car.version, car.fuel, car.transmission, car.bodyType]);
       final matchesBrand = selectedBrand == 'Todas' || car.brand == selectedBrand;
       final matchesModel = selectedModel == 'Todos' || car.model == selectedModel;
       final matchesFuel =
@@ -1109,7 +1090,7 @@ class _HomePageState extends State<HomePage> {
       final matchesMaxYear = maxYear == null || car.year <= maxYear!;
       final matchesMinKm = minKm == null || car.km >= minKm!;
       final matchesMaxKm = maxKm == null || car.km <= maxKm!;
-      final matchesTransmission = selectedTransmission == 'Todas' || car.transmission == selectedTransmission;
+      final matchesTransmission = matchesVehicleTransmission(car.transmission, selectedTransmission);
       final matchesBodyType = selectedBodyType == 'Todos' || car.bodyType == selectedBodyType;
       final matchesLabel = selectedLabel == 'Todas' || car.etiquetaMedioambiental == selectedLabel;
       final matchesColor = selectedColor.trim().isEmpty || (car.color ?? '').toLowerCase().contains(selectedColor.trim().toLowerCase());
@@ -1601,8 +1582,8 @@ class _HomePageState extends State<HomePage> {
                     focusNode: searchFocusNode,
                     optionsBuilder: (value) {
                       final query = value.text.trim().toLowerCase();
-                      if (query.isEmpty) return const Iterable<String>.empty();
-                      final options = <String>{};
+                      if (query.isEmpty) return recentVehicleQueries;
+                      final options = <String>{...recentVehicleQueries.where((item) => matchesVehicleSearch(query, [item]))};
                       for (final car in cars) {
                         if (car.brand.toLowerCase().contains(query)) options.add(car.brand);
                         if (car.model.toLowerCase().contains(query)) options.add(car.model);
@@ -1613,18 +1594,22 @@ class _HomePageState extends State<HomePage> {
                     },
                     onSelected: (value) {
                       searchController.text = value;
+                      rememberVehicleSearch(value);
                       setState(() {});
                     },
                     fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) => TextField(
                       controller: controller,
                       focusNode: focusNode,
                       onChanged: (_) => setState(() {}),
-                      onSubmitted: (_) => onFieldSubmitted(),
+                      onSubmitted: (_) { rememberVehicleSearch(controller.text); onFieldSubmitted(); },
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
                         hintText: appText('Escribe marca o modelo...', 'Search make or model...'),
                         prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: controller.text.isEmpty ? null : IconButton(
+                        suffixIcon: controller.text.isEmpty ? IconButton(
+                          tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded),
+                          onPressed: () => openVehicleSearchHistory((query) { searchController.text = query; searchFocusNode.unfocus(); setState(() {}); }),
+                        ) : IconButton(
                           tooltip: appText('Borrar búsqueda', 'Clear search'), icon: const Icon(Icons.close_rounded),
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
@@ -1711,6 +1696,15 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
               ]),
+            ),
+            const SizedBox(height: 12),
+            MarketQuickFilters(
+              automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
+              electric: selectedFuel == 'Eléctrico', budget: maxPrice == 20000,
+              onAutomatic: () => setState(() => selectedTransmission = selectedTransmission == 'Automático' ? 'Todas' : 'Automático'),
+              onSuv: () => setState(() => selectedBodyType = selectedBodyType == 'SUV' ? 'Todos' : 'SUV'),
+              onElectric: () => setState(() => selectedFuel = selectedFuel == 'Eléctrico' ? 'Todos' : 'Eléctrico'),
+              onBudget: () => setState(() { maxPrice = maxPrice == 20000 ? null : 20000; if (maxPrice != null && minPrice != null && minPrice! > maxPrice!) minPrice = null; }),
             ),
             const SizedBox(height: 24),
             Row(
@@ -1874,11 +1868,13 @@ class AllVehiclesPage extends StatefulWidget {
   State<AllVehiclesPage> createState() => _AllVehiclesPageState();
 }
 
-class _AllVehiclesPageState extends State<AllVehiclesPage> {
+class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSearchState<AllVehiclesPage> {
   final search = TextEditingController();
   String brand = 'Todas';
   String model = 'Todos';
   String fuel = 'Todos';
+  String transmission = 'Todas';
+  String bodyType = 'Todos';
   double minPrice = 0, maxPrice = 200000;
   int minKm = 0, maxKm = 300000, minCv = 0, maxCv = 1000;
   int minYear = 1990, maxYear = DateTime.now().year + 1;
@@ -1909,6 +1905,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       brand = 'Todas';
       model = 'Todos';
       fuel = 'Todos';
+      transmission = 'Todas'; bodyType = 'Todos';
       minPrice = 0;
       maxPrice = 200000;
       minKm = 0;
@@ -1928,8 +1925,9 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   List<String> get models => ['Todos', ...widget.cars.where((c) => brand == 'Todas' || c.brand == brand).map((c) => c.model).toSet().toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
-    return ('${c.brand} ${c.model} ${c.version ?? ''} ${c.fuel}'.toLowerCase().contains(q)) &&
+    return matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
+      matchesVehicleTransmission(c.transmission, transmission) && (bodyType == 'Todos' || normalizeVehicleSearch(c.bodyType ?? '') == normalizeVehicleSearch(bodyType)) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
       c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
       ((minCv == 0 && maxCv == 1000) || (c.cv != null && c.cv! >= minCv && c.cv! <= maxCv)) &&
@@ -1990,7 +1988,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               onPressed: () {
                 final selected = widget.cars.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
                 if (selected.length >= 2) {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected)));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected, onOpenCar: widget.onOpenCar)));
                 }
               },
               icon: const Icon(Icons.compare_arrows_rounded),
@@ -1999,7 +1997,15 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
           ))
         : null,
       body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); setState(() {}); })) : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
+        if (!showFilters) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
+          automatic: transmission == 'Automático', suv: bodyType == 'SUV',
+          electric: fuel == 'Eléctrico', budget: maxPrice == 20000,
+          onAutomatic: () => setState(() => transmission = transmission == 'Automático' ? 'Todas' : 'Automático'),
+          onSuv: () => setState(() => bodyType = bodyType == 'SUV' ? 'Todos' : 'SUV'),
+          onElectric: () => setState(() => fuel = fuel == 'Eléctrico' ? 'Todos' : 'Eléctrico'),
+          onBudget: () => setState(() { maxPrice = maxPrice == 20000 ? 200000 : 20000; if (minPrice > maxPrice) minPrice = 0; }),
+        )),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 12, runSpacing: 4, children: [
@@ -2030,11 +2036,13 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             onChanged: (value) => setState(() => sortOrder = value ?? 'featured'),
           ),
         ),
-        if (!showFilters && (brand != 'Todas' || model != 'Todos' || fuel != 'Todos' || minPrice != 0 || maxPrice != 200000 || minKm != 0 || maxKm != 300000 || minCv != 0 || maxCv != 1000 || minYear != 1990 || maxYear != DateTime.now().year + 1))
+        if (!showFilters && (transmission != 'Todas' || bodyType != 'Todos' || brand != 'Todas' || model != 'Todos' || fuel != 'Todos' || minPrice != 0 || maxPrice != 200000 || minKm != 0 || maxKm != 300000 || minCv != 0 || maxCv != 1000 || minYear != 1990 || maxYear != DateTime.now().year + 1))
           SizedBox(height: 48, child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
+              if (transmission != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, transmission)), onDeleted: () => setState(() => transmission = 'Todas'))),
+              if (bodyType != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, bodyType)), onDeleted: () => setState(() => bodyType = 'Todos'))),
               if (brand != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(brand), onDeleted: () => setState(() { brand = 'Todas'; model = 'Todos'; }))),
               if (model != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(model), onDeleted: () => setState(() => model = 'Todos'))),
               if (fuel != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, fuel)), onDeleted: () => setState(() => fuel = 'Todos'))),
@@ -2050,6 +2058,16 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             child: Column(children: [
           Row(children: [Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: brand, decoration: InputDecoration(labelText: AppLocalizations.of(context).brand), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: models.contains(model)?model:'Todos', decoration: InputDecoration(labelText: AppLocalizations.of(context).model), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
           const SizedBox(height:8), DropdownButtonFormField<String>(isExpanded: true, value:fuel, decoration: InputDecoration(labelText: AppLocalizations.of(context).fuel), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(uiText(context, v)))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(isExpanded: true, initialValue: transmission,
+            decoration: InputDecoration(labelText: uiText(context, 'Transmisión')),
+            items: ['Todas', 'Manual', 'Automático', 'Automático (DSG)'].map((value) => DropdownMenuItem(value: value, child: Text(uiText(context, value)))).toList(),
+            onChanged: (value) => setState(() => transmission = value ?? 'Todas')),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(isExpanded: true, initialValue: bodyType,
+            decoration: InputDecoration(labelText: uiText(context, 'Carrocería')),
+            items: {'Todos', 'SUV', ...widget.cars.map((car) => car.bodyType).whereType<String>().where((value) => value.trim().isNotEmpty)}.map((value) => DropdownMenuItem(value: value, child: Text(uiText(context, value)))).toList(),
+            onChanged: (value) => setState(() => bodyType = value ?? 'Todos')),
           const SizedBox(height:8), priceRange(),
           rangeField(AppLocalizations.of(context).minMileage, minKm, 0, 300000, (v)=>setState(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
           rangeField(AppLocalizations.of(context).maxMileage, maxKm, 0, 300000, (v)=>setState(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
