@@ -318,4 +318,7 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Traducción de los nuevos textos a español, inglés y catalán. No cambia compras, precios verificados ni permisos del servidor.
 - Verificación: 141 pruebas existentes aprobadas; 21 pruebas focalizadas aprobadas, incluidas 3 nuevas de tarjeta Editorial a 320 px con texto al 100 %, 150 % y 200 %.
 - Compilación web release aprobada. Revisión visual real a 390 × 844 de inicio y ficha (fotos primero); favoritos revisados con datos ficticios y fuentes reales. Prueba adicional del orden fotos/título y del contacto fijo aprobada para publicado, reservado y vendido.
-- Estado: preparada para una única build iOS 23. Declaración de cifrado y activación en TestFlight pendientes.
+- Estado confirmado: **AUTOMOTORS 1.0.1 (23), En pruebas**, grupo interno **AUTOMOTORS Sandbox**, 2 testers, caduca en 90 días. Cifrado «Ninguno de los algoritmos mencionados anteriormente» guardado con autorización explícita del usuario.
+- Binario: commit `01dc1a0ebc58dc8dde065d662133a0b0e38f1cbb`; Codemagic `6ae91d63e83a9019991c7f8f`; Apple build `ea2cf7ce-256d-4bd3-819b-804351283e7d`.
+- GitHub: flutter-check, postgres-and-edge e iOS aprobados para ese commit. Codemagic compiló, firmó y subió correctamente; su asignación automática de grupo falló por faltar el cifrado y se completó manualmente tras guardarlo. No se envió a revisión pública.
+- Este registro posterior a la activación solo cambia documentación; no requiere otro binario.
