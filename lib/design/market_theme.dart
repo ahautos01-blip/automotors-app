@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-const marketPaper = Color(0xFFFAF9F6);
+const marketPaper = Color(0xFFF6F5F0);
 const marketSurface = Color(0xFFFFFFFF);
 const marketHeroChip = Color(0xFF343C39);
-const marketInk = Color(0xFF1D2423);
-const marketMuted = Color(0xFF69706B);
-const marketLine = Color(0xFFE4E5DF);
+const marketInk = Color(0xFF22342B);
+const marketMuted = Color(0xFF69746C);
+const marketLine = Color(0xFFDEDFD7);
 const marketTint = Color(0xFFEFEEE7);
-const marketGold = Color(0xFFD7B34D);
+const marketGold = Color(0xFFC7A044);
 const marketAccent = Color(0xFF876B24);
 
 ThemeData automotorsMarketTheme() => ThemeData(
@@ -20,7 +20,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
         seedColor: marketGold,
         brightness: Brightness.light,
       ).copyWith(
-        primary: marketAccent,
+        primary: marketInk,
         onPrimary: marketSurface,
         secondary: marketAccent,
         surface: marketSurface,
@@ -29,6 +29,60 @@ ThemeData automotorsMarketTheme() => ThemeData(
         error: const Color(0xFFB3261E),
       ),
   dividerColor: marketLine,
+  visualDensity: VisualDensity.standard,
+  iconTheme: const IconThemeData(color: marketInk, size: 20),
+  textTheme: const TextTheme(
+    headlineLarge: TextStyle(
+      fontSize: 36,
+      height: 1.08,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -1.5,
+      color: marketInk,
+    ),
+    headlineMedium: TextStyle(
+      fontSize: 30,
+      height: 1.12,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -1.1,
+      color: marketInk,
+    ),
+    titleLarge: TextStyle(
+      fontSize: 22,
+      height: 1.2,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -.5,
+      color: marketInk,
+    ),
+    titleMedium: TextStyle(
+      fontSize: 16,
+      height: 1.3,
+      fontWeight: FontWeight.w600,
+      color: marketInk,
+    ),
+    bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: marketInk),
+    bodyMedium: TextStyle(fontSize: 14, height: 1.45, color: marketInk),
+    bodySmall: TextStyle(fontSize: 12, height: 1.4, color: marketMuted),
+    labelLarge: TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: marketInk,
+    ),
+  ),
+  listTileTheme: const ListTileThemeData(
+    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    iconColor: marketMuted,
+  ),
+  dialogTheme: DialogThemeData(
+    backgroundColor: marketPaper,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: marketPaper,
+    showDragHandle: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+  ),
   appBarTheme: const AppBarTheme(
     backgroundColor: marketPaper,
     foregroundColor: marketInk,
@@ -86,7 +140,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
     style: TextButton.styleFrom(foregroundColor: marketAccent),
   ),
   navigationBarTheme: NavigationBarThemeData(
-    backgroundColor: marketPaper,
+    backgroundColor: marketSurface,
     indicatorColor: marketTint,
     iconTheme: WidgetStateProperty.resolveWith(
       (states) => IconThemeData(

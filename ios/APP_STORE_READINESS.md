@@ -307,3 +307,15 @@ El catálogo permite guardar la búsqueda activa directamente desde su cabecera.
 Validación: 141 pruebas Flutter correctas, incluidas foto ausente/fallida, guardado exacto de filtros, ordenación por precio actual y comparación de favoritos. Compilación web de producción correcta, revisión visual de ficha con foto real y controles móviles, sin compras ni escrituras de prueba en producción. Build nativa y activación de 1.0.1 (22) pendientes de verificar; no se ha enviado a revisión pública.
 
 Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc67a3b30b17db8: https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae911a3e83a9019991c7c61. El titular autorizó expresamente Ninguno de los algoritmos mencionados anteriormente para esta build. Apple procesó UUID c35c01e5-2b70-4c6f-b0a8-287083bbccfa. Se guardó el cifrado autorizado y se añadió únicamente a AUTOMOTORS Sandbox. La página del grupo confirma 1.0.1 (22) En pruebas, dos testers y caducidad en 90 días: disponible en TestFlight. CI flutter-check y postgres-and-edge correctos; el job adicional de simulador iOS sigue en cola, mientras la build nativa firmada de Codemagic ya terminó. La sesión de App Store Connect se renovó por el titular. Sin envío a revisión pública.
+
+
+## Build 23 preparada: diseño Editorial unificado
+
+- Tema común claro con tinta verde oscuro y acentos dorados; jerarquía tipográfica, iconos, botones, formularios, diálogos y navegación coherentes.
+- Inicio con titular Editorial, una tarjeta principal y filas secundarias compactas que conservan favoritos, apertura y estado reservado.
+- Ficha móvil con fotos primero y título y precio debajo, según la última indicación; fotos a sangre, datos principales agrupados y vendedor con su foto. Se conserva la galería completa y el contacto fijo.
+- Favoritos con cabecera Editorial, miniaturas mayores, comparación mediante casilla y avisos de precio accesibles. Se conservan ordenación y preferencias.
+- Traducción de los nuevos textos a español, inglés y catalán. No cambia compras, precios verificados ni permisos del servidor.
+- Verificación: 141 pruebas existentes aprobadas; 21 pruebas focalizadas aprobadas, incluidas 3 nuevas de tarjeta Editorial a 320 px con texto al 100 %, 150 % y 200 %.
+- Compilación web release aprobada. Revisión visual real a 390 × 844 de inicio y ficha (fotos primero); favoritos revisados con datos ficticios y fuentes reales. Prueba adicional del orden fotos/título y del contacto fijo aprobada para publicado, reservado y vendido.
+- Estado: preparada para una única build iOS 23. Declaración de cifrado y activación en TestFlight pendientes.

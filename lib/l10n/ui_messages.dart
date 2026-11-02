@@ -1,5 +1,11 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "TU PRÓXIMO COCHE": ["YOUR NEXT CAR", "EL TEU PROPER COTXE"],
+  "Encuentra el que\nva contigo.": ["Find the car\nthat fits you.", "Troba el que\nva amb tu."],
+  "Particulares y profesionales. En un mismo lugar.": ["Private sellers and professionals. In one place.", "Particulars i professionals. En un mateix lloc."],
+  "TU SELECCIÓN": ["YOUR SHORTLIST", "LA TEVA SELECCIÓ"],
+  "Los que te gustan.": ["The ones you like.", "Els que t’agraden."],
+
   "Comparar": ["Compare", "Comparar"],
   "Foto del vendedor": ["Seller photo", "Foto del venedor"],
   "Ordenar favoritos": ["Sort favourites", "Ordenar preferits"],

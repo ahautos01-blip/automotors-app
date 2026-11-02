@@ -85,8 +85,10 @@ class MarketFavoriteCard extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: SizedBox(
-                      width: 64,
-                      height: 64,
+                      width: MediaQuery.textScalerOf(context).scale(1) > 1.2
+                          ? 76
+                          : 96,
+                      height: 124,
                       child: photo == null
                           ? const ColoredBox(
                               color: marketTint,
@@ -110,9 +112,11 @@ class MarketFavoriteCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -129,8 +133,8 @@ class MarketFavoriteCard extends StatelessWidget {
                               ? watchPrice(price)
                               : uiText(context, 'Anuncio no disponible'),
                           style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 23,
                           ),
                         ),
                         if (lower && available) ...[
@@ -169,27 +173,25 @@ class MarketFavoriteCard extends StatelessWidget {
             ),
           ),
           if (onCompare != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: OutlinedButton.icon(
-                onPressed: onCompare,
-                icon: Icon(
-                  comparing
-                      ? Icons.check_circle_rounded
-                      : Icons.compare_arrows_rounded,
-                ),
-                label: Text(
-                  uiText(
-                    context,
-                    comparing ? 'Seleccionado para comparar' : 'Comparar',
-                  ),
-                ),
+            CheckboxListTile(
+              dense: true,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              value: comparing,
+              onChanged: (_) => onCompare!(),
+              title: Text(
+                uiText(context, 'Comparar'),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
           if (available)
             SwitchListTile.adaptive(
-              title: Text(uiText(context, 'Avisarme si baja')),
-              subtitle: Text(uiText(context, 'Avisos en el buzón de la app')),
+              title: Text(
+                uiText(context, 'Avisarme si baja'),
+                style: const TextStyle(fontSize: 12),
+              ),
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14),
               value: watching,
               onChanged: busy ? null : onWatch,
             ),

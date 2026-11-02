@@ -56,6 +56,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final gallery = find.byKey(const Key('vehicle-photo-gallery'));
+      final heading = find.byKey(const Key('editorial-listing-heading'));
+      expect(heading, findsOneWidget);
+      expect(
+        tester.getTopLeft(gallery).dy,
+        lessThan(tester.getTopLeft(heading).dy),
+      );
       final bar = find.byKey(const Key('vehicle-contact-bar'));
       final action = find.descendant(
         of: bar,

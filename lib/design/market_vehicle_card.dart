@@ -203,3 +203,108 @@ class MarketVehicleCard extends StatelessWidget {
     ),
   );
 }
+
+/// Compact editorial row used for secondary cars without losing listing actions.
+class MarketEditorialCarRow extends StatelessWidget {
+  final String title, price, details;
+  final String? version;
+  final Uint8List? photo;
+  final Widget favorite;
+  final Widget? status;
+  final VoidCallback onTap;
+  const MarketEditorialCarRow({
+    super.key,
+    required this.title,
+    required this.price,
+    required this.details,
+    this.version,
+    this.photo,
+    required this.favorite,
+    this.status,
+    required this.onTap,
+  });
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    width: 88,
+                    height: 112,
+                    child: photo == null
+                        ? const ColoredBox(
+                            color: marketTint,
+                            child: Icon(
+                              Icons.directions_car_outlined,
+                              color: marketMuted,
+                            ),
+                          )
+                        : Image.memory(
+                            photo!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, e, s) =>
+                                const Icon(Icons.directions_car_outlined),
+                          ),
+                  ),
+                ),
+                Positioned(top: 0, right: 0, child: favorite),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (version?.trim().isNotEmpty == true)
+                    Text(
+                      version!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: marketMuted),
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.7,
+                    ),
+                  ),
+                  if (status != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: status!,
+                    ),
+                  const SizedBox(height: 5),
+                  Text(
+                    details,
+                    style: const TextStyle(fontSize: 12, color: marketMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}

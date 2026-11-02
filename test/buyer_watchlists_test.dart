@@ -427,7 +427,7 @@ void main() {
             .title,
         'SEAT Ibiza',
       );
-      final buttons = find.widgetWithText(OutlinedButton, 'Comparar');
+      final buttons = find.widgetWithText(CheckboxListTile, 'Comparar');
       await t.ensureVisible(buttons.first);
       await t.pumpAndSettle();
       await t.tap(buttons.first);
