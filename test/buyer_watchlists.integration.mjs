@@ -61,4 +61,27 @@ for(const criteria of [{max_year:2020},{min_km:100},{min_cv:1},{max_price:'garba
 }
 await db.exec("create or replace function private.listing_not_held(uuid) returns boolean language sql as $$select false$$");
 await db.query('update vehicle_listings set price=16000 where id=$1',[listing]);assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,3);
+
+// Existing purchase-review notifications must survive the buyer-alert migration.
+await db.exec(`alter table vehicle_listings add column sold_to_buyer_id uuid,add column sold_externally boolean default false;
+create table vehicle_reviews(listing_id uuid,buyer_id uuid);
+create unique index vehicle_review_invitation_once on vehicle_search_alerts(user_id,listing_id) where alert_type='review_requested';
+create table public.push_devices(id uuid primary key default gen_random_uuid(),user_id uuid,active boolean default true,updated_at timestamptz default now());
+create table private.push_deliveries(device_id uuid,user_id uuid,event_key text,kind text,listing_id uuid,unique(device_id,event_key));
+`);
+const reviewSource=await readFile(new URL('../supabase/fixes/restore_buyer_review_invitations.sql',import.meta.url),'utf8');
+await db.exec(reviewSource.slice(reviewSource.indexOf('create or replace function private.invite_verified_buyer_review()'),reviewSource.indexOf('-- Recover pending invitations')));
+const pushSource=await readFile(new URL('../supabase/fixes/enable_ios_push.sql',import.meta.url),'utf8');
+await db.exec(pushSource.slice(pushSource.indexOf('create function private.queue_review_push()'),pushSource.indexOf('-- These worker RPCs')));
+await db.query('insert into push_devices(user_id) values($1),($2)',[buyer,other]);
+await db.query("select set_config('request.jwt.claim.sub',$1,false)",['11111111-1111-4111-8111-111111111111']);
+await db.query("update vehicle_listings set status='sold',sold_to_buyer_id=$1 where id=$2",[buyer,listing]);
+let reviews=(await db.query("select * from vehicle_search_alerts where alert_type='review_requested'")).rows;
+assert.equal(reviews.length,1);assert.equal(reviews[0].user_id,buyer);
+let deliveries=(await db.query('select * from private.push_deliveries')).rows;
+assert.equal(deliveries.length,1);assert.equal(deliveries[0].user_id,buyer);assert.equal(deliveries[0].kind,'review_requested');
+await db.query("update vehicle_listings set status='sold' where id=$1",[listing]);assert.equal((await db.query('select * from private.push_deliveries')).rows.length,1);
+await db.exec("update vehicle_listings set status='sold',sold_externally=true where id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'");
+assert.equal((await db.query("select * from vehicle_search_alerts where alert_type='review_requested'")).rows.length,1);
+console.log('PASS: verified sale creates one buyer inbox invitation and one buyer-only push job; repeat updates/external sales do not duplicate it.');
 await db.close();console.log('PASS: server reference, opt-in, RLS isolation, field grants, matching, repeated drops, pause, status publication, missing/malformed fields and held listings.');

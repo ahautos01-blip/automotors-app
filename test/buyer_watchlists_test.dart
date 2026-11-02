@@ -34,6 +34,7 @@ Widget app(Widget page, {double scale = 1, String lang = 'es'}) => MaterialApp(
 void main() {
   final patches = <http.Request>[];
   bool fail = false;
+  bool reviewAlert = false;
   bool missing = false;
   final raw = <String, dynamic>{
     'id': listing,
@@ -42,6 +43,9 @@ void main() {
     'year': 2021,
     'km': 40000,
     'fuel': 'Diésel',
+    'owner_id': '33333333-3333-4333-8333-333333333333',
+    'sold_to_buyer_id': uid,
+    'sold_externally': false,
     'vehicle_brands': {'name': 'Volkswagen'},
     'vehicle_models': {'name': 'Touran'},
     'vehicle_photos': [],
@@ -158,8 +162,8 @@ void main() {
             {
               'id': listing,
               'listing_id': listing,
-              'alert_type': 'price_drop',
-              'title': 'Bajada de precio',
+              'alert_type': reviewAlert ? 'review_requested' : 'price_drop',
+              'title': reviewAlert ? 'Valora tu compra' : 'Bajada de precio',
               'message': 'Touran',
               'previous_price': 20000,
               'current_price': 19000,
@@ -180,6 +184,7 @@ void main() {
   tearDownAll(() async => Supabase.instance.dispose());
   setUp(() {
     patches.clear();
+    reviewAlert = false;
     fail = false;
     missing = false;
   });
@@ -308,4 +313,19 @@ void main() {
       expect(find.text('Este aviso ya no está disponible.'), findsOneWidget);
     },
   );
+  testWidgets('purchase-review invitation opens the buyer review form', (
+    t,
+  ) async {
+    reviewAlert = true;
+    await t.pumpWidget(
+      app(VehicleSearchAlertsPage(onOpenCar: (_) => fail = true)),
+    );
+    await t.pumpAndSettle();
+    await t.tap(find.text('Valora tu compra'));
+    await t.pumpAndSettle();
+    expect(find.text('Comunicación'), findsOneWidget);
+    expect(find.text('Confianza'), findsOneWidget);
+    expect(fail, false);
+    expect(jsonDecode(patches.single.body).keys, ['read_at']);
+  });
 }

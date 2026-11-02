@@ -129,6 +129,10 @@ class _MarkVehicleSoldDialogState extends State<MarkVehicleSoldDialog> {
             }).toList(),
             onChanged: saving ? null : (v) => setState(() => selectedBuyer = v),
           ),
+          if (!soldExternally && selectedBuyer != null) Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(uiText(context, 'El comprador recibirá una invitación para valorar la compra. El aviso en el iPhone requiere tener las notificaciones activadas.'),style:const TextStyle(fontSize:12)),
+          ),
           if (error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(uiText(context, error!), style: const TextStyle(color: Colors.redAccent))),
         ])),
     actions: [

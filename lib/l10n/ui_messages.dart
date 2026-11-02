@@ -1,5 +1,6 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "El comprador recibirá una invitación para valorar la compra. El aviso en el iPhone requiere tener las notificaciones activadas.": ["The buyer will receive an invitation to review the purchase. iPhone alerts require notifications to be enabled.", "El comprador rebrà una invitació per valorar la compra. L’avís a l’iPhone requereix tenir les notificacions activades."],
   "Ver búsquedas": ["View searches", "Veure cerques"],
   "Sigue los coches que te interesan": ["Follow the cars you like", "Segueix els cotxes que t’interessen"],
   "Anuncios nuevos": ["New listings", "Anuncis nous"],
