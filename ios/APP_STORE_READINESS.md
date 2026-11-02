@@ -217,3 +217,18 @@ El titular autorizó expresamente guardar para la build 16 «Ninguno de los algo
 
 
 El 2/11/2026, tras el inicio de sesión del titular, se confirmó que Apple había procesado 1.0.1 (16). Se guardó la respuesta de cifrado ya autorizada y se añadió la build 5f6caf4a-97f7-4ab5-83cb-0c42e3058e99 a AUTOMOTORS Sandbox. La página del grupo interno confirma «En pruebas», dos testers y caducidad de 90 días. Build 16 disponible para actualizar desde TestFlight. Pendientes la prueba física de denuncia y verificar que los precios EUR válidos se mantienen o aparece Consultar precio en Apple si el catálogo devuelve otra moneda. No se ha convertido 179 USD en 199 EUR ni resuelto el origen del metadato incoherente. La publicación pública y la exigencia global del filtro siguen pendientes.
+
+
+## Build 17: catálogo y publicación
+
+Portada compacta con búsqueda y filtros antes del catálogo, tarjetas con fotografías mayores y hasta ocho resultados iniciales. Las tarjetas y Ver todos respetan ahora filteredCars: antes los controles cambiaban el estado, pero la portada seguía mostrando cars sin filtrar. Se retira la etiqueta de vehículos verificados, que no correspondía a una comprobación garantizada.
+
+La ficha mantiene el contacto en una barra fija con área segura y conserva WhatsApp, consulta de disponibilidad y bloqueo de contacto para vendidos. Se corrige el desbordamiento de Descripción en pantallas estrechas. Denunciar sigue accesible en cabecera y cuerpo.
+
+El catálogo muestra filtros activos eliminables; al abrir filtros, la ordenación y los resultados ceden espacio a una lista desplazable y un botón fijo con el número de resultados. La cabecera se adapta a textos largos. Se conserva la búsqueda al aplicar y retirar filtros.
+
+La publicación conserva el formulario y sus validadores. La ficha técnica ampliada y equipamiento se agrupan en un desplegable que mantiene los controladores y valores. Combustible permanece en los datos básicos. El botón principal de publicación ocupa el pie, con packs accesibles en la cabecera. Se puede elegir otra fotografía principal moviéndola a la primera posición sin eliminar fotos ni volver a seleccionarlas. Las nuevas instrucciones se traducen a es/en/ca.
+
+Esta actualización no modifica tarifas ni la validación de compras. Sigue pendiente diagnosticar en iPhone el metadato USD que difiere de la hoja nativa EUR. Se conserva la protección de presentación de build 16 y no se afirma que la discrepancia esté resuelta. Sin cambios de servidor, activación global de moderación ni envío a revisión pública. La disponibilidad en TestFlight se registrará tras la subida y verificación en Apple.
+
+Validación del lote 17: 95 pruebas Flutter correctas, compilación web de producción correcta y revisión visual del inicio y ficha a 390x844 con catálogo real en modo de solo lectura. Las fotos y el contacto fijo se presentan correctamente. El análisis no detecta errores de compilación; conserva avisos de estilo y deprecación anteriores. Pendientes compilación firmada iOS y prueba física en TestFlight.

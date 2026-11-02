@@ -1,5 +1,9 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  'Opcional': ['Optional', 'Opcional'],
+  'Usar como principal': ['Use as cover', 'Fes-la principal'],
+  'La primera fotografía será la principal. Puedes elegir otra sin volver a subir las fotos.': ['The first photo is the cover. You can choose another without uploading the photos again.', 'La primera fotografia és la principal. Pots triar-ne una altra sense tornar a pujar les fotos.'],
+
   "No se pudo confirmar la publicación. Revisa el estado del anuncio en tu garaje antes de reintentar.": ["Publication could not be confirmed. Check the listing’s status in your garage before retrying.", "No s’ha pogut confirmar la publicació. Revisa l’estat de l’anunci al garatge abans de tornar-ho a provar."],
   "Moderación automática": ["Automatic moderation", "Moderació automàtica"],
 
