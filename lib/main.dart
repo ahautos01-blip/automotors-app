@@ -1,3 +1,4 @@
+import 'design/market_details.dart';
 import 'design/market_vehicle_card.dart';
 import 'design/market_theme.dart';
 import 'services/listing_photo_loader.dart';
@@ -1128,45 +1129,48 @@ class _HomePageState extends State<HomePage> {
     }).toList()..sort((a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0));
   }
 
+  Future<void> _openSavedSearches() async {
+    if (Supabase.instance.client.auth.currentUser == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+    }
+    if (!mounted) return;
+    await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedSearchesPage(onApply: (criteria) {
+      if (!mounted) return;
+      num? numeric(String key) {
+        final value = num.tryParse('${criteria[key] ?? ''}');
+        return value != null && value.isFinite ? value : null;
+      }
+      setState(() {
+        searchController.text = criteria['query']?.toString() ?? '';
+        selectedBrand = criteria['brand']?.toString() ?? 'Todas';
+        selectedModel = criteria['model']?.toString() ?? 'Todos';
+        selectedFuel = criteria['fuel']?.toString() ?? 'Todos';
+        minPrice = numeric('min_price')?.toDouble(); maxPrice = numeric('max_price')?.toDouble();
+        minYear = numeric('min_year')?.toInt(); maxYear = numeric('max_year')?.toInt();
+        minKm = numeric('min_km')?.toInt(); maxKm = numeric('max_km')?.toInt();
+        minCv = numeric('min_cv')?.toInt(); maxCv = numeric('max_cv')?.toInt();
+        minCc = numeric('min_cc')?.toInt(); maxDoors = numeric('max_doors')?.toInt(); minSeats = numeric('min_seats')?.toInt();
+        selectedTransmission = criteria['transmission']?.toString() ?? 'Todas';
+        selectedBodyType = criteria['body_type']?.toString() ?? 'Todos';
+        selectedLabel = criteria['label']?.toString() ?? 'Todas'; selectedColor = criteria['color']?.toString() ?? '';
+        selectedEquipmentFilters..clear()..addAll((criteria['equipment'] is List ? criteria['equipment'] as List : const []).whereType<String>());
+      });
+    })));
+  }
+
   Future<void> saveCurrentSearch() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       final loggedIn = await requireAutomotorsLogin(context);
       if (!loggedIn || !mounted) return;
     }
-    final nameController = TextEditingController(
-      text: [
-        if (selectedBrand != 'Todas') selectedBrand,
-        if (selectedModel != 'Todos') selectedModel,
-        if (selectedFuel != 'Todos') selectedFuel,
-      ].join(' ').trim(),
-    );
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title:  Text(uiText(context, "Guardar búsqueda")),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          maxLength: 80,
-          decoration:  InputDecoration(
-            labelText: uiText(context, "Nombre de la búsqueda"),
-            hintText: uiText(context, "Ej. SUV diésel hasta 20.000 €"),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child:  Text(uiText(context, "Cancelar"))),
-          FilledButton(
-            onPressed: () {
-              final value = nameController.text.trim();
-              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
-            },
-            child:  Text(uiText(context, "Guardar")),
-          ),
-        ],
-      ),
-    );
-    nameController.dispose();
+    final initialName = [
+      if (selectedBrand != 'Todas') selectedBrand,
+      if (selectedModel != 'Todos') selectedModel,
+      if (selectedFuel != 'Todos') selectedFuel,
+    ].join(' ').trim();
+    final name = await promptMarketSavedSearchName(context, initialName);
     if (name == null || !mounted) return;
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) return;
@@ -1231,7 +1235,7 @@ class _HomePageState extends State<HomePage> {
     var fuel = selectedFuel;
     var brand = selectedBrand;
     var model = selectedModel;
-    final brands = ['Todas', ...cars.map((car) => car.brand).toSet().toList()..sort()];
+    final brands = ['Todas', ...{if (brand != 'Todas') brand, ...cars.map((car) => car.brand)}.toList()..sort()];
     final models = ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()];
 
     await showModalBottomSheet<void>(
@@ -1500,8 +1504,12 @@ class _HomePageState extends State<HomePage> {
       selectedModel != 'Todos',
       minPrice != null,
       maxPrice != null,
-      minYear != null,
-      maxKm != null,
+      minYear != null, maxYear != null,
+      minKm != null, maxKm != null,
+      selectedTransmission != 'Todas', selectedBodyType != 'Todos',
+      selectedLabel != 'Todas', selectedColor.trim().isNotEmpty,
+      minCv != null, maxCv != null, minCc != null,
+      maxDoors != null, minSeats != null, selectedEquipmentFilters.isNotEmpty,
     ].where((active) => active).length;
 
     return Scaffold(
@@ -1565,14 +1573,24 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: EdgeInsets.fromLTRB(isWide ? 28 : 16, 10, isWide ? 28 : 16, 28),
           children: [
+            Container(
+              key: const Key('market-search-hero'),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+              decoration: BoxDecoration(color: marketInk, borderRadius: BorderRadius.circular(28)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(width: 22, height: 2, color: gold), const SizedBox(width: 9),
+                  Expanded(child: Text(uiText(context, 'BUSCA. COMPARA. DECIDE.'),
+                    style: const TextStyle(color: gold, letterSpacing: 1.6, fontSize: 10, fontWeight: FontWeight.w700))),
+                ]),
             Padding(
               padding: const EdgeInsets.only(top: 8, bottom: 20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(uiText(context, 'Un coche.\nMil posibilidades.'),
-                  style: const TextStyle(fontSize: 34, height: 1.06, fontWeight: FontWeight.w800, letterSpacing: -1.3)),
+                  style: const TextStyle(color: marketSurface, fontSize: 30, height: 1.06, fontWeight: FontWeight.w800, letterSpacing: -1.3)),
                 const SizedBox(height: 8),
                 Text(uiText(context, 'Encuentra el que encaja contigo.'),
-                  style: const TextStyle(color: marketMuted, fontSize: 14, height: 1.4)),
+                  style: const TextStyle(color: marketSurface, fontSize: 13, height: 1.4)),
               ]),
             ),
             Row(
@@ -1692,6 +1710,8 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+              ]),
+            ),
             const SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -1705,7 +1725,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 10),
             if (loadingCars)
-              const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: marketAccent)))
+              const MarketLoadingCard()
             else if (filtered.isNotEmpty)
               SizedBox(
                 height: 342,
@@ -1722,6 +1742,7 @@ class _HomePageState extends State<HomePage> {
                         price: euros(car.price),
                         details: '${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context, car.fuel)}',
                         version: car.version,
+                        photoCount: car.photoCount,
                         photo: car.photos.isEmpty ? null : car.photos.first,
                         favorite: SaveVehicleButton(car: car),
                         status: car.status == 'reserved' || car.status == 'sold' ? _VehicleStatusBadge(status: car.status) : null,
@@ -1736,6 +1757,14 @@ class _HomePageState extends State<HomePage> {
               Padding(padding: const EdgeInsets.symmetric(vertical: 28),
                 child: Text(AppLocalizations.of(context).noVehiclesFound,
                   textAlign: TextAlign.center, style: const TextStyle(color: marketMuted))),
+            const SizedBox(height: 24),
+            Text(uiText(context, 'Tu próxima búsqueda'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -.5)),
+            const SizedBox(height: 12),
+            MarketQuickLink(title: 'Tus búsquedas', subtitle: 'Recupera tus filtros guardados',
+              icon: Icons.bookmark_outline_rounded, onTap: _openSavedSearches),
+            const SizedBox(height: 10),
+            MarketQuickLink(title: 'Guardar esta búsqueda', subtitle: 'Vuelve a los coches que encajan contigo',
+              icon: Icons.saved_search_rounded, onTap: saveCurrentSearch),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
@@ -1810,14 +1839,14 @@ class _HomePageState extends State<HomePage> {
       label: Text(uiText(context, fuel)),
       selected: selected,
       onSelected: (_) => setState(() => selectedFuel = fuel),
-      selectedColor: marketInk,
-      backgroundColor: const Color(0xFFFFFFFF),
+      selectedColor: gold,
+      backgroundColor: marketHeroChip,
       labelStyle: TextStyle(
-        color: selected ? marketSurface : marketMuted,
+        color: selected ? marketInk : marketSurface,
         fontSize: 12,
         fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
       ),
-      side: BorderSide(color: selected ? marketInk : marketLine),
+      side: BorderSide(color: selected ? gold : marketHeroChip),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       showCheckmark: false,
     );
@@ -2074,7 +2103,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               return MarketVehicleCard(
                 title: '${car.brand} ${car.model}', price: euros(car.price),
                 details: '${car.year} · ${number(car.km)} km · ${uiText(context, car.fuel)}',
-                version: car.version, photo: car.photos.isEmpty ? null : car.photos.first,
+                version: car.version, photoCount: car.photoCount, photo: car.photos.isEmpty ? null : car.photos.first,
                 favorite: SaveVehicleButton(car: car),
                 comparison: Material(color: marketSurface, borderRadius: BorderRadius.circular(12),
                   child: IconButton(
@@ -2443,7 +2472,8 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
       onPressed: loading ? null : _toggle,
       icon: loading
           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent))
-          : Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isSaved ? Colors.redAccent : marketInk),
+          : AnimatedSwitcher(duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 180),
+              child: Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(isSaved), color: isSaved ? Colors.redAccent : marketInk)),
     ),
   );
 }
@@ -2665,6 +2695,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   int currentPhotoIndex = 0;
   late List<Uint8List> detailPhotos;
   late final Future<void> galleryReady;
+  late final Future<Map<String, dynamic>?> sellerProfile;
   late final PageController _photoController = PageController();
 
   @override
@@ -2678,7 +2709,26 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     super.initState();
     detailPhotos = List.of(car.photos);
     galleryReady = _loadGallery();
+    sellerProfile = _loadPublicSeller();
     _loadFavorite();
+  }
+
+  Future<Map<String, dynamic>?> _loadPublicSeller() async {
+    if (car.ownerId == null) return null;
+    try {
+      return await Supabase.instance.client.from('public_seller_profiles')
+        .select('full_name,business_name,city').eq('id', car.ownerId!).maybeSingle();
+    } catch (_) {
+      return null; // Keep the existing profile action available on network failure.
+    }
+  }
+
+  Future<void> _openSeller() async {
+    if (car.ownerId == null) return;
+    final loggedIn = await requireAutomotorsLogin(context);
+    if (!loggedIn || !mounted) return;
+    await Navigator.push<void>(context, MaterialPageRoute(
+      builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!)));
   }
 
   Future<void> _loadGallery() async {
@@ -3015,8 +3065,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     await galleryReady;
     if (!context.mounted || detailPhotos.isEmpty) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => FullScreenGalleryPage(
+      PageRouteBuilder<void>(
+        transitionDuration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 220),
+        reverseTransitionDuration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 160),
+        transitionsBuilder: (_, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, animation, secondaryAnimation) => FullScreenGalleryPage(
           photos: detailPhotos,
           initialIndex: initialIndex,
           title: '${car.brand} ${car.model}',
@@ -3168,7 +3221,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               onTap: () {
                 _photoController.animateToPage(
                   index,
-                  duration: const Duration(milliseconds: 240),
+                  duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 240),
                   curve: Curves.easeOut,
                 );
               },
@@ -3345,6 +3398,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ],
           ),
         ),
+        if (car.ownerId != null) ...[
+          const SizedBox(height: 16),
+          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller),
+        ],
         const SizedBox(height: 18),
          Text(
           uiText(context, "DATOS PRINCIPALES"),
@@ -3588,28 +3645,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ),
         const SizedBox(height: 22),
-        if (car.ownerId != null) ...[
-          OutlinedButton.icon(
-            onPressed: () async {
-              final loggedIn = await requireAutomotorsLogin(context);
-              if (!loggedIn || !context.mounted) return;
-              await Navigator.push<void>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!),
-                ),
-              );
-            },
-            icon: const Icon(Icons.account_circle_outlined, color: marketAccent),
-            label:  Text(uiText(context, "Ver perfil del vendedor")),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: marketAccent),
-              foregroundColor: marketInk,
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
 
       ],
     );
@@ -3735,7 +3770,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                       ],
                     )
                   else ...[
-                    _gallery(context, height: constraints.maxWidth < 500 ? 270 : 360),
+                    _gallery(context, height: constraints.maxWidth < 500 ? 310 : 390),
                     _photoThumbnails(),
                     _featureControl(),
                     const SizedBox(height: 20),
@@ -6202,13 +6237,15 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
   static const Color _bg = marketPaper;
   static const Color _panel = Color(0xFFFFFFFF);
 
+  bool get _usesSpanishAppStoreCatalog => kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
+
   String _storePrice(String productId) {
     for (final product in _purchaseService.products) {
       if (product.id != productId) continue;
-      // App Store Connect currently makes these subscriptions available only in Spain.
-      final price = storeDisplayPrice(product,
-        expectedCurrency: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? 'EUR' : null);
-      if (price == null) return uiText(context, 'Consultar precio en Apple');
+      final price = _usesSpanishAppStoreCatalog
+          ? spanishStoreDisplayPrice(product)
+          : storeDisplayPrice(product);
+      if (price == null) return uiText(context, 'Precio no disponible');
       final period = storeSubscriptionPeriod(product);
       final message = storePeriodMessage(product);
       if (period != null && message != null) {
@@ -6216,7 +6253,11 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       }
       return price;
     }
-    return uiText(context, 'Consultar tienda');
+    // Public Spanish catalog while StoreKit loads; checkout still requires a
+    // real store product, billing metadata, authentication and verification.
+    final configured = _usesSpanishAppStoreCatalog ? configuredSpanishSubscriptionPrice(productId) : null;
+    if (configured != null) return '$configured / ${uiText(context, "mes")}';
+    return uiText(context, 'Precio no disponible');
   }
 
   @override
@@ -6292,7 +6333,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
                     'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
                   }) : null,
               onSelect: StorePurchaseService.checkoutEnabled &&
-                      _purchaseService.products.any((product) => storePeriodMessage(product) != null && product.id == switch (pack.title) {
+                      _purchaseService.products.any((product) => storePeriodMessage(product) != null && (!_usesSpanishAppStoreCatalog || spanishStoreDisplayPrice(product) != null) && product.id == switch (pack.title) {
                         'PACK 10' => 'automotors_pack_10',
                         'PACK 15' => 'automotors_pack_15',
                         'PACK 20' => 'automotors_pack_20',

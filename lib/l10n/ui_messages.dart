@@ -1,5 +1,16 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  'Precio no disponible': ['Price unavailable', 'Preu no disponible'],
+
+  'BUSCA. COMPARA. DECIDE.': ['SEARCH. COMPARE. DECIDE.', 'CERCA. COMPARA. DECIDEIX.'],
+  'Tu próxima búsqueda': ['Your next search', 'La teva pròxima cerca'],
+  'Tus búsquedas': ['Your searches', 'Les teves cerques'],
+  'Recupera tus filtros guardados': ['Return to your saved filters', 'Recupera els teus filtres desats'],
+  'Vuelve a los coches que encajan contigo': ['Return to the cars that suit you', 'Torna als cotxes que encaixen amb tu'],
+  'Cargando vehículos…': ['Loading vehicles…', 'Carregant vehicles…'],
+  'VENDEDOR': ['SELLER', 'VENEDOR'],
+  '{0} fotos': ['{0} photos', '{0} fotos'],
+
   'Un coche.\nMil posibilidades.': ['One car.\nEndless possibilities.', 'Un cotxe.\nMil possibilitats.'],
 
   'Opcional': ['Optional', 'Opcional'],

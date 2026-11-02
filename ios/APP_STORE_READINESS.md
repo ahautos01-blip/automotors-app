@@ -245,3 +245,25 @@ MarketVehicleCard unifica la presentación del inicio y catálogo: fotografía g
 Validación: 98 pruebas Flutter correctas. Las nuevas verifican contraste mínimo 4.5:1 en texto y acciones principales, y las tres acciones independientes de tarjeta a 320 px con texto normal y ampliado al 150%. Las pruebas de filtros, contacto y formulario usan ahora el tema real. Compilación web de producción correcta; revisión visual con catálogo real en modo de solo lectura de inicio, catálogo, ficha y galería ampliada a 390x844. Las compras, sus importes de Apple, validación del servidor, permisos y moderación no se modifican. Sigue pendiente comprobar físicamente la discrepancia de metadatos USD frente a EUR. La compilación firmada y disponibilidad de 1.0.1 (18) se registrarán tras verificarse en Apple.
 
 El 2/11/2026 Codemagic compiló, firmó y subió 1.0.1 (18) desde 153ae0554d58669ec78b1a7bb5117346e96104f1: https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae8e307e83a9019991c6ce3. El log confirma Build Number 18, IPA 27.5 MB y UPLOAD SUCCEEDED with no errors a las 19:29:08 UTC (20:29:08 Madrid). Apple procesó 171a2249-0fd9-4d3d-a4ee-fcddfd3129d7. Tras la autorización expresa del titular para esta build, se guardó Ninguno de los algoritmos mencionados anteriormente. Se añadió solo al grupo interno AUTOMOTORS Sandbox, y la página del grupo confirma 1.0.1 (18) En pruebas, caducidad de 90 días. La build está disponible en TestFlight. La asignación automática anterior de Codemagic había fallado por información de exportación pendiente; la asignación en Apple quedó completada sin reenviar el binario. La revisión pública de App Store y las pruebas físicas siguen pendientes.
+
+
+## Build 19: composición, vendedor y precios EUR
+
+El titular pidió aplicar el acabado completo y sustituir Consultar precio en Apple por importes en euros. El inicio integra titular, buscador y combustible en una superficie editorial; las tarjetas compactan modelo y precio en una fila cuando hay espacio y conservan disposición vertical con texto ampliado. Añaden contador de fotografías, entrada suave y favorito animado. Las animaciones respetan Reducir movimiento. La carga muestra un esqueleto estático accesible, sin actividad inventada.
+
+El inicio ofrece Tus búsquedas y Guardar esta búsqueda utilizando las funciones existentes. Se restauran todos los filtros del registro, sin cambiar preferencias de notificación. El diálogo valida nombre no vacío, permite cancelar y conserva su controlador hasta terminar la salida. La ficha amplía la galería y añade una transición al abrir fotografías; el vendedor queda junto al resumen de compra. Solo lee full_name, business_name y city de public_seller_profiles, la misma vista pública existente; un fallo conserva el acceso al perfil sin inventar identidad ni distintivos de verificación. Se confirmó con el catálogo real que el nombre y localidad públicos se muestran. Sin migraciones ni cambios de permisos.
+
+### Tarifas de España verificadas el 2/11/2026
+
+Se consultaron las cuatro páginas de producto de App Store Connect, grupo 22517049, app 6827315199. Cada producto tiene duración de un mes y disponibilidad de un único país, España; el filtro de países disponibles muestra España (EUR):
+
+| Producto | ID Apple | Precio mensual España |
+| --- | --- | --- |
+| automotors_pack_10 | 6827338470 | 59,00 EUR |
+| automotors_pack_15 | 6827338063 | 75,00 EUR |
+| automotors_pack_20 | 6827337711 | 99,00 EUR |
+| automotors_pro_monthly_199 | 6827335055 | 199,00 EUR |
+
+Las tarjetas iOS y web conservan el precio EUR coherente de StoreKit si está disponible. Para un SKU conocido cuyo período de StoreKit es un mes pero la moneda o formato es incoherente, muestran la tarifa española comprobada de forma independiente. Mientras carga el catálogo, pueden mostrar esa tarifa mensual pública, pero el botón de compra exige producto y período reales. Un producto desconocido o un período contradictorio no recibe un importe supuesto y queda sin contratación con ese comportamiento alternativo. No se cambian los objetos de compra, monedas recibidas, recibos ni verificación del servidor; no hay conversión de dólares ni sustitución de símbolos. Android conserva el catálogo de su tienda. Actualizar la instantánea de precios al cambiar tarifas de España o territorios. El origen de los metadatos USD de Sandbox sigue sin diagnosticarse; la corrección es de presentación de las tarifas españolas.
+
+Validación del lote: 112 pruebas Flutter correctas, incluidas las cuatro tarifas, prioridad de EUR válido, SKU desconocido, período incompatible, formato dólar con código EUR, resumen del vendedor y fallos de lectura, movimiento reducido y cierre/cancelación del diálogo. Compilación web de producción correcta y revisión visual de inicio completo y planes a 390x844: se muestran 59,00, 75,00, 99,00 y 199,00 EUR por mes. Sin compras, denuncias ni búsquedas reales creadas en estas comprobaciones. Compilación/firma y disponibilidad de 1.0.1 (19) en TestFlight pendientes de verificar.

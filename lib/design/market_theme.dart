@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 const marketPaper = Color(0xFFFAF9F6);
 const marketSurface = Color(0xFFFFFFFF);
+const marketHeroChip = Color(0xFF343C39);
 const marketInk = Color(0xFF1D2423);
 const marketMuted = Color(0xFF69706B);
 const marketLine = Color(0xFFE4E5DF);

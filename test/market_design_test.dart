@@ -14,6 +14,11 @@ void main() {
     () {
       final theme = automotorsMarketTheme();
       expect(theme.brightness, Brightness.light);
+      expect(marketHeroChip.a, 1);
+      expect(
+        contrast(marketSurface, marketHeroChip),
+        greaterThanOrEqualTo(4.5),
+      );
       expect(contrast(marketInk, marketPaper), greaterThanOrEqualTo(4.5));
       expect(contrast(marketMuted, marketSurface), greaterThanOrEqualTo(4.5));
       expect(contrast(marketAccent, marketSurface), greaterThanOrEqualTo(4.5));
