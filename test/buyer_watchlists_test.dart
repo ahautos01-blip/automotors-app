@@ -33,6 +33,9 @@ Widget app(Widget page, {double scale = 1, String lang = 'es'}) => MaterialApp(
 );
 void main() {
   final patches = <http.Request>[];
+  final savedSearches = <Map<String, dynamic>>[];
+  bool multipleFavorites = false;
+  const secondListing = "44444444-4444-4444-8444-444444444444";
   bool fail = false;
   bool reviewAlert = false;
   bool missing = false;
@@ -133,6 +136,11 @@ void main() {
           }
           return http.Response('[]', 200, headers: headers, request: r);
         }
+        if (r.method == 'POST' &&
+            r.url.path.endsWith('saved_vehicle_searches')) {
+          savedSearches.add(Map<String, dynamic>.from(jsonDecode(r.body)));
+          return http.Response('', 201, request: r);
+        }
         Object rows = [];
         if (r.url.path.endsWith('saved_vehicles')) {
           rows = [
@@ -141,6 +149,12 @@ void main() {
               'reference_price': 20000,
               'notify_price_drops': false,
             },
+            if (multipleFavorites)
+              {
+                'listing_id': secondListing,
+                'reference_price': 13000,
+                'notify_price_drops': false,
+              },
           ];
         }
         if (r.url.path.endsWith('saved_vehicle_searches')) {
@@ -155,7 +169,20 @@ void main() {
           ];
         }
         if (r.url.path.endsWith('vehicle_listings')) {
-          rows = missing ? [] : [raw];
+          rows = missing
+              ? []
+              : [
+                  raw,
+                  if (multipleFavorites)
+                    {
+                      ...raw,
+                      'id': secondListing,
+                      'price': 12000,
+                      'year': 2022,
+                      'vehicle_brands': {'name': 'SEAT'},
+                      'vehicle_models': {'name': 'Ibiza'},
+                    },
+                ];
         }
         if (r.url.path.endsWith('vehicle_search_alerts')) {
           rows = [
@@ -184,6 +211,8 @@ void main() {
   tearDownAll(() async => Supabase.instance.dispose());
   setUp(() {
     patches.clear();
+    savedSearches.clear();
+    multipleFavorites = false;
     reviewAlert = false;
     fail = false;
     missing = false;
@@ -205,6 +234,8 @@ void main() {
                   price: 18000,
                   referencePrice: 20000,
                   watching: false,
+                  comparing: true,
+                  onCompare: () {},
                   onOpen: () {},
                   onRemove: () {},
                   onWatch: (_) {},
@@ -328,4 +359,88 @@ void main() {
     expect(fail, false);
     expect(jsonDecode(patches.single.body).keys, ['read_at']);
   });
+  testWidgets(
+    'catalog saves its active shortcuts and text without invented power/year constraints',
+    (t) async {
+      await t.pumpWidget(
+        app(
+          AllVehiclesPage(
+            cars: const [
+              Car(
+                brand: 'Volkswagen',
+                model: 'Touran',
+                year: 2021,
+                km: 40000,
+                price: 18000,
+                fuel: 'Diésel',
+                transmission: 'Automático (DSG)',
+                bodyType: 'SUV',
+                description: '',
+                phone: '',
+              ),
+            ],
+            onOpenCar: (_) {},
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(FilterChip, 'Automático'));
+      await t.pumpAndSettle();
+      await t.tap(find.widgetWithText(FilterChip, 'SUV'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(TextField), 'VW automatico');
+      await t.tap(find.byTooltip('Guardar búsqueda'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('market-search-name')), 'Mi DSG');
+      await t.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await t.pumpAndSettle();
+      expect(savedSearches, hasLength(1));
+      final row = savedSearches.single;
+      expect(row['user_id'], uid);
+      expect(row['name'], 'Mi DSG');
+      final criteria = row['criteria'] as Map;
+      expect(criteria['query'], 'VW automatico');
+      expect(criteria['transmission'], 'Automático');
+      expect(criteria['body_type'], 'SUV');
+      expect(criteria['max_price'], 200000);
+      expect(criteria.containsKey('min_cv'), false);
+      expect(criteria.containsKey('min_year'), false);
+      expect(t.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'favorites sort by current price and compare the selected listings',
+    (t) async {
+      multipleFavorites = true;
+      await t.pumpWidget(
+        app(SavedVehiclesPage(cars: const [], onOpenCar: (_) {})),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const Key('favorite-sort')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Precio: menor a mayor').last);
+      await t.pumpAndSettle();
+      expect(
+        t
+            .widgetList<MarketFavoriteCard>(find.byType(MarketFavoriteCard))
+            .first
+            .title,
+        'SEAT Ibiza',
+      );
+      final buttons = find.widgetWithText(OutlinedButton, 'Comparar');
+      await t.ensureVisible(buttons.first);
+      await t.pumpAndSettle();
+      await t.tap(buttons.first);
+      await t.pumpAndSettle();
+      await t.ensureVisible(buttons.last);
+      await t.pumpAndSettle();
+      await t.tap(buttons.last);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Comparar 2 vehículos'));
+      await t.pumpAndSettle();
+      expect(find.text('Comparar vehículos'), findsOneWidget);
+      expect(find.text('SEAT Ibiza'), findsWidgets);
+      expect(t.takeException(), isNull);
+    },
+  );
 }

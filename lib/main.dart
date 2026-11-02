@@ -1896,6 +1896,70 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   String sortOrder = 'featured';
   final Set<String> _comparisonIds = <String>{};
 
+  bool savingSearch = false;
+  Map<String, dynamic> get catalogCriteria => {
+    'query': search.text.trim(),
+    'brand': brand,
+    'model': model,
+    'fuel': fuel,
+    'transmission': transmission,
+    'body_type': bodyType,
+    'min_price': minPrice,
+    'max_price': maxPrice,
+    'min_km': minKm,
+    'max_km': maxKm,
+    if (minCv != 0 || maxCv != 1000) ...{'min_cv': minCv, 'max_cv': maxCv},
+    if (minYear != 1990 || maxYear != DateTime.now().year + 1) ...{
+      'min_year': minYear,
+      'max_year': maxYear,
+    },
+  };
+  Future<void> saveCatalogSearch() async {
+    if (savingSearch) return;
+    final criteria = Map<String, dynamic>.from(catalogCriteria);
+    final db = Supabase.instance.client;
+    if (db.auth.currentUser == null) {
+      if (!await requireAutomotorsLogin(context) || !mounted) return;
+    }
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) return;
+    final suggested = [
+      if (brand != 'Todas') brand,
+      if (model != 'Todos') model,
+      if (search.text.trim().isNotEmpty) search.text.trim(),
+    ].join(' ');
+    setState(() => savingSearch = true);
+    try {
+      final name = await promptMarketSavedSearchName(context, suggested);
+      if (name == null || !mounted || db.auth.currentUser?.id != uid) return;
+      await db.from('saved_vehicle_searches').insert({
+        'user_id': uid,
+        'name': name,
+        'criteria': criteria,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(uiText(context, 'Búsqueda guardada en tu cuenta.')),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              uiText(
+                context,
+                'No se pudo guardar la búsqueda. Inténtalo de nuevo.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => savingSearch = false);
+    }
+  }
   void _toggleCompare(Car car) {
     final id = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
     setState(() {
@@ -1978,8 +2042,9 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
       backgroundColor: const Color(0xFFFAF9F6),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFFFFF),
-        title: Text(AppLocalizations.of(context).viewVehicles, style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context).viewVehicles, maxLines:1,overflow:TextOverflow.ellipsis,style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
+          IconButton(tooltip:uiText(context,'Guardar búsqueda'),onPressed:savingSearch ? null : saveCatalogSearch,icon:const Icon(Icons.bookmark_add_outlined,color:marketAccent)),
           if (_comparisonIds.isNotEmpty)
             Center(child: Padding(
               padding: const EdgeInsets.only(right: 4),
@@ -2837,6 +2902,50 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   List<Map<String, dynamic>> favorites = [];
   Map<String, Car> cars = {};
   final busy = <String>{};
+  String favoriteSort = 'recent';
+  final selectedFavorites = <String>{};
+  List<Map<String, dynamic>> get orderedFavorites {
+    final rows = List<Map<String, dynamic>>.from(favorites);
+    if (favoriteSort == 'recent') return rows;
+    final positions = {
+      for (var i = 0; i < favorites.length; i++)
+        favorites[i]['listing_id'].toString(): i,
+    };
+    rows.sort((a, b) {
+      final aId = a['listing_id'].toString(), bId = b['listing_id'].toString();
+      final ca = cars[aId], cb = cars[bId];
+      final aMissing =
+          ca == null ||
+          (favoriteSort == 'price_asc' ? ca.price <= 0 : ca.year <= 0);
+      final bMissing =
+          cb == null ||
+          (favoriteSort == 'price_asc' ? cb.price <= 0 : cb.year <= 0);
+      if (aMissing != bMissing) return aMissing ? 1 : -1;
+      final difference = aMissing
+          ? 0
+          : favoriteSort == 'price_asc'
+          ? ca.price.compareTo(cb!.price)
+          : cb!.year.compareTo(ca.year);
+      return difference != 0
+          ? difference
+          : positions[aId]!.compareTo(positions[bId]!);
+    });
+    return rows;
+  }
+
+  void toggleFavoriteComparison(String id) {
+    setState(() {
+      if (selectedFavorites.contains(id)) {
+        selectedFavorites.remove(id);
+      } else if (selectedFavorites.length < 3) {
+        selectedFavorites.add(id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).comparisonLimit)),
+        );
+      }
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -2872,6 +2981,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
       setState(() {
         favorites = records;
         cars = {for (final car in fresh) car.listingId!: car};
+        selectedFavorites.removeWhere((id)=>!cars.containsKey(id) || !['published','reserved'].contains(cars[id]!.status));
         loading = false;
       });
     } catch (_) {
@@ -2915,7 +3025,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
       }
       if (mounted && db.auth.currentUser?.id == uid) {
         setState(() {
-          if (remove) favorites.remove(item);
+          if (remove) {favorites.remove(item);selectedFavorites.remove(id);}
         });
       }
     } catch (_) {
@@ -2948,12 +3058,23 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
         ),
       ],
     ),
+    bottomNavigationBar:selectedFavorites.length<2 ? null : SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:FilledButton.icon(
+      onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>VehicleComparisonPage(cars:selectedFavorites.map((id)=>cars[id]!).toList(),onOpenCar:widget.onOpenCar))),
+      icon:const Icon(Icons.compare_arrows_rounded),label:Text(AppLocalizations.of(context).compareVehicles(selectedFavorites.length)),
+    ))),
     body: RefreshIndicator(
       onRefresh: loadFavorites,
       child: ListView(
         padding: const EdgeInsets.all(16),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          if(!loading && error==null && favorites.isNotEmpty) ...[
+            DropdownButtonFormField<String>(key:const Key('favorite-sort'),initialValue:favoriteSort,isExpanded:true,decoration:InputDecoration(labelText:uiText(context,'Ordenar favoritos')),
+              items:[DropdownMenuItem(value:'recent',child:Text(uiText(context,'Guardados más recientes'))),DropdownMenuItem(value:'price_asc',child:Text(AppLocalizations.of(context).priceLowHigh)),DropdownMenuItem(value:'year_desc',child:Text(AppLocalizations.of(context).newestFirst))],
+              onChanged:(value)=>setState(()=>favoriteSort=value??'recent')),
+            const SizedBox(height:12),
+          ],
+
           if (loading)
             const Padding(
               padding: EdgeInsets.all(60),
@@ -2973,7 +3094,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
               ),
             )
           else
-            ...favorites.map((item) {
+            ...orderedFavorites.map((item) {
               final id = item['listing_id'].toString();
               final car = cars[id];
               return Padding(
@@ -2988,6 +3109,8 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
                   price: car?.price ?? 0,
                   referencePrice: item['reference_price'] as num?,
                   photo: car?.photos.firstOrNull,
+                  comparing:selectedFavorites.contains(id),
+                  onCompare:car!=null && ['published','reserved'].contains(car.status) ? ()=>toggleFavoriteComparison(id) : null,
                   watching: item['notify_price_drops'] == true,
                   busy: busy.contains(id),
                   available:
@@ -3057,7 +3180,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     if (car.ownerId == null) return null;
     try {
       return await Supabase.instance.client.from('public_seller_profiles')
-        .select('full_name,business_name,city').eq('id', car.ownerId!).maybeSingle();
+        .select('full_name,business_name,city,profile_photo_path').eq('id', car.ownerId!).maybeSingle();
     } catch (_) {
       return null; // Keep the existing profile action available on network failure.
     }
@@ -3740,7 +3863,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ),
         if (car.ownerId != null) ...[
           const SizedBox(height: 16),
-          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller),
+          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller, photoUrlForPath: (path) => Supabase.instance.client.storage.from('profile-photos').getPublicUrl(path)),
         ],
         const SizedBox(height: 18),
          Text(

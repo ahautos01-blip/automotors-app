@@ -131,10 +131,12 @@ class MarketQuickLink extends StatelessWidget {
 class MarketSellerSummary extends StatelessWidget {
   final Future<Map<String, dynamic>?> profile;
   final VoidCallback onOpen;
+  final String Function(String path)? photoUrlForPath;
   const MarketSellerSummary({
     super.key,
     required this.profile,
     required this.onOpen,
+    this.photoUrlForPath,
   });
   @override
   Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>?>(
@@ -145,6 +147,12 @@ class MarketSellerSummary extends StatelessWidget {
       final person = row?['full_name']?.toString().trim() ?? '';
       final name = business.isNotEmpty ? business : person;
       final city = row?['city']?.toString().trim() ?? '';
+      final path = row?['profile_photo_path']?.toString().trim() ?? '';
+      final photoUrl = path.isEmpty ? null : photoUrlForPath?.call(path);
+      final placeholder = Icon(
+        business.isNotEmpty ? Icons.storefront_outlined : Icons.person_outline,
+        color: marketAccent,
+      );
       return Material(
         color: marketSurface,
         borderRadius: BorderRadius.circular(18),
@@ -155,13 +163,28 @@ class MarketSellerSummary extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: marketTint,
-                  foregroundColor: marketAccent,
-                  child: Icon(
-                    business.isNotEmpty
-                        ? Icons.storefront_outlined
-                        : Icons.person_outline,
+                ClipOval(
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: ColoredBox(
+                      color: marketTint,
+                      child: photoUrl == null
+                          ? Center(child: placeholder)
+                          : Image.network(
+                              photoUrl,
+                              key: const Key('seller-summary-photo'),
+                              semanticLabel: uiText(
+                                context,
+                                'Foto del vendedor',
+                              ),
+                              fit: BoxFit.cover,
+                              cacheWidth: 144,
+                              cacheHeight: 144,
+                              errorBuilder: (_, error, stack) =>
+                                  Center(child: placeholder),
+                            ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

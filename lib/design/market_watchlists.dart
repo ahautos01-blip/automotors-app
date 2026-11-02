@@ -46,7 +46,8 @@ class MarketFavoriteCard extends StatelessWidget {
   final num price;
   final num? referencePrice;
   final Uint8List? photo;
-  final bool watching, busy, available;
+  final bool watching, busy, available, comparing;
+  final VoidCallback? onCompare;
   final VoidCallback onOpen, onRemove;
   final ValueChanged<bool> onWatch;
   const MarketFavoriteCard({
@@ -59,6 +60,8 @@ class MarketFavoriteCard extends StatelessWidget {
     required this.watching,
     this.busy = false,
     this.available = true,
+    this.comparing = false,
+    this.onCompare,
     required this.onOpen,
     required this.onRemove,
     required this.onWatch,
@@ -165,6 +168,24 @@ class MarketFavoriteCard extends StatelessWidget {
               ),
             ),
           ),
+          if (onCompare != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: OutlinedButton.icon(
+                onPressed: onCompare,
+                icon: Icon(
+                  comparing
+                      ? Icons.check_circle_rounded
+                      : Icons.compare_arrows_rounded,
+                ),
+                label: Text(
+                  uiText(
+                    context,
+                    comparing ? 'Seleccionado para comparar' : 'Comparar',
+                  ),
+                ),
+              ),
+            ),
           if (available)
             SwitchListTile.adaptive(
               title: Text(uiText(context, 'Avisarme si baja')),

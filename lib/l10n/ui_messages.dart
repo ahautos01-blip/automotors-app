@@ -1,5 +1,11 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Comparar": ["Compare", "Comparar"],
+  "Foto del vendedor": ["Seller photo", "Foto del venedor"],
+  "Ordenar favoritos": ["Sort favourites", "Ordenar preferits"],
+  "Guardados más recientes": ["Recently saved", "Desats més recents"],
+  "Seleccionado para comparar": ["Selected for comparison", "Seleccionat per comparar"],
+
   "El comprador recibirá una invitación para valorar la compra. El aviso en el iPhone requiere tener las notificaciones activadas.": ["The buyer will receive an invitation to review the purchase. iPhone alerts require notifications to be enabled.", "El comprador rebrà una invitació per valorar la compra. L’avís a l’iPhone requereix tenir les notificacions activades."],
   "Ver búsquedas": ["View searches", "Veure cerques"],
   "Sigue los coches que te interesan": ["Follow the cars you like", "Segueix els cotxes que t’interessen"],

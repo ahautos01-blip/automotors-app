@@ -48,6 +48,66 @@ void main() {
   );
 
   testWidgets(
+    'seller summary requests its public profile photo and handles failed images',
+    (tester) async {
+      String? resolved;
+      await tester.pumpWidget(
+        app(
+          MarketSellerSummary(
+            profile: Future.value({
+              'full_name': 'Vendedor',
+              'profile_photo_path': ' seller/avatar.jpg ',
+            }),
+            photoUrlForPath: (path) {
+              resolved = path;
+              return 'https://example.test/profile-photos/$path';
+            },
+            onOpen: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(resolved, 'seller/avatar.jpg');
+      final image = tester.widget<Image>(
+        find.byKey(const Key('seller-summary-photo')),
+      );
+      expect(
+        (image.image as ResizeImage).imageProvider,
+        isA<NetworkImage>().having(
+          (i) => i.url,
+          'url',
+          'https://example.test/profile-photos/seller/avatar.jpg',
+        ),
+      );
+      expect(image.fit, BoxFit.cover);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('missing seller photo does not request a storage URL', (
+    tester,
+  ) async {
+    var requests = 0;
+    await tester.pumpWidget(
+      app(
+        MarketSellerSummary(
+          profile: Future.value({
+            'full_name': 'Vendedor',
+            'profile_photo_path': ' ',
+          }),
+          photoUrlForPath: (path) {
+            requests++;
+            return path;
+          },
+          onOpen: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(requests, 0);
+    expect(find.byKey(const Key('seller-summary-photo')), findsNothing);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+  });
+  testWidgets(
     'missing or failed public profile keeps the profile action usable',
     (tester) async {
       final result = Completer<Map<String, dynamic>?>();
