@@ -209,3 +209,8 @@ La discrepancia de PRO persiste tras reabrir la app, según el titular. Se añad
 Las pruebas de interfaz de denuncia usan únicamente cuentas, anuncios y respuestas HTTP ficticios; no crean denuncias reales. Se verifican motivos y envío en es/en/ca a 320x568 y cancelación en ambas etapas. Se añade una comprobación de monedas que rechaza presentar 179 USD como tarifa EUR y conserva 199 EUR. La versión preparada es 1.0.1 (16); la distribución se confirma por separado.
 
 Validación local del lote 16: 88 pruebas Flutter correctas y compilación web JavaScript de producción correcta. No se han creado denuncias reales ni cambiado tarifas de Apple durante estas comprobaciones.
+
+
+Codemagic compiló, firmó y subió 1.0.1 (16), commit 0e686d146655986ebdab57d11d76517af0794fca. El registro confirma Version code 16 y UPLOAD SUCCEEDED with no errors a las 23:02:09 UTC del 1/11/2026 (00:02:09 del 2/11 en Madrid), delivery/build UUID 5f6caf4a-97f7-4ab5-83cb-0c42e3058e99: https://codemagic.io/app/6adfc9610f69aaef96f68807/build/6ae7c3ddefa74786046fe8b3.
+
+El titular autorizó expresamente guardar para la build 16 «Ninguno de los algoritmos mencionados anteriormente». La revisión automática bloqueó el acceso al navegador por límite de uso. Al retomarlo el 2/11 exigió nueva autorización explícita para acceder a Apple, que el titular concedió. El acceso quedó permitido, pero la sesión de Apple había caducado; se abrió el formulario para que el titular inicie sesión. Aún no se ha guardado la declaración de la build 16 ni confirmado la asignación/estado En pruebas. No afirmar disponibilidad hasta verificarlo en Apple.
