@@ -51,7 +51,7 @@ class _ModerationEntryState extends State<ModerationEntry> {
       if (snapshot.data != true) return const SizedBox.shrink();
       return ListTile(
         leading: const Icon(Icons.shield_outlined),
-        title: Text(uiText(context, 'Moderación')),
+        title: Text(uiText(context, 'Administración')),
         subtitle: Text(
           uiText(context, 'Revisar denuncias de anuncios y conversaciones'),
         ),
@@ -132,7 +132,7 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(uiText(context, 'Moderación')),
+      title: Text(uiText(context, 'Administración')),
       actions: [
         IconButton(
           tooltip: uiText(context, 'Actualizar denuncias'),

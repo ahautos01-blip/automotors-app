@@ -1,3 +1,5 @@
+import 'package:app_links/app_links.dart';
+import 'services/email_confirmation_service.dart';
 import 'design/market_watchlists.dart';
 import 'design/market_comparison.dart';
 import 'design/market_search.dart';
@@ -35,6 +37,8 @@ import 'package:automotors_base/sold_reviews_features.dart';
 import 'package:automotors_base/vehicle_feature_control.dart';
 import 'package:automotors_base/services/ios_push_service.dart';
 
+const automotorsSupabaseUrl=String.fromEnvironment('SUPABASE_URL',defaultValue:'https://ndicdhlpbyywqyjgxpnx.supabase.co');
+const automotorsSupabaseKey=String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY',defaultValue:'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu');
 const gold = marketGold;
 const black = marketPaper;
 const panel = marketSurface;
@@ -333,14 +337,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: const String.fromEnvironment(
-      'SUPABASE_URL',
-      defaultValue: 'https://ndicdhlpbyywqyjgxpnx.supabase.co',
-    ),
-    publishableKey: const String.fromEnvironment(
-      'SUPABASE_PUBLISHABLE_KEY',
-      defaultValue: 'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu',
-    ),
+    url: automotorsSupabaseUrl,
+    publishableKey: automotorsSupabaseKey,
+    authOptions: const FlutterAuthClientOptions(detectSessionInUriPredicate:automaticallyHandleAuthUri),
   );
 
   await AutomotorsLocaleController.instance.load();
@@ -399,7 +398,14 @@ Future<bool> requireAutomotorsLogin(BuildContext context) async {
 }
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? initialMessage, initialEmail;
+  final bool initialMessageIsError;
+  const LoginPage({
+    super.key,
+    this.initialMessage,
+    this.initialEmail,
+    this.initialMessageIsError = false,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -414,6 +420,65 @@ class _LoginPageState extends State<LoginPage> {
   bool hidePassword = true;
   String? message;
   bool messageIsError = false;
+  bool showVerificationResend = false;
+  DateTime? lastVerificationResend;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text = widget.initialEmail ?? '';
+    message = widget.initialMessage;
+    messageIsError = widget.initialMessageIsError;
+    showVerificationResend = widget.initialMessageIsError;
+  }
+
+  String? get verificationRedirect =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+      ? emailConfirmationRedirect
+      : null;
+
+  Future<void> resendVerification() async {
+    if (loading) return;
+    final email = emailController.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() {
+        message = 'Introduce un correo válido';
+        messageIsError = true;
+      });
+      return;
+    }
+    if (lastVerificationResend != null &&
+        DateTime.now().difference(lastVerificationResend!) <
+            const Duration(seconds: 60)) {
+      setState(() {
+        message = 'Espera un minuto antes de solicitar otro correo.';
+        messageIsError = false;
+      });
+      return;
+    }
+    setState(() => loading = true);
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: verificationRedirect,
+      );
+      lastVerificationResend = DateTime.now();
+      if (mounted)
+        setState(() {
+          message = 'Si la cuenta está pendiente de verificar, recibirás un nuevo correo.';
+          messageIsError = false;
+        });
+    } catch (_) {
+      if (mounted)
+        setState(() {
+          message = 'No se pudo reenviar el correo. Comprueba la conexión e inténtalo de nuevo.';
+          messageIsError = true;
+        });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -433,13 +498,21 @@ class _LoginPageState extends State<LoginPage> {
       final email = emailController.text.trim();
       final password = passwordController.text;
       if (creatingAccount) {
-        final response = await auth.signUp(email: email, password: password);
+        final response = await auth.signUp(
+          email: email,
+          password: password,
+          emailRedirectTo: verificationRedirect,
+        );
+        if (!mounted) return;
         if (response.session != null) {
           if (mounted) Navigator.pop(context, true);
           return;
         }
         setState(() {
-          message = 'Cuenta creada. Revisa tu correo y confirma la dirección; después vuelve aquí para iniciar sesión.';
+          message = verificationRedirect == null
+              ? 'Cuenta creada. Revisa tu correo y confirma la dirección; después vuelve aquí para iniciar sesión.'
+              : 'Cuenta creada. Abre el correo en este iPhone y pulsa el enlace para verificar tu cuenta y volver a AUTOMOTORS.';
+          showVerificationResend = true;
           messageIsError = false;
           creatingAccount = false;
         });
@@ -452,6 +525,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         setState(() {
           message = error.message;
+          showVerificationResend = error.code == 'email_not_confirmed';
           messageIsError = true;
         });
       }
@@ -470,7 +544,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title:  Text(uiText(context, "Cuenta AUTOMOTORS"))),
+      appBar: AppBar(title: Text(uiText(context, "Cuenta AUTOMOTORS"))),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -483,20 +557,43 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const AutomotorsBrandMark(size: 112),
                   const SizedBox(height: 12),
-                   Text(uiText(context, "AUTOMOTORS"), textAlign: TextAlign.center,
-                    style: TextStyle(color: marketAccent, fontSize: 26, fontWeight: FontWeight.bold)),
+                  Text(
+                    uiText(context, "AUTOMOTORS"),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: marketAccent,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(creatingAccount ? uiText(context, "Crea tu cuenta para publicar y contactar.") : uiText(context, "Inicia sesión para publicar y contactar."),
-                    textAlign: TextAlign.center),
+                  Text(
+                    creatingAccount
+                        ? uiText(
+                            context,
+                            "Crea tu cuenta para publicar y contactar.",
+                          )
+                        : uiText(
+                            context,
+                            "Inicia sesión para publicar y contactar.",
+                          ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
-                    decoration:  InputDecoration(labelText: uiText(context, "Correo electrónico"), prefixIcon: Icon(Icons.email_outlined)),
+                    decoration: InputDecoration(
+                      labelText: uiText(context, "Correo electrónico"),
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
                     validator: (value) {
                       final text = value?.trim() ?? '';
-                      if (text.isEmpty || !text.contains('@') || !text.contains('.')) return uiText(context, 'Introduce un correo válido');
+                      if (text.isEmpty ||
+                          !text.contains('@') ||
+                          !text.contains('.'))
+                        return uiText(context, 'Introduce un correo válido');
                       return null;
                     },
                   ),
@@ -504,44 +601,123 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: passwordController,
                     obscureText: hidePassword,
-                    autofillHints: creatingAccount ? const [AutofillHints.newPassword] : const [AutofillHints.password],
+                    autofillHints: creatingAccount
+                        ? const [AutofillHints.newPassword]
+                        : const [AutofillHints.password],
                     decoration: InputDecoration(
                       labelText: uiText(context, "Contraseña"),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        onPressed: () => setState(() => hidePassword = !hidePassword),
-                        icon: Icon(hidePassword ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () =>
+                            setState(() => hidePassword = !hidePassword),
+                        icon: Icon(
+                          hidePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
                       ),
                     ),
                     validator: (value) {
                       final text = value ?? '';
-                      if (text.length < 6) return uiText(context, 'La contraseña debe tener al menos 6 caracteres');
+                      if (text.length < 6)
+                        return uiText(
+                          context,
+                          'La contraseña debe tener al menos 6 caracteres',
+                        );
                       return null;
                     },
                   ),
                   if (message != null) ...[
                     const SizedBox(height: 14),
-                    Text(uiText(context, message!), style: TextStyle(color: messageIsError ? Colors.redAccent : gold)),
+                    Semantics(
+                      liveRegion: true,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: marketTint,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              messageIsError
+                                  ? Icons.info_outline
+                                  : Icons.check_circle_outline,
+                              color: messageIsError
+                                  ? Colors.red.shade800
+                                  : marketInk,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                uiText(context, message!),
+                                style: TextStyle(
+                                  color: messageIsError
+                                      ? Colors.red.shade800
+                                      : marketInk,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 20),
                   FilledButton(
                     onPressed: loading ? null : submit,
-                    style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: gold,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: loading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(creatingAccount ? uiText(context, "Crear cuenta") : uiText(context, "Iniciar sesión")),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            creatingAccount
+                                ? uiText(context, "Crear cuenta")
+                                : uiText(context, "Iniciar sesión"),
+                          ),
                   ),
                   TextButton(
-                    onPressed: loading ? null : () => setState(() {
-                      creatingAccount = !creatingAccount;
-                      message = null;
-                    }),
-                    child: Text(creatingAccount ? uiText(context, "Ya tengo una cuenta · Iniciar sesión") : uiText(context, "¿No tienes cuenta? Crear cuenta")),
+                    onPressed: loading
+                        ? null
+                        : () => setState(() {
+                            creatingAccount = !creatingAccount;
+                            message = null;
+                          }),
+                    child: Text(
+                      creatingAccount
+                          ? uiText(
+                              context,
+                              "Ya tengo una cuenta · Iniciar sesión",
+                            )
+                          : uiText(context, "¿No tienes cuenta? Crear cuenta"),
+                    ),
                   ),
+                  if (showVerificationResend)
+                    TextButton(
+                      onPressed: loading ? null : resendVerification,
+                      child: Text(
+                        uiText(context, 'Reenviar correo de verificación'),
+                      ),
+                    ),
                   const SupportLinks(),
                   const SizedBox(height: 8),
-                   Text(uiText(context, "Puedes seguir viendo los anuncios sin registrarte."), textAlign: TextAlign.center,
-                    style: TextStyle(color: marketMuted, fontSize: 12)),
+                  Text(
+                    uiText(
+                      context,
+                      "Puedes seguir viendo los anuncios sin registrarte.",
+                    ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: marketMuted, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -551,6 +727,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
 
 class Car {
   final String brand;
@@ -965,16 +1142,69 @@ class AutomotorsApp extends StatefulWidget {
 }
 
 class _AutomotorsAppState extends State<AutomotorsApp> {
+  StreamSubscription<Uri>? confirmationSubscription;
+  final confirmationLinks = AppLinks();
+  late final EmailConfirmationHandler confirmationHandler =
+      EmailConfirmationHandler(
+        verify: (code) => exchangeEmailConfirmation(
+          code,
+          () => SupabaseClient(
+            automotorsSupabaseUrl,
+            automotorsSupabaseKey,
+            authOptions: AuthClientOptions(
+              autoRefreshToken: false,
+              pkceAsyncStorage: SharedPreferencesGotrueAsyncStorage(),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> openConfirmation(Uri uri) async {
+    final result = await confirmationHandler.handle(uri);
+    if (result == null || !mounted) return;
+    final navigator = automotorsNavigatorKey.currentState;
+    if (navigator == null) return;
+    unawaited(
+      navigator.pushAndRemoveUntil<bool>(
+        MaterialPageRoute(
+          builder: (_) => LoginPage(
+            initialMessage: result.message,
+            initialEmail: result.email,
+            initialMessageIsError: !result.verified,
+          ),
+        ),
+        (route) => route.isFirst,
+      ),
+    );
+  }
+
+  Future<void> startConfirmationLinks() async {
+    if (!mounted || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return;
+    confirmationSubscription = confirmationLinks.uriLinkStream.listen(
+      (uri) => unawaited(openConfirmation(uri)),
+      onError: (_) {},
+    );
+    try {
+      final initial = await confirmationLinks.getInitialLink();
+      if (initial != null && mounted) await openConfirmation(initial);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     AutomotorsLocaleController.instance.addListener(_refreshLocale);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(startConfirmationLinks()),
+    );
   }
 
   void _refreshLocale() => setState(() {});
 
   @override
   void dispose() {
+    unawaited(confirmationSubscription?.cancel());
     AutomotorsLocaleController.instance.removeListener(_refreshLocale);
     super.dispose();
   }
@@ -3185,6 +3415,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   late List<Uint8List> detailPhotos;
   late final Future<void> galleryReady;
   late final Future<Map<String, dynamic>?> sellerProfile;
+  late Future<int?> listingFavoriteCount;
   late final PageController _photoController = PageController();
 
   @override
@@ -3199,7 +3430,16 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     detailPhotos = List.of(car.photos);
     galleryReady = _loadGallery();
     sellerProfile = _loadPublicSeller();
+    listingFavoriteCount = _loadListingFavoriteCount();
     _loadFavorite();
+  }
+
+  Future<int?> _loadListingFavoriteCount() async {
+    if(car.listingId==null)return null;
+    try {
+      final value=await Supabase.instance.client.rpc('listing_favorite_count',params:{'p_listing_id':car.listingId});
+      return value is num && value>=0 ? value.toInt() : null;
+    } catch (_) {return null;}
   }
 
   Future<Map<String, dynamic>?> _loadPublicSeller() async {
@@ -3266,7 +3506,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         });
       }
       if (mounted) {
-        setState(() => isFavorite = !isFavorite);
+        setState(() {isFavorite = !isFavorite; listingFavoriteCount=_loadListingFavoriteCount();});
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(isFavorite ? uiText(context, "Vehículo guardado en favoritos.") : uiText(context, "Vehículo eliminado de favoritos.")),
         ));
@@ -3888,6 +4128,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ],
         ),
       ),
+      if(car.listingId!=null) Padding(padding:const EdgeInsets.only(top:10),child:FutureBuilder<int?>(future:listingFavoriteCount,builder:(context,snapshot)=>Row(children:[
+        const Icon(Icons.favorite_border_rounded,size:17,color:marketMuted),const SizedBox(width:6),
+        Flexible(child:Text(snapshot.connectionState==ConnectionState.waiting ? uiText(context,'Cargando favoritos…') : snapshot.data==null ? uiText(context,'Favoritos no disponibles') : snapshot.data==1 ? uiText(context,'1 favorito') : uiText(context,'{0} favoritos',[snapshot.data]),style:const TextStyle(color:marketMuted,fontSize:13))),
+      ]))),
     ],
   );
 
@@ -4615,6 +4859,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       foregroundColor: marketAccent,
       automaticallyImplyLeading: true,
       title: null,
+      actions:[if(isOwnProfile) PopupMenuButton<String>(
+        key:const Key('own-account-menu'),tooltip:uiText(context,'Configuración de cuenta'),icon:const Icon(Icons.settings_outlined),
+        onSelected:(value)=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>value=='delete' ? const DeleteAccountPage() : const ProfilePage())),
+        itemBuilder:(context)=>[
+          PopupMenuItem(value:'profile',child:Text(uiText(context,'Mi perfil'))),
+          PopupMenuItem(value:'delete',child:Text(uiText(context,'Eliminar mi cuenta'))),
+        ],
+      )],
       centerTitle: false,
     ),
     body: FutureBuilder<Map<String, dynamic>>(
@@ -4759,6 +5011,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                       ),
                     ),
                   ),
+                  const ModerationEntry(),
+                  const AccountDeletionEntry(),
                 ],
                 if (supabase.auth.currentUser?.id != widget.ownerId) ...[
                 const SizedBox(height: 17),
@@ -5841,6 +6095,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
               ),
             ),
+            const ModerationEntry(),
+            const AccountDeletionEntry(),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,

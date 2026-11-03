@@ -350,3 +350,16 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Binario: commit `18d1973eb877024ff188568336b576c1838b3d43`; Codemagic `6aea516ba87b4d255fde493d`; Apple build `dc78bbb5-c762-4723-8af8-47c8f0ef9aee`.
 - Flutter-check y postgres-and-edge de GitHub aprobados. iOS de GitHub cancelado; Codemagic compiló, firmó y subió correctamente. Asignación automática bloqueada pendiente de cifrado y completada manualmente tras guardarlo. Sin envío a revisión pública.
 - Este registro solo cambia documentación y no requiere otro binario.
+
+
+## Build 26 preparada: verificación, cuenta y favoritos
+
+- Registro/reenvío nativo iOS: retorno exacto `com.automotors.automotorsbase://auth/verify-email`, registrado en Info.plist. App Links recibe arranque en frío/en caliente; Flutter no procesa el enlace como una ruta normal.
+- Se mantiene PKCE: el callback se canjea con el verificador local en un cliente efímero y solo confirma éxito si Supabase devuelve email confirmado. No persiste ni sustituye la sesión activa; revoca la sesión efímera y muestra Login con «Cuenta verificada. Ya puedes iniciar sesión.» y el correo validado. Errores y códigos caducados muestran recuperación/reenvío; no se acepta un parámetro `verified=true` ni tokens implícitos. Enlace repetido se procesa una sola vez.
+- El SDK conserva su manejo habitual de otros callbacks de autenticación. No se ha desactivado la confirmación de email ni debilitado PKCE.
+- Accesos a Eliminar mi cuenta y Administración añadidos al perfil propio y a Mis datos. El menú de ajustes permite abrir eliminación incluso si falla la carga del perfil. No se elimina nada al abrir: se conserva la confirmación ya implementada.
+- `abdelmounimtg94@gmail.com`: identidad existente y correo confirmado comprobados. is_admin activado con petición explícita; ya tenía rol privado de moderación. El cliente no decide permisos por el correo; el acceso interno depende del RPC autorizado en servidor.
+- Contador de favoritos en la ficha vía `listing_favorite_count`, solo un total agregado para anuncios visibles o propios. Respeta ocultaciones/moderación/cuenta activa; filas e identidades de quienes guardan permanecen bajo RLS. Reconsulta tras guardar/quitar, sin inventar cero ante un error.
+- Verificación: 159 pruebas de suite completa, 41 focalizadas (incluidas las nuevas entradas y total para visitantes), 4 UI de confirmación ES/EN/CA y 6 de validación PKCE aprobadas. Prueba PGlite del agregado aprobada: anon, propietario, no propietario, borrador, oculto, moderación, inexistente y cuenta inactiva, sin acceso a usuarios que guardan.
+- Pendientes: desplegar el agregado y permitir el callback exacto en Supabase; compilar y distribuir iOS 26. El enlace real correo→iPhone requiere comprobarlo físicamente tras instalar la nueva build.
+- Bloqueo para registro público: Supabase usa SMTP de pruebas (solo destinatarios del equipo). El usuario no tiene dominio/proveedor; elección de dominio/correo profesional o Gmail provisional pendiente. No se han comprado servicios ni enviado correos de prueba reales.

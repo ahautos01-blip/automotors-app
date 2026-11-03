@@ -17,6 +17,18 @@ Widget localized(String code, Widget page) => MaterialApp(
 );
 
 void main() {
+  testWidgets(
+    'visible account deletion entry opens the confirmation screen without deleting',
+    (tester) async {
+      await tester.pumpWidget(
+        localized('es', const Scaffold(body: AccountDeletionEntry())),
+      );
+      await tester.tap(find.byKey(const Key('account-deletion-entry')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DeleteAccountPage), findsOneWidget);
+      expect(find.byKey(const Key('confirm-account-deletion')), findsNothing);
+    },
+  );
   test('billing period comes from StoreKit, not product name or currency', () {
     final product = AppStoreProduct2Details.fromSK2Product(
       SK2Product(
@@ -58,13 +70,30 @@ void main() {
     expect(storeSubscriptionPeriod(unknown), isNull);
     expect(storePeriodMessage(unknown), isNull);
   });
-  test('a mismatched market currency never becomes a fabricated euro price', () {
-    final dollars = ProductDetails(id:'pro', title:'PRO', description:'', price:r'$179.00', rawPrice:179, currencyCode:'USD');
-    final euros = ProductDetails(id:'pro', title:'PRO', description:'', price:'199,00 €', rawPrice:199, currencyCode:'EUR');
-    expect(storeDisplayPrice(dollars, expectedCurrency:'EUR'), isNull);
-    expect(storeDisplayPrice(euros, expectedCurrency:'EUR'), '199,00 €');
-    expect(storeDisplayPrice(dollars), r'$179.00');
-  });
+  test(
+    'a mismatched market currency never becomes a fabricated euro price',
+    () {
+      final dollars = ProductDetails(
+        id: 'pro',
+        title: 'PRO',
+        description: '',
+        price: r'$179.00',
+        rawPrice: 179,
+        currencyCode: 'USD',
+      );
+      final euros = ProductDetails(
+        id: 'pro',
+        title: 'PRO',
+        description: '',
+        price: '199,00 €',
+        rawPrice: 199,
+        currencyCode: 'EUR',
+      );
+      expect(storeDisplayPrice(dollars, expectedCurrency: 'EUR'), isNull);
+      expect(storeDisplayPrice(euros, expectedCurrency: 'EUR'), '199,00 €');
+      expect(storeDisplayPrice(dollars), r'$179.00');
+    },
+  );
   for (final language in ['es', 'en', 'ca']) {
     String tr(String source) => translateUiMessage(source, language);
     testWidgets('support and privacy work without sign-in in $language', (

@@ -1,5 +1,18 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Configuración de cuenta": ["Account settings", "Configuració del compte"],
+  "Administración": ["Administration", "Administració"],
+  "Cargando favoritos…": ["Loading favourites…", "Carregant preferits…"],
+  "Favoritos no disponibles": ["Favourites unavailable", "Preferits no disponibles"],
+  "1 favorito": ["1 favourite", "1 preferit"],
+  "{0} favoritos": ["{0} favourites", "{0} preferits"],
+  "Cuenta verificada. Ya puedes iniciar sesión.": ["Account verified. You can now sign in.", "Compte verificat. Ja pots iniciar sessió."],
+  "No se pudo validar este enlace. Si ya confirmaste el correo, inicia sesión. Si ha caducado, solicita uno nuevo desde este iPhone.": ["This link could not be validated. If you already confirmed your email, sign in. If it expired, request a new one from this iPhone.", "No s’ha pogut validar aquest enllaç. Si ja has confirmat el correu, inicia sessió. Si ha caducat, sol·licita’n un de nou des d’aquest iPhone."],
+  "Cuenta creada. Abre el correo en este iPhone y pulsa el enlace para verificar tu cuenta y volver a AUTOMOTORS.": ["Account created. Open the email on this iPhone and tap the link to verify your account and return to AUTOMOTORS.", "Compte creat. Obre el correu en aquest iPhone i prem l’enllaç per verificar el compte i tornar a AUTOMOTORS."],
+  "Reenviar correo de verificación": ["Resend verification email", "Reenviar el correu de verificació"],
+  "Espera un minuto antes de solicitar otro correo.": ["Wait a minute before requesting another email.", "Espera un minut abans de sol·licitar un altre correu."],
+  "Si la cuenta está pendiente de verificar, recibirás un nuevo correo.": ["If the account is awaiting verification, you will receive another email.", "Si el compte està pendent de verificar, rebràs un nou correu."],
+  "No se pudo reenviar el correo. Comprueba la conexión e inténtalo de nuevo.": ["The email could not be resent. Check your connection and try again.", "No s’ha pogut reenviar el correu. Comprova la connexió i torna-ho a provar."],
   "Etiqueta medioambiental {0}": ["Environmental label {0}", "Etiqueta ambiental {0}"],
   "Publicar": ["Sell", "Publicar"],
   "Guarda los coches que te gustan y compáralos aquí.": ["Save the cars you like and compare them here.", "Desa els cotxes que t’agraden i compara’ls aquí."],

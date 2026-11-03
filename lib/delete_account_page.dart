@@ -160,3 +160,18 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
     ),
   );
 }
+
+class AccountDeletionEntry extends StatelessWidget {
+  const AccountDeletionEntry({super.key});
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: const Key('account-deletion-entry'),
+    leading: Icon(Icons.delete_forever_outlined, color: Colors.red.shade800),
+    title: Text(uiText(context, 'Eliminar mi cuenta')),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () => Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const DeleteAccountPage()),
+    ),
+  );
+}

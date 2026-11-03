@@ -142,8 +142,24 @@ void main() {
       localized('es', Scaffold(body: ModerationEntry(service: service))),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Moderación'), findsNothing);
+    expect(find.text('Administración'), findsNothing);
     expect(calls, ['community_moderation_access']);
+  });
+  testWidgets('administration entry opens only after server authorization', (
+    tester,
+  ) async {
+    final service = CommunityModerationService(
+      request: (name, args) async =>
+          name == 'community_moderation_access' ? true : [],
+    );
+    await tester.pumpWidget(
+      localized('es', Scaffold(body: ModerationEntry(service: service))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Administración'), findsOneWidget);
+    await tester.tap(find.text('Administración'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CommunityModerationPage), findsOneWidget);
   });
   for (final language in ['es', 'en', 'ca']) {
     String tr(String source) => translateUiMessage(source, language);

@@ -29,10 +29,11 @@ void main() {
       url: 'https://example.supabase.co',
       publishableKey: 'test-key',
       httpClient: MockClient(
-        (_) async => http.Response(
-          '[]',
+        (r) async => http.Response(
+          r.url.path.endsWith('/rpc/listing_favorite_count') ? '7' : '[]',
           200,
           headers: {'content-type': 'application/json'},
+          request: r,
         ),
       ),
       authOptions: const FlutterAuthClientOptions(autoRefreshToken: false),
@@ -40,6 +41,28 @@ void main() {
     );
   });
   tearDownAll(() async => Supabase.instance.dispose());
+  testWidgets('guest sees total favorites from aggregate RPC', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('es'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: CarDetailsPage(
+          car: Car.fromListing({
+            ...listing(false, false),
+            'id': 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          }),
+          priceText: '20.000 €',
+          onContact: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('7 favoritos'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   test('absent visibility flags never expose stored identifiers', () {
     final row = listing(true, true)
       ..remove('show_matricula_publicly')
