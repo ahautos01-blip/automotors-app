@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (25)** en el grupo interno AUTOMOTORS Sandbox. La siguiente entrega se prepara como build 27; la build 26 queda sin asignar.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (27)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -369,3 +369,12 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Revisión final: todo enlace con el esquema propio queda fuera del procesamiento automático del SDK, incluidos hosts/rutas/puertos/userinfo alterados. Solo el handler estricto valida la confirmación. Prueba adicional cubre estas variantes para evitar cambios inesperados de sesión.
 - Build 26 (`6aea61c2a87b4d255fde4ec7`) compilada y subida, sin activar: sustituida por la corrección de enrutado de la build 27. La autorización recibida para 26 no se aplica a otro número de build.
 - El usuario eligió Gmail provisional como SMTP; configuración y contraseña de aplicación pendientes de completar de forma privada.
+
+## Activación de la build 27 y Gmail provisional
+
+- Apple confirma 1.0.1 (27) «En pruebas» en AUTOMOTORS Sandbox, grupo interno de 2 testers; caduca en 90 días. Declaración de cifrado guardada tras autorización expresa para 27. No se ha enviado a revisión pública.
+- Binario: commit `5b0ec25d88ccca151e0c6e576377bece496dfe36`; Codemagic `6aea6622a87b4d255fde5019`; Apple build `677e1271-1e89-4981-a34c-a0b46f4f98e1`.
+- La build 26 sigue sin asignarse. Las 11 pruebas finales de callbacks y UI pasan, incluida la exclusión de todas las variantes del esquema propio del manejo automático del SDK.
+- El usuario guardó privadamente la contraseña de aplicación de Gmail. Comprobación posterior en una página nueva: SMTP activado, host smtp.gmail.com y puerto 587 persistidos. No se leyó la contraseña ni se enviaron correos de prueba.
+- Gmail es provisional. Pendiente comprobar físicamente recepción de correo y retorno a Login en el mismo iPhone con la build 27 instalada; no se considera validado el envío por haber guardado la configuración.
+- Este registro cambia únicamente documentación y no requiere otro binario.
