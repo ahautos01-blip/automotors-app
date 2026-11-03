@@ -1,5 +1,6 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Etiqueta medioambiental {0}": ["Environmental label {0}", "Etiqueta ambiental {0}"],
   "Publicar": ["Sell", "Publicar"],
   "Guarda los coches que te gustan y compáralos aquí.": ["Save the cars you like and compare them here.", "Desa els cotxes que t’agraden i compara’ls aquí."],
   "Explorar vehículos": ["Explore cars", "Explorar vehicles"],

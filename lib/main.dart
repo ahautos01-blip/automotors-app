@@ -197,32 +197,116 @@ class EnvironmentalSticker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = (label ?? '').trim().toUpperCase();
-    if (!['CERO', 'ECO', 'C', 'B'].contains(value)) return const SizedBox.shrink();
-    final base = value == 'CERO' ? const Color(0xFF168FD0)
-        : value == 'ECO' ? const Color(0xFF78C900)
-        : value == 'C' ? const Color(0xFF63B900) : const Color(0xFFFFD400);
-    return SizedBox(width: size, height: size, child: DecoratedBox(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: base,
-        border: Border.all(color: marketInk, width: size * .025),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(1, 2))]),
-      child: ClipOval(child: Stack(children: [
-        Positioned(left: size*.07, top: size*.12, child: Container(
-          width: size*.13, height: size*.42, color: marketInk,
-          child: Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(11, (_) => Container(height: size*.012, color: Colors.black))))),
-        Positioned(right: size*.13, top: size*.16, child: _StickerQr(size: size*.23)),
-        Center(child: Padding(padding: EdgeInsets.only(left:size*.1,right:size*.18,top:size*.02),
-          child: Text(value == 'CERO' ? '0' : value, style: TextStyle(color: Colors.black,
-            fontSize:size*(value == 'CERO' ? .48 : .43),fontWeight:FontWeight.w700,height:1)))),
-        Positioned(left:size*.24,right:size*.22,bottom:size*.15,child:Container(
-          height:size*.14,color:const Color(0xFFBFC0C0),alignment:Alignment.center,
-          child:Text(uiText(context, "DGT"),style:TextStyle(color:Colors.black,fontWeight:FontWeight.w700,
-            fontStyle:FontStyle.italic,fontSize:size*.13)))),
-        Positioned(left:size*.1,right:size*.1,bottom:size*.045,child:Container(height:size*.025,color:marketMuted)),
-      ])),
-    ));
+    if (!['CERO', 'ECO', 'C', 'B'].contains(value))
+      return const SizedBox.shrink();
+    final base = value == 'CERO'
+        ? const Color(0xFF168FD0)
+        : value == 'ECO'
+        ? const Color(0xFF78C900)
+        : value == 'C'
+        ? const Color(0xFF63B900)
+        : const Color(0xFFFFD400);
+    return Semantics(
+      label: uiText(context, 'Etiqueta medioambiental {0}', [value]),
+      image: true,
+      child: ExcludeSemantics(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: DecoratedBox(
+              key: const Key('environmental-sticker-disc'),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: base,
+                border: Border.all(color: marketInk, width: size * .025),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black45,
+                    blurRadius: 5,
+                    offset: Offset(1, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: size * .07,
+                      top: size * .12,
+                      child: Container(
+                        width: size * .13,
+                        height: size * .42,
+                        color: marketInk,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(
+                            11,
+                            (_) => Container(
+                              height: size * .012,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: size * .13,
+                      top: size * .16,
+                      child: _StickerQr(size: size * .23),
+                    ),
+                    Positioned(
+                      left:size*(value=='ECO' ? .23 : .20),
+                      right:size*(value=='ECO' ? .12 : .28),
+                      top:size*(value=='ECO' ? .40 : .24),
+                      height:size*(value=='ECO' ? .27 : .44),
+                      child:FittedBox(fit:BoxFit.scaleDown,child:Text(
+                        value=='CERO' ? '0' : value,
+                        textScaler:TextScaler.noScaling,maxLines:1,softWrap:false,
+                        style:TextStyle(color:Colors.black,fontSize:size*.43,fontWeight:FontWeight.w700,height:1),
+                      )),
+                    ),
+                    Positioned(
+                      left: size * .24,
+                      right: size * .22,
+                      bottom: size * .15,
+                      child: Container(
+                        height: size * .14,
+                        color: const Color(0xFFBFC0C0),
+                        alignment: Alignment.center,
+                        child: Text(
+                          "DGT",
+                          textScaler: TextScaler.noScaling,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700,
+                            fontStyle: FontStyle.italic,
+                            fontSize: size * .13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: size * .1,
+                      right: size * .1,
+                      bottom: size * .045,
+                      child: Container(height: size * .025, color: marketMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
+
 class _StickerQr extends StatelessWidget {
   final double size;
   const _StickerQr({required this.size});
@@ -3964,7 +4048,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           _technicalSectionLabel(uiText(context, "Emisiones")),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 54),
+            child: EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 72),
           ),
         ],
         if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true || car.showVinPublicly && car.vin?.trim().isNotEmpty == true) ...[

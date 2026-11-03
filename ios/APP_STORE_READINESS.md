@@ -339,3 +339,11 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Binario: commit `3576a926210330ce1cd83a225fea72b03ed80775`; Codemagic `6aea356ea87b4d255fde3fd1`; Apple build `6a426204-6db6-485b-a0e9-86649df11cb9`.
 - Codemagic compiló, firmó y subió la app correctamente. La asignación automática de grupo falló por faltar el cifrado; se completó manualmente tras guardarlo. GitHub flutter-check y postgres-and-edge aprobados; job iOS de GitHub cancelado, compilación nativa de Codemagic correcta. Sin envío a revisión pública.
 - Este registro posterior solo cambia documentación y no requiere volver a generar el binario.
+
+
+## Build 25 preparada: etiqueta en Emisiones
+
+- Causa: la columna estirada de Ficha técnica imponía todo el ancho al SizedBox de la etiqueta y separaba los elementos del círculo.
+- Corrección: alineación que libera el ancho del dibujo y conserva un disco cuadrado; tamaño de Emisiones aumentado a 72 px. Texto gráfico independiente del escalado de interfaz, letras acotadas sin salto de línea y zona ECO separada del QR/barra decorativos. Etiqueta accesible con nombre de categoría.
+- Verificación: 15 pruebas focalizadas de etiqueta y ficha aprobadas; tras ajustar la posición de ECO, 8 pruebas de C/B/ECO/CERO con texto al 100/200 % aprobadas. Disco de 72 × 72 bajo columna de ancho completo, sin desbordamientos. Captura de componente con fuentes reales revisada.
+- Estado: build iOS y activación de TestFlight pendientes.
