@@ -22,6 +22,17 @@ class MemoryVerifier extends GotrueAsyncStorage {
 }
 
 void main() {
+  test('altered app callback paths never reach automatic authentication', () {
+    for (final link in [
+      'com.automotors.automotorsbase://auth/wrong?code=valid-code',
+      'com.automotors.automotorsbase://attacker/verify-email?code=valid-code',
+      'com.automotors.automotorsbase://user@auth/verify-email?code=valid-code',
+      'com.automotors.automotorsbase://auth:123/verify-email?code=valid-code',
+    ]) {
+      expect(automaticallyHandleAuthUri(Uri.parse(link)), isFalse);
+    }
+  });
+
   test('only exact native confirmation callbacks are accepted and not auto signed in', () {
     final valid = Uri.parse('$emailConfirmationRedirect?code=once');
     expect(isEmailConfirmationUri(valid), isTrue);

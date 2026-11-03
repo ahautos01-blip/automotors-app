@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (13)** en el grupo interno AUTOMOTORS Sandbox. Los cambios de preparación de App Store posteriores a la build 13 todavía no se han distribuido en una nueva build.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (25)** en el grupo interno AUTOMOTORS Sandbox. La siguiente entrega se prepara como build 27; la build 26 queda sin asignar.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -352,7 +352,7 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Este registro solo cambia documentación y no requiere otro binario.
 
 
-## Build 26 preparada: verificación, cuenta y favoritos
+## Build 27 preparada: verificación, cuenta y favoritos (sustituye a 26)
 
 - Registro/reenvío nativo iOS: retorno exacto `com.automotors.automotorsbase://auth/verify-email`, registrado en Info.plist. App Links recibe arranque en frío/en caliente; Flutter no procesa el enlace como una ruta normal.
 - Se mantiene PKCE: el callback se canjea con el verificador local en un cliente efímero y solo confirma éxito si Supabase devuelve email confirmado. No persiste ni sustituye la sesión activa; revoca la sesión efímera y muestra Login con «Cuenta verificada. Ya puedes iniciar sesión.» y el correo validado. Errores y códigos caducados muestran recuperación/reenvío; no se acepta un parámetro `verified=true` ni tokens implícitos. Enlace repetido se procesa una sola vez.
@@ -363,5 +363,9 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Verificación: 159 pruebas de suite completa, 41 focalizadas (incluidas las nuevas entradas y total para visitantes), 4 UI de confirmación ES/EN/CA y 6 de validación PKCE aprobadas. Prueba PGlite del agregado aprobada: anon, propietario, no propietario, borrador, oculto, moderación, inexistente y cuenta inactiva, sin acceso a usuarios que guardan.
 - Agregado desplegado y verificado por API pública: total actual 2 y lectura de usuarios que guardan denegada. Entrada pública SECURITY INVOKER y función privada privilegiada con los mismos controles de visibilidad; advisors sin avisos nuevos de funciones expuestas. Se conservan avisos anteriores de tablas privadas sin políticas y protección de contraseñas filtradas desactivada (https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Callback exacto guardado en Redirect URLs de Supabase, sin comodines. Plantilla de confirmación estándar confirmada. Configuración nativa plist analizada correctamente.
-- Pendientes: compilar y distribuir iOS 26. El enlace real correo→iPhone requiere comprobarlo físicamente tras instalar la nueva build.
+- Pendientes: compilar y distribuir iOS 27. El enlace real correo→iPhone requiere comprobarlo físicamente tras instalar la nueva build.
 - Bloqueo para registro público: Supabase usa SMTP de pruebas (solo destinatarios del equipo). El usuario no tiene dominio/proveedor; elección de dominio/correo profesional o Gmail provisional pendiente. No se han comprado servicios ni enviado correos de prueba reales.
+
+- Revisión final: todo enlace con el esquema propio queda fuera del procesamiento automático del SDK, incluidos hosts/rutas/puertos/userinfo alterados. Solo el handler estricto valida la confirmación. Prueba adicional cubre estas variantes para evitar cambios inesperados de sesión.
+- Build 26 (`6aea61c2a87b4d255fde4ec7`) compilada y subida, sin activar: sustituida por la corrección de enrutado de la build 27. La autorización recibida para 26 no se aplica a otro número de build.
+- El usuario eligió Gmail provisional como SMTP; configuración y contraseña de aplicación pendientes de completar de forma privada.

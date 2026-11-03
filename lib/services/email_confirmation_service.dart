@@ -13,7 +13,9 @@ bool isEmailConfirmationUri(Uri uri) =>
 /// Own confirmation callbacks use an isolated PKCE exchange, not the active session.
 /// Preserve the SDK's normal detection for other auth flows.
 bool automaticallyHandleAuthUri(Uri uri) {
-  if (isEmailConfirmationUri(uri)) return false;
+  // Own-scheme links are exclusively routed by our strict confirmation handler.
+  // Invalid paths/hosts must never fall back to the SDK and replace a session.
+  if (uri.scheme == 'com.automotors.automotorsbase') return false;
   try {
     final params = {
       ...uri.queryParameters,
