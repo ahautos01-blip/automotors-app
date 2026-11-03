@@ -346,4 +346,7 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Causa: la columna estirada de Ficha técnica imponía todo el ancho al SizedBox de la etiqueta y separaba los elementos del círculo.
 - Corrección: alineación que libera el ancho del dibujo y conserva un disco cuadrado; tamaño de Emisiones aumentado a 72 px. Texto gráfico independiente del escalado de interfaz, letras acotadas sin salto de línea y zona ECO separada del QR/barra decorativos. Etiqueta accesible con nombre de categoría.
 - Verificación: 15 pruebas focalizadas de etiqueta y ficha aprobadas; tras ajustar la posición de ECO, 8 pruebas de C/B/ECO/CERO con texto al 100/200 % aprobadas. Disco de 72 × 72 bajo columna de ancho completo, sin desbordamientos. Captura de componente con fuentes reales revisada.
-- Estado: build iOS y activación de TestFlight pendientes.
+- Estado confirmado: **AUTOMOTORS 1.0.1 (25), En pruebas**, grupo interno **AUTOMOTORS Sandbox**, 2 testers, caduca en 90 días. Cifrado guardado con la respuesta expresamente autorizada «Ninguno de los algoritmos mencionados anteriormente».
+- Binario: commit `18d1973eb877024ff188568336b576c1838b3d43`; Codemagic `6aea516ba87b4d255fde493d`; Apple build `dc78bbb5-c762-4723-8af8-47c8f0ef9aee`.
+- Flutter-check y postgres-and-edge de GitHub aprobados. iOS de GitHub cancelado; Codemagic compiló, firmó y subió correctamente. Asignación automática bloqueada pendiente de cifrado y completada manualmente tras guardarlo. Sin envío a revisión pública.
+- Este registro solo cambia documentación y no requiere otro binario.
