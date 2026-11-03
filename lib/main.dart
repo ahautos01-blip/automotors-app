@@ -4861,7 +4861,11 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       title: null,
       actions:[if(isOwnProfile) PopupMenuButton<String>(
         key:const Key('own-account-menu'),tooltip:uiText(context,'Configuración de cuenta'),icon:const Icon(Icons.settings_outlined),
-        onSelected:(value)=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>value=='delete' ? const DeleteAccountPage() : const ProfilePage())),
+        onSelected:(value) async {
+          await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>value=='delete' ? const DeleteAccountPage() : const ProfilePage()));
+          if (!mounted) return;
+          setState(() => dataFuture = loadSeller());
+        },
         itemBuilder:(context)=>[
           PopupMenuItem(value:'profile',child:Text(uiText(context,'Mi perfil'))),
           PopupMenuItem(value:'delete',child:Text(uiText(context,'Eliminar mi cuenta'))),
@@ -4991,28 +4995,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await Navigator.push<void>(context, MaterialPageRoute(
-                          builder: (_) => const ProfilePage(),
-                        ));
-                        if (!mounted) return;
-                        setState(() => dataFuture = loadSeller());
-                      },
-                      icon: const Icon(Icons.manage_accounts_outlined),
-                      label:  Text(uiText(context, "Mis datos y editar perfil")),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: marketAccent,
-                        side: const BorderSide(color: marketAccent),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                      ),
-                    ),
-                  ),
                   const ModerationEntry(),
-                  const AccountDeletionEntry(),
                 ],
                 if (supabase.auth.currentUser?.id != widget.ownerId) ...[
                 const SizedBox(height: 17),
