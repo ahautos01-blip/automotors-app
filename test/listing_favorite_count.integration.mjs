@@ -25,6 +25,9 @@ insert into public.vehicle_listings values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
 insert into public.saved_vehicles values('11111111-1111-4111-8111-111111111111','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),('22222222-2222-4222-8222-222222222222','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),('33333333-3333-4333-8333-333333333333','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/20261103221235_listing_favorite_count.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261103223010_isolate_favorite_count_privilege.sql',import.meta.url),'utf8'));
+await db.exec('grant usage on schema private to anon,authenticated');
+assert.equal((await db.query("select prosecdef from pg_proc where oid='public.listing_favorite_count(uuid)'::regprocedure")).rows[0].prosecdef,false);
 const visible='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',draft='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 async function role(name,uid='') {await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid]);await db.exec('set role '+name);}
 const count=async(id)=>(await db.query('select public.listing_favorite_count($1::uuid) as n',[id])).rows[0].n;

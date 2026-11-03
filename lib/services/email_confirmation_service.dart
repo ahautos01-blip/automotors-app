@@ -83,7 +83,9 @@ Future<String?> exchangeEmailConfirmation(
 ) async {
   final client = createClient();
   try {
-    final response = await client.auth.exchangeCodeForSession(code);
+    final response = await client.auth
+        .exchangeCodeForSession(code)
+        .timeout(const Duration(seconds: 20));
     final user = response.session.user;
     if (user.emailConfirmedAt == null ||
         response.redirectType == 'passwordRecovery')
@@ -93,7 +95,9 @@ Future<String?> exchangeEmailConfirmation(
   } finally {
     try {
       if (client.auth.currentSession != null)
-        await client.auth.signOut(scope: SignOutScope.local);
+        await client.auth
+            .signOut(scope: SignOutScope.local)
+            .timeout(const Duration(seconds: 5));
     } catch (_) {
       /* No session is persisted if temporary revocation is offline. */
     }
