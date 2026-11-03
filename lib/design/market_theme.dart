@@ -139,6 +139,14 @@ ThemeData automotorsMarketTheme() => ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(foregroundColor: marketAccent),
   ),
+  tabBarTheme: const TabBarThemeData(
+    labelColor: marketInk,
+    unselectedLabelColor: marketMuted,
+    indicatorColor: marketAccent,
+    labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    dividerColor: marketLine,
+  ),
   navigationBarTheme: NavigationBarThemeData(
     backgroundColor: marketSurface,
     indicatorColor: marketTint,

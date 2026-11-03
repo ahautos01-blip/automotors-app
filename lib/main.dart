@@ -1670,7 +1670,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Icon(Icons.tune_rounded, color: marketAccent),
+                        Semantics(label: AppLocalizations.of(context).filters, child: const Icon(Icons.tune_rounded, color: marketInk)),
                         if (activeFilterCount > 0)
                           Positioned(
                             right: -9, top: -9,
@@ -1687,24 +1687,6 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 13),
-            SizedBox(
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _fuelChip('Todos'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Diésel'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Gasolina'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Híbrido'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Eléctrico'),
-                ],
-              ),
             ),
               ]),
             ),
@@ -1732,19 +1714,17 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             if (loadingCars)
               const MarketLoadingCard()
             else if (filtered.isNotEmpty) ...[
-              SizedBox(height: MediaQuery.textScalerOf(context).scale(1)>1.2 ? 470 : 390,child:MarketVehicleCard(
+              Align(alignment:Alignment.centerLeft,child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:540),child:SizedBox(height: (MediaQuery.sizeOf(context).width-32).clamp(288,540)*.75+185*MediaQuery.textScalerOf(context).scale(1),child:MarketVehicleCard(
                 title:'${filtered.first.brand} ${filtered.first.model}',price:euros(filtered.first.price),details:'${filtered.first.year} · ${_formatCompactKm(filtered.first.km)} · ${uiText(context,filtered.first.fuel)}',
                 version:filtered.first.version,photoCount:filtered.first.photoCount,photo:filtered.first.photos.firstOrNull,favorite:SaveVehicleButton(car:filtered.first),
                 status:filtered.first.status=='reserved' ? _VehicleStatusBadge(status:filtered.first.status) : null,onTap:()=>openCarDetails(filtered.first),
-              )),
+              )))),
               for(final car in filtered.skip(1).take(3)) Padding(padding:const EdgeInsets.only(top:12),child:MarketEditorialCarRow(
                 title:'${car.brand} ${car.model}',price:euros(car.price),details:'${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context,car.fuel)}',version:car.version,photo:car.photos.firstOrNull,favorite:SaveVehicleButton(car:car),status:car.status=='reserved' ? _VehicleStatusBadge(status:car.status) : null,onTap:()=>openCarDetails(car),
               )),
             ],
             if (!loadingCars && filtered.isEmpty)
-              Padding(padding: const EdgeInsets.symmetric(vertical: 28),
-                child: Text(AppLocalizations.of(context).noVehiclesFound,
-                  textAlign: TextAlign.center, style: const TextStyle(color: marketMuted))),
+              MarketEmptyState(icon:Icons.search_off_rounded,title:AppLocalizations.of(context).noVehiclesFound,message:'Prueba otra marca o ajusta los filtros para ampliar tu búsqueda.',actionLabel:AppLocalizations.of(context).filters,onAction:openFilters),
             const SizedBox(height: 24),
             Text(uiText(context, 'Tu próxima búsqueda'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.5)),
             const SizedBox(height: 12),
@@ -1817,29 +1797,10 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: AppLocalizations.of(context).home),
           NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: AppLocalizations.of(context).chats),
-          NavigationDestination(icon: const Icon(Icons.add_circle_outline), selectedIcon: const Icon(Icons.add_circle), label: AppLocalizations.of(context).publishVehicle),
+          NavigationDestination(icon: const MarketPublishIcon(), selectedIcon: const MarketPublishIcon(), label: uiText(context,'Publicar')),
           NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: AppLocalizations.of(context).profile),
         ],
       ),
-    );
-  }
-
-  Widget _fuelChip(String fuel) {
-    final selected = selectedFuel == fuel;
-    return ChoiceChip(
-      label: Text(uiText(context, fuel)),
-      selected: selected,
-      onSelected: (_) => setState(() => selectedFuel = fuel),
-      selectedColor: gold,
-      backgroundColor: marketSurface,
-      labelStyle: TextStyle(
-        color: selected ? marketInk : marketMuted,
-        fontSize: 12,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-      ),
-      side: BorderSide(color: selected ? gold : marketLine),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      showCheckmark: false,
     );
   }
 
@@ -2174,7 +2135,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 16,
-              mainAxisExtent: columns == 1 ? 370 : 360,
+              mainAxisExtent: ((constraints.maxWidth-28-(columns-1)*14)/columns)*.75+185*MediaQuery.textScalerOf(context).scale(1),
             ),
             itemBuilder: (context, index) {
               final car = found[index];
@@ -3073,13 +3034,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
               child: Text(uiText(context, error!), textAlign: TextAlign.center),
             )
           else if (favorites.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                uiText(context, 'Aún no tienes coches favoritos.'),
-                textAlign: TextAlign.center,
-              ),
-            )
+            MarketEmptyState(icon:Icons.favorite_border_rounded,title:'Aún no tienes coches favoritos.',message:'Guarda los coches que te gustan y compáralos aquí.',actionLabel:'Explorar vehículos',onAction:()=>Navigator.pop(context))
           else
             ...orderedFavorites.map((item) {
               final id = item['listing_id'].toString();
@@ -3939,7 +3894,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)]),
               borderRadius: BorderRadius.circular(18),
               border: const Border.fromBorderSide(BorderSide(color: marketLine)),
-              boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6))],
+
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [const Icon(Icons.notes_rounded, color: marketAccent, size: 21), const SizedBox(width: 9),  Expanded(child: Text(uiText(context, "Descripción"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700))), const SizedBox(width: 8), Container(width: 26, height: 3, decoration: BoxDecoration(color: marketAccent, borderRadius: BorderRadius.circular(4)))]),
@@ -3949,6 +3904,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
           const SizedBox(height: 20),
         ],
+        const SizedBox(height:20),
+        MarketDetailSection(sectionKey:const Key('listing-technical-details'),title:'Ficha técnica',icon:Icons.tune_rounded,children:[
         Card(
           color: panel,
           margin: EdgeInsets.zero,
@@ -3995,13 +3952,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-         Row(children: [
-          Icon(Icons.tune_rounded, color: marketAccent, size: 22),
-          SizedBox(width: 9),
-          Expanded(child: Text(uiText(context, "Ficha técnica"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-        ]),
-        const SizedBox(height: 14),
         if (car.version?.trim().isNotEmpty == true)
           _technicalRow(Icons.badge_outlined, uiText(context, "Versión"), car.version!),
         if (car.cv != null || car.cilindradaCc != null || car.transmission?.trim().isNotEmpty == true) ...[
@@ -4033,14 +3983,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           if (car.seats != null) _technicalRow(Icons.event_seat_outlined, uiText(context, "Plazas"), '${car.seats}'),
           if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, uiText(context, "Color"), car.color!),
         ],
-        if (car.equipment.isNotEmpty) ...[
-          const SizedBox(height: 20),
-           Row(children: [
-            Icon(Icons.checklist_rounded, color: marketAccent, size: 22),
-            SizedBox(width: 9),
-            Text(uiText(context, "Equipamiento"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ]),
-          const SizedBox(height: 5),
+        ]),
+        if(car.equipment.isNotEmpty) ...[
+          const SizedBox(height:12),
+          MarketDetailSection(sectionKey:const Key('listing-equipment'),title:'Equipamiento',icon:Icons.checklist_rounded,children:[
           Text(
             uiText(context, "{0} elementos indicados en el anuncio", [car.equipment.length]),
             style: TextStyle(color: marketInk.withValues(alpha: 0.65), fontSize: 12),
@@ -4075,6 +4021,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               )).toList(),
             ),
           ),
+          ]),
         ],
         const SizedBox(height: 22),
         Container(
@@ -4229,7 +4176,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                       ],
                     )
                   else ...[
-                    _gallery(context, height: constraints.maxWidth < 500 ? 280 : 390),
+                    _gallery(context, height: constraints.maxWidth < 500 ? constraints.maxWidth*.8 : 390),
                     _photoThumbnails(),
                     _featureControl(),
                     const SizedBox(height: 20),
@@ -4679,7 +4626,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(shape: BoxShape.circle, color: marketAccent, boxShadow: [BoxShadow(color: marketAccent.withValues(alpha: .22), blurRadius: 14)]),
                     child: CircleAvatar(
-                      radius: 42,
+                      radius: 48,
                       backgroundColor: marketSurface,
                       backgroundImage: avatar == null ? null : NetworkImage(avatar),
                       onBackgroundImageError: avatar == null ? null : (_, __) {},
@@ -4698,6 +4645,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   ])),
 
                 ]),
+                if(aboutUs.trim().isNotEmpty) Padding(padding:const EdgeInsets.only(top:16),child:Text(aboutUs.trim(),maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:marketMuted,height:1.5))),
                 const SizedBox(height: 19),
                 Row(children: [
                   profileStat('${listings.length}', uiText(context, "Anuncios")),

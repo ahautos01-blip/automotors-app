@@ -28,35 +28,37 @@ class MarketReveal extends StatelessWidget {
 class MarketLoadingCard extends StatelessWidget {
   const MarketLoadingCard({super.key});
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: uiText(context, 'Cargando vehículos…'),
-    liveRegion: true,
-    child: ExcludeSemantics(
-      child: Container(
-        height: 300,
-        decoration: BoxDecoration(
-          color: marketSurface,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Expanded(child: ColoredBox(color: marketTint)),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(height: 14, width: 190, color: marketTint),
-                  const SizedBox(height: 12),
-                  Container(height: 23, width: 110, color: marketTint),
-                  const SizedBox(height: 12),
-                  Container(height: 10, width: 240, color: marketTint),
-                ],
+  Widget build(BuildContext context) => MarketReveal(
+    child: Semantics(
+      label: uiText(context, 'Cargando vehículos…'),
+      liveRegion: true,
+      child: ExcludeSemantics(
+        child: Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: marketSurface,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Expanded(child: ColoredBox(color: marketTint)),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(height: 14, width: 190, color: marketTint),
+                    const SizedBox(height: 12),
+                    Container(height: 23, width: 110, color: marketTint),
+                    const SizedBox(height: 12),
+                    Container(height: 10, width: 240, color: marketTint),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -165,8 +167,8 @@ class MarketSellerSummary extends StatelessWidget {
               children: [
                 ClipOval(
                   child: SizedBox(
-                    width: 48,
-                    height: 48,
+                    width: 64,
+                    height: 64,
                     child: ColoredBox(
                       color: marketTint,
                       child: photoUrl == null
@@ -179,8 +181,8 @@ class MarketSellerSummary extends StatelessWidget {
                                 'Foto del vendedor',
                               ),
                               fit: BoxFit.cover,
-                              cacheWidth: 144,
-                              cacheHeight: 144,
+                              cacheWidth: 192,
+                              cacheHeight: 192,
                               errorBuilder: (_, error, stack) =>
                                   Center(child: placeholder),
                             ),
@@ -280,4 +282,103 @@ Future<String?> promptMarketSavedSearchName(
   await route.completed;
   controller.dispose();
   return result;
+}
+
+/// Shared disclosures keep the photo-first listing readable while preserving all values.
+class MarketDetailSection extends StatelessWidget {
+  final Key sectionKey;
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+  const MarketDetailSection({
+    super.key,
+    required this.sectionKey,
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+  @override
+  Widget build(BuildContext context) => Card(
+    child: ExpansionTile(
+      key: sectionKey,
+      maintainState: true,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      leading: Icon(icon, color: marketAccent, size: 20),
+      title: Text(
+        uiText(context, title),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      ],
+    ),
+  );
+}
+
+class MarketEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title, message, actionLabel;
+  final VoidCallback onAction;
+  const MarketEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+  @override
+  Widget build(BuildContext context) => MarketReveal(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 12),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: const BoxDecoration(
+              color: marketTint,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 34, color: marketAccent),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            uiText(context, title),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            uiText(context, message),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: marketMuted, height: 1.5),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton(
+            onPressed: onAction,
+            child: Text(uiText(context, actionLabel)),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class MarketPublishIcon extends StatelessWidget {
+  const MarketPublishIcon({super.key});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+    decoration: BoxDecoration(
+      color: marketInk,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: const Icon(Icons.add_rounded, color: marketSurface, size: 24),
+  );
 }

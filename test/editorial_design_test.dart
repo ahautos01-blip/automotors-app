@@ -1,3 +1,5 @@
+import 'package:automotors_base/l10n/app_localizations.dart';
+import 'package:automotors_base/design/market_details.dart';
 import 'package:automotors_base/design/market_theme.dart';
 import 'package:automotors_base/design/market_vehicle_card.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,9 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: automotorsMarketTheme(),
+            locale: const Locale('es'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: MediaQuery(
               data: MediaQueryData(textScaler: TextScaler.linear(scale)),
               child: Scaffold(
@@ -52,4 +57,49 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'technical disclosure preserves values when reopened with enlarged text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: automotorsMarketTheme(),
+          locale: const Locale('es'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.5)),
+            child: Scaffold(
+              body: ListView(
+                children: [
+                  MarketDetailSection(
+                    sectionKey: Key('specs'),
+                    title: 'Ficha técnica',
+                    icon: Icons.tune,
+                    children: [
+                      Text('VIN: WBA12345678901234'),
+                      Text('Transmisión: Automático'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('VIN: WBA12345678901234'), findsNothing);
+      await tester.tap(find.text('Ficha técnica'));
+      await tester.pumpAndSettle();
+      expect(find.text('VIN: WBA12345678901234'), findsOneWidget);
+      await tester.tap(find.text('Ficha técnica'));
+      await tester.pumpAndSettle();
+      expect(find.text('VIN: WBA12345678901234'), findsNothing);
+      await tester.tap(find.text('Ficha técnica'));
+      await tester.pumpAndSettle();
+      expect(find.text('Transmisión: Automático'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

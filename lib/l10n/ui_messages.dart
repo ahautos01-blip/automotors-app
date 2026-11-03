@@ -1,5 +1,9 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Publicar": ["Sell", "Publicar"],
+  "Guarda los coches que te gustan y compáralos aquí.": ["Save the cars you like and compare them here.", "Desa els cotxes que t’agraden i compara’ls aquí."],
+  "Explorar vehículos": ["Explore cars", "Explorar vehicles"],
+  "Prueba otra marca o ajusta los filtros para ampliar tu búsqueda.": ["Try another make or adjust the filters to broaden your search.", "Prova una altra marca o ajusta els filtres per ampliar la cerca."],
   "TU PRÓXIMO COCHE": ["YOUR NEXT CAR", "EL TEU PROPER COTXE"],
   "Encuentra el que\nva contigo.": ["Find the car\nthat fits you.", "Troba el que\nva amb tu."],
   "Particulares y profesionales. En un mismo lugar.": ["Private sellers and professionals. In one place.", "Particulars i professionals. En un mateix lloc."],

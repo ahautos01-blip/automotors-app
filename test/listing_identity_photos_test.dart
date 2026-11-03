@@ -74,6 +74,23 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          final technical = find.byKey(const Key('listing-technical-details'));
+          await tester.scrollUntilVisible(
+            technical,
+            250,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await Scrollable.ensureVisible(
+            tester.element(technical),
+            alignment: 0.2,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find
+                .descendant(of: technical, matching: find.byType(ListTile))
+                .first,
+          );
+          await tester.pumpAndSettle();
           if (flags.$1) {
             await tester.scrollUntilVisible(
               find.text('1234XYZ'),

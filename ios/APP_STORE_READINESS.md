@@ -322,3 +322,17 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Binario: commit `01dc1a0ebc58dc8dde065d662133a0b0e38f1cbb`; Codemagic `6ae91d63e83a9019991c7f8f`; Apple build `ea2cf7ce-256d-4bd3-819b-804351283e7d`.
 - GitHub: flutter-check, postgres-and-edge e iOS aprobados para ese commit. Codemagic compiló, firmó y subió correctamente; su asignación automática de grupo falló por faltar el cifrado y se completó manualmente tras guardarlo. No se envió a revisión pública.
 - Este registro posterior a la activación solo cambia documentación; no requiere otro binario.
+
+
+## Build 24 preparada: los seis puntos de acabado visual
+
+- Fotos: tarjetas con área de imagen acotada a 4:3 cuando hay espacio, tamaño adaptado al ancho y texto, contador más discreto y favorito independiente sobre la foto. La galería de la ficha sigue primero y crece con el ancho.
+- Inicio: una sola fila de filtros rápidos; combustible y demás opciones permanecen en el panel completo. Botón de filtros etiquetado para accesibilidad.
+- Ficha: datos adicionales agrupados en Ficha técnica y Equipamiento desplegables, conservando cada valor y los controles de visibilidad de matrícula/VIN. Datos esenciales y contacto siguen accesibles.
+- Vendedor: foto mayor en resumen y perfil, presentación existente resumida en cabecera y pestañas con el estilo común. Se conservan valoraciones reales y su lógica; sin indicadores inventados.
+- Navegación: Publicar destacado con botón visual de alto contraste, conservando autenticación y destinos.
+- Acabado: estados vacíos con icono, explicación y acción en inicio/favoritos; entrada suave de cargas y estados vacíos respetando movimiento reducido.
+- Nuevos textos en ES/EN/CA. No cambia servidor, permisos ni precios/compras.
+- Verificación: suite completa 145 pruebas aprobadas; tras el ajuste final de proporciones y agrupación, 25 pruebas focalizadas aprobadas, incluidos contacto fijo, privacidad de identificación y acciones separadas de tarjetas.
+- Revisión visual real a 390 × 844: inicio con una fila de filtros, navegación destacada, fotos, vendedor con avatar mayor y ficha técnica desplegable. Compilación web final en curso.
+- Estado: build iOS pendiente; no afirmar distribución hasta confirmar En pruebas en Apple.
