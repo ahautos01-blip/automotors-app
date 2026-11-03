@@ -334,5 +334,8 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Acabado: estados vacíos con icono, explicación y acción en inicio/favoritos; entrada suave de cargas y estados vacíos respetando movimiento reducido.
 - Nuevos textos en ES/EN/CA. No cambia servidor, permisos ni precios/compras.
 - Verificación: suite completa 145 pruebas aprobadas; tras el ajuste final de proporciones y agrupación, 25 pruebas focalizadas aprobadas, incluidos contacto fijo, privacidad de identificación y acciones separadas de tarjetas.
-- Revisión visual real a 390 × 844: inicio con una fila de filtros, navegación destacada, fotos, vendedor con avatar mayor y ficha técnica desplegable. Compilación web final en curso.
-- Estado: build iOS pendiente; no afirmar distribución hasta confirmar En pruebas en Apple.
+- Revisión visual real a 390 × 844: inicio con una fila de filtros, navegación destacada, fotos, vendedor con avatar mayor y ficha técnica desplegable. Compilación web release final aprobada.
+- Estado confirmado: **AUTOMOTORS 1.0.1 (24), En pruebas**, grupo interno **AUTOMOTORS Sandbox**, 2 testers, caduca en 90 días. Declaración de cifrado guardada con la respuesta explícitamente autorizada «Ninguno de los algoritmos mencionados anteriormente».
+- Binario: commit `3576a926210330ce1cd83a225fea72b03ed80775`; Codemagic `6aea356ea87b4d255fde3fd1`; Apple build `6a426204-6db6-485b-a0e9-86649df11cb9`.
+- Codemagic compiló, firmó y subió la app correctamente. La asignación automática de grupo falló por faltar el cifrado; se completó manualmente tras guardarlo. GitHub flutter-check y postgres-and-edge aprobados; job iOS de GitHub cancelado, compilación nativa de Codemagic correcta. Sin envío a revisión pública.
+- Este registro posterior solo cambia documentación y no requiere volver a generar el binario.
