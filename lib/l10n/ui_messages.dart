@@ -1,5 +1,7 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Ver perfil de la otra persona": ["View the other person's profile", "Veure el perfil de l’altra persona"],
+  "No se pudo abrir el perfil de esta persona. Inténtalo de nuevo.": ["This person's profile could not be opened. Please try again.", "No s’ha pogut obrir el perfil d’aquesta persona. Torna-ho a provar."],
   "Vendedor profesional": ["Professional seller", "Venedor professional"],
   "Configuración de cuenta": ["Account settings", "Configuració del compte"],
   "Administración": ["Administration", "Administració"],

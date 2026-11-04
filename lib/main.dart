@@ -1,3 +1,4 @@
+import 'services/chat_participant_service.dart';
 import 'package:app_links/app_links.dart';
 import 'services/email_confirmation_service.dart';
 import 'design/market_watchlists.dart';
@@ -6422,6 +6423,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
   final controller = TextEditingController();
   bool sending = false;
+  bool openingParticipant = false;
   bool markingRead = false;
   late final Stream<List<Map<String, dynamic>>> messagesStream;
   final supabase = Supabase.instance.client;
@@ -6438,6 +6440,24 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         .stream(primaryKey: ['id'])
         .eq('conversation_id', widget.conversationId)
         .order('created_at');
+  }
+
+  Future<void> openParticipantProfile() async {
+    if (openingParticipant) return;
+    setState(() => openingParticipant = true);
+    try {
+      final participantId = await loadChatParticipantId(supabase, widget.conversationId);
+      if (!mounted) return;
+      await Navigator.push<void>(context, MaterialPageRoute(
+        builder: (_) => PublicSellerProfilePage(ownerId: participantId),
+      ));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(uiText(context, 'No se pudo abrir el perfil de esta persona. Inténtalo de nuevo.')),
+      ));
+    } finally {
+      if (mounted) setState(() => openingParticipant = false);
+    }
   }
 
   Future<void> openVehicleListing() async {
@@ -6577,7 +6597,17 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     final currentUserId = supabase.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
-        actions: [ChatSafetyControls(controller: chatSafety)],
+        actions: [
+          IconButton(
+            key: const Key('chat-participant-profile'),
+            tooltip: uiText(context, 'Ver perfil de la otra persona'),
+            onPressed: openingParticipant ? null : openParticipantProfile,
+            icon: openingParticipant
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.person_outline),
+          ),
+          ChatSafetyControls(controller: chatSafety),
+        ],
         titleSpacing: 0,
         title: Row(
           children: [

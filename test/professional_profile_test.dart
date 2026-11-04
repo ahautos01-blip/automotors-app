@@ -1,3 +1,5 @@
+import 'package:automotors_base/services/chat_participant_service.dart';
+
 import 'dart:convert';
 
 import 'package:automotors_base/main.dart';
@@ -12,6 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() {
   const uid = '11111111-1111-4111-8111-111111111111';
   var type = 'empresa';
+  Map<String, dynamic>? conversation;
   final saved = <Map<String, dynamic>>[];
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
@@ -24,6 +27,8 @@ void main() {
       authOptions: const FlutterAuthClientOptions(autoRefreshToken: false),
       httpClient: MockClient((r) async {
         dynamic body = [];
+        if (r.url.path == '/rest/v1/chat_conversations')
+          body = conversation == null ? [] : [conversation];
         if (r.url.path == '/auth/v1/token')
           body = {
             'access_token': token,
@@ -72,6 +77,32 @@ void main() {
     await Supabase.instance.client.auth.setSession('fixture');
   });
   tearDownAll(() async => Supabase.instance.dispose());
+  test(
+    'chat profile resolves the actual other participant and rejects outsiders',
+    () async {
+      final client = Supabase.instance.client;
+      const other = '22222222-2222-4222-8222-222222222222';
+      conversation = {'buyer_id': other, 'seller_id': uid};
+      expect(await loadChatParticipantId(client, 'fixture-chat'), other);
+      conversation = {'buyer_id': uid, 'seller_id': other};
+      expect(await loadChatParticipantId(client, 'fixture-chat'), other);
+      conversation = {'buyer_id': other, 'seller_id': 'outsider'};
+      await expectLater(
+        loadChatParticipantId(client, 'fixture-chat'),
+        throwsFormatException,
+      );
+      conversation = {'buyer_id': uid, 'seller_id': null};
+      await expectLater(
+        loadChatParticipantId(client, 'fixture-chat'),
+        throwsFormatException,
+      );
+      conversation = null;
+      await expectLater(
+        loadChatParticipantId(client, 'fixture-chat'),
+        throwsFormatException,
+      );
+    },
+  );
   for (final account in ['empresa', 'autonomo', 'particular']) {
     testWidgets('$account cover eligibility and document-free profile save', (
       tester,
