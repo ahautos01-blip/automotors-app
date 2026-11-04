@@ -1,6 +1,6 @@
 # App Store: preparación del primer envío
 
-Estado: no enviado. Versión pública preparada 1.0.1; build 30 seleccionada provisionalmente. El titular elige primer lanzamiento solo iPhone; build 31 debe sustituir a 30.
+Estado: ENVIADO A APP REVIEW el 4 de noviembre de 2026, 13:15 Europe/Madrid. Version 1.0.1 (31), solo iPhone, pendiente de revision. Aun no publicado en App Store.
 
 ## Guardado en App Store Connect
 - Nombre AUTOMOTORS; subtítulo Compra y vende coches; categoría Compras.
@@ -46,3 +46,11 @@ El titular introdujo la contraseña directamente en Apple y confirmó guardado. 
 - La validación de la versión 1.0.1 (31) ya no indica dimensiones faltantes; indica «Una o más capturas de pantalla deben terminar de procesarse». No volver a subir duplicados mientras Apple procesa.
 - Borrador existente iniciado el 27 de octubre: se añadieron productos mediante su menú Añadir a revisión. Revisar su lista con una carga fresca cuando terminen todas las imágenes; cada pestaña puede mostrar una lista anterior. El envío final continúa pendiente y no se ha publicado la app.
 - Auditoría de lanzamiento: la exigencia global de moderación continúa desactivada; requiere resolver el contenido legado antes de activarla. No se modificó durante la carga de capturas.
+
+## Envio confirmado a App Review
+- Apple confirmo 6 elementos enviados el 4 de noviembre de 2026 a las 13:15 (Europe/Madrid).
+- ID de envio: 8e3bf9cf-9f53-4268-b188-3ba8637d5dcb. Estado observado en Revision de apps: Pendiente de revision.
+- Elementos: AUTOMOTORS planes mensuales (grupo); PACK10, PACK20, PACK15, AUTOMOTORS PRO; App para iOS 1.0.1, compilacion 1.0.1 (31). Los seis muestran Pendiente de revision.
+- Capturas procesadas y validadas; no quedan bloqueos de imagen en este envio. Apple mostro confirmacion de envio y su pagina de revision. No equivale a aprobacion ni publicacion.
+- Prueba local: appstore-build31-pending-review.png. Credenciales de revision no leidas ni capturadas.
+- Sigue pendiente antes de disponibilidad publica resolver la exigencia global de moderacion y el contenido legado; el envio a Apple no activa esa configuracion.
