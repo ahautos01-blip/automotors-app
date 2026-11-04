@@ -1,3 +1,23 @@
+import 'design/market_professional_header.dart';
+import 'services/chat_participant_service.dart';
+import 'package:app_links/app_links.dart';
+import 'services/email_confirmation_service.dart';
+import 'design/market_watchlists.dart';
+import 'design/market_comparison.dart';
+import 'design/market_search.dart';
+import 'services/vehicle_search.dart';
+import 'design/market_details.dart';
+import 'design/market_vehicle_card.dart';
+import 'design/market_theme.dart';
+import 'services/listing_photo_loader.dart';
+import 'services/content_publication_service.dart';
+import 'community_moderation_page.dart';
+import 'chat_safety_controls.dart';
+import 'services/chat_safety_controller.dart';
+import 'delete_account_page.dart';
+import 'support_page.dart';
+import 'services/store_product_presentation.dart';
+import 'l10n/ui_text.dart';
 import 'l10n/app_localizations.dart';
 import 'services/automotors_locale_controller.dart';
 import 'dart:async';
@@ -9,15 +29,109 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cross_file/cross_file.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:automotors_base/services/store_purchase_service.dart';
+import 'package:automotors_base/services/verified_store_plans.dart';
+import 'package:automotors_base/sold_reviews_features.dart';
+import 'package:automotors_base/vehicle_feature_control.dart';
+import 'package:automotors_base/services/ios_push_service.dart';
 
-const gold = Color(0xFFD4AF37);
-const black = Color(0xFF0D0D0F);
-const panel = Color(0xFF1A1A1D);
+const automotorsSupabaseUrl=String.fromEnvironment('SUPABASE_URL',defaultValue:'https://ndicdhlpbyywqyjgxpnx.supabase.co');
+const automotorsSupabaseKey=String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY',defaultValue:'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu');
+const gold = marketGold;
+const black = marketPaper;
+const panel = marketSurface;
+
+const buyerListingProjection = 'id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
+
+final automotorsNavigatorKey = GlobalKey<NavigatorState>();
+late final IosPushService automotorsPush;
+
+Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
+  final navigator = automotorsNavigatorKey.currentState;
+  final context = automotorsNavigatorKey.currentContext;
+  if (navigator == null || context == null) return;
+  if (!await requireAutomotorsLogin(context)) return;
+  final db = Supabase.instance.client;
+  if (notification['user_id'] != db.auth.currentUser?.id) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(content: Text(uiText(context, "Este aviso pertenece a otra cuenta de AUTOMOTORS."))),
+    );
+    return;
+  }
+  try {
+    if (notification['kind'] == 'review_requested') {
+      final listingId = notification['listing_id']?.toString();
+      if (listingId == null || listingId.isEmpty) return;
+      await navigator.push<void>(MaterialPageRoute(
+        builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
+      ));
+    } else if (notification['kind'] == 'chat_message') {
+      final conversationId = notification['conversation_id']?.toString();
+      if (conversationId == null || !RegExp(r'^[0-9]+$').hasMatch(conversationId)) return;
+      // RLS verifies that the current user still belongs to this conversation.
+      final conversation = await db.from('chat_conversations').select('id, listing_id')
+          .eq('id', conversationId).maybeSingle();
+      if (conversation == null) throw StateError('Conversation unavailable');
+      if (!navigator.mounted) return;
+      await navigator.push<void>(MaterialPageRoute(builder: (_) => ChatPage(
+        conversationId: conversationId,
+        listingId: conversation['listing_id']?.toString(),
+        title: uiText(context, "Mensajes"),
+      )));
+    }
+  } catch (_) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(content: Text(uiText(context, "Este aviso ya no está disponible."))),
+    );
+  }
+}
+
+const Map<String, String> automotorsCatalanText = {
+  "Seleccionar idioma": "Seleccionar idioma",
+  "Alertas de búsqueda": "Alertes de cerca",
+  "VEHÍCULOS VERIFICADOS": "VEHICLES VERIFICATS",
+  "Encuentra tu próximo coche.": "Troba el teu pròxim cotxe.",
+  "Encuentra\ntu próximo coche.": "Troba\nel teu pròxim cotxe.",
+  "Vehículos de particulares y profesionales.": "Vehicles de particulars i professionals.",
+  "Ver vehículos": "Veure vehicles",
+  "Escribe marca o modelo...": "Escriu marca o model...",
+  "Borrar búsqueda": "Esborrar la cerca",
+  "No se pudo consultar tu plan. Reintenta para comprobar el acceso.": "No s'ha pogut consultar el teu pla. Torna-ho a provar.",
+  "El pago aún no está verificado o el plan ha caducado.": "El pagament encara no està verificat o el pla ha caducat.",
+  "Has alcanzado el límite de anuncios activos de tu cuenta.": "Has arribat al límit d'anuncis actius del teu compte.",
+  "Todo lo necesario para empezar": "Tot el que necessites per començar",
+  "10 anuncios · 3 destacados": "10 anuncis · 3 destacats",
+  "Más visibilidad para tu negocio": "Més visibilitat per al teu negoci",
+  "15 anuncios · 5 destacados": "15 anuncis · 5 destacats",
+  "Para concesionarios con más stock": "Per a concessionaris amb més estoc",
+  "20 anuncios · 8 destacados": "20 anuncis · 8 destacats",
+  "Para una venta profesional sin límites": "Per a una venda professional sense límits",
+  "Anuncios ilimitados · hasta 15 destacados": "Anuncis il·limitats · fins a 15 destacats",
+  "Publicar mi vehículo": "Publicar el meu vehicle",
+  "PUBLICAR GRATIS  →": "PUBLICAR GRATIS  →",
+  "LLEGA A MÁS COMPRADORES": "ARRIBA A MÉS COMPRADORS",
+  "Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.": "Tria l'opció que s'adapti millor a tu.\nAugmenta la visibilitat dels anuncis amb els nostres paquets.",
+  "Restaurar compras": "Restaurar compres",
+  "Reintentar": "Torna-ho a provar",
+  "El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.": "L'accés s'activa després de verificar el pagament. Pots restaurar les compres amb el mateix compte.",
+  "Publicar vehículo": "Publicar vehicle",
+};
+
+String appText(String spanish, String english) {
+  final language = AutomotorsLocaleController.instance.locale.languageCode;
+  if (language == 'en') return english;
+  if (language == 'ca') {
+    if (spanish.endsWith(' vehículos anunciados')) {
+      return spanish.replaceAll(' vehículos anunciados', ' vehicles anunciats');
+    }
+    if (spanish.startsWith('Elegir ')) return spanish.replaceFirst('Elegir ', 'Triar ');
+    return automotorsCatalanText[spanish] ?? spanish;
+  }
+  return spanish;
+}
 
 
 class AutomotorsBrandMark extends StatelessWidget {
@@ -25,21 +139,17 @@ class AutomotorsBrandMark extends StatelessWidget {
   const AutomotorsBrandMark({super.key, this.size = 36});
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size, height: size,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(size * .28),
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft, end: Alignment.bottomRight,
-        colors: [Color(0xFFF2D477), Color(0xFFB88A19)],
+  Widget build(BuildContext context) => Center(
+    widthFactor: 1,
+    heightFactor: 1,
+    child: SizedBox.square(
+      dimension: size,
+      child: Image.asset(
+        'assets/automotors_app_icon.png',
+        fit: BoxFit.contain,
+        semanticLabel: 'AUTOMOTORS',
       ),
-      boxShadow: const [BoxShadow(color: Color(0x332D2200), blurRadius: 8, offset: Offset(0, 3))],
     ),
-    child: Center(child: Icon(
-      Icons.directions_car_filled_rounded,
-      color: const Color(0xFF0D0D0F),
-      size: size * .62,
-    )),
   );
 }
 
@@ -92,38 +202,122 @@ class EnvironmentalSticker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = (label ?? '').trim().toUpperCase();
-    if (!['CERO', 'ECO', 'C', 'B'].contains(value)) return const SizedBox.shrink();
-    final base = value == 'CERO' ? const Color(0xFF168FD0)
-        : value == 'ECO' ? const Color(0xFF78C900)
-        : value == 'C' ? const Color(0xFF63B900) : const Color(0xFFFFD400);
-    return SizedBox(width: size, height: size, child: DecoratedBox(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: base,
-        border: Border.all(color: Colors.white, width: size * .025),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(1, 2))]),
-      child: ClipOval(child: Stack(children: [
-        Positioned(left: size*.07, top: size*.12, child: Container(
-          width: size*.13, height: size*.42, color: Colors.white,
-          child: Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(11, (_) => Container(height: size*.012, color: Colors.black))))),
-        Positioned(right: size*.13, top: size*.16, child: _StickerQr(size: size*.23)),
-        Center(child: Padding(padding: EdgeInsets.only(left:size*.1,right:size*.18,top:size*.02),
-          child: Text(value == 'CERO' ? '0' : value, style: TextStyle(color: Colors.black,
-            fontSize:size*(value == 'CERO' ? .48 : .43),fontWeight:FontWeight.w900,height:1)))),
-        Positioned(left:size*.24,right:size*.22,bottom:size*.15,child:Container(
-          height:size*.14,color:const Color(0xFFBFC0C0),alignment:Alignment.center,
-          child:Text('DGT',style:TextStyle(color:Colors.black,fontWeight:FontWeight.w900,
-            fontStyle:FontStyle.italic,fontSize:size*.13)))),
-        Positioned(left:size*.1,right:size*.1,bottom:size*.045,child:Container(height:size*.025,color:Colors.white70)),
-      ])),
-    ));
+    if (!['CERO', 'ECO', 'C', 'B'].contains(value))
+      return const SizedBox.shrink();
+    final base = value == 'CERO'
+        ? const Color(0xFF168FD0)
+        : value == 'ECO'
+        ? const Color(0xFF78C900)
+        : value == 'C'
+        ? const Color(0xFF63B900)
+        : const Color(0xFFFFD400);
+    return Semantics(
+      label: uiText(context, 'Etiqueta medioambiental {0}', [value]),
+      image: true,
+      child: ExcludeSemantics(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: 1,
+          heightFactor: 1,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: DecoratedBox(
+              key: const Key('environmental-sticker-disc'),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: base,
+                border: Border.all(color: marketInk, width: size * .025),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black45,
+                    blurRadius: 5,
+                    offset: Offset(1, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: size * .07,
+                      top: size * .12,
+                      child: Container(
+                        width: size * .13,
+                        height: size * .42,
+                        color: marketInk,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(
+                            11,
+                            (_) => Container(
+                              height: size * .012,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: size * .13,
+                      top: size * .16,
+                      child: _StickerQr(size: size * .23),
+                    ),
+                    Positioned(
+                      left:size*(value=='ECO' ? .23 : .20),
+                      right:size*(value=='ECO' ? .12 : .28),
+                      top:size*(value=='ECO' ? .40 : .24),
+                      height:size*(value=='ECO' ? .27 : .44),
+                      child:FittedBox(fit:BoxFit.scaleDown,child:Text(
+                        value=='CERO' ? '0' : value,
+                        textScaler:TextScaler.noScaling,maxLines:1,softWrap:false,
+                        style:TextStyle(color:Colors.black,fontSize:size*.43,fontWeight:FontWeight.w700,height:1),
+                      )),
+                    ),
+                    Positioned(
+                      left: size * .24,
+                      right: size * .22,
+                      bottom: size * .15,
+                      child: Container(
+                        height: size * .14,
+                        color: const Color(0xFFBFC0C0),
+                        alignment: Alignment.center,
+                        child: Text(
+                          "DGT",
+                          textScaler: TextScaler.noScaling,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700,
+                            fontStyle: FontStyle.italic,
+                            fontSize: size * .13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: size * .1,
+                      right: size * .1,
+                      bottom: size * .045,
+                      child: Container(height: size * .025, color: marketMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
+
 class _StickerQr extends StatelessWidget {
   final double size;
   const _StickerQr({required this.size});
   @override
   Widget build(BuildContext context) => Container(width:size,height:size,padding:EdgeInsets.all(size*.08),
-    color:Colors.white,child:CustomPaint(painter:_QrPatternPainter()));
+    color:marketInk,child:CustomPaint(painter:_QrPatternPainter()));
 }
 class _QrPatternPainter extends CustomPainter {
   @override
@@ -144,12 +338,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://ndicdhlpbyywqyjgxpnx.supabase.co',
-    publishableKey: 'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu',
+    url: automotorsSupabaseUrl,
+    publishableKey: automotorsSupabaseKey,
+    authOptions: const FlutterAuthClientOptions(detectSessionInUriPredicate:automaticallyHandleAuthUri),
   );
 
   await AutomotorsLocaleController.instance.load();
+  automotorsPush = IosPushService(db: Supabase.instance.client, onOpen: openAutomotorsPush);
   runApp(const AutomotorsApp());
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(automotorsPush.start()));
 }
 
 /// Devuelve el número para wa.me solo si parece válido.
@@ -179,13 +376,13 @@ Future<void> openWhatsAppForCar(BuildContext context, Car car) async {
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp en este dispositivo.')),
+         SnackBar(content: Text(uiText(context, "No se pudo abrir WhatsApp en este dispositivo."))),
       );
     }
   } catch (_) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp. Comprueba que esté disponible.')),
+         SnackBar(content: Text(uiText(context, "No se pudo abrir WhatsApp. Comprueba que esté disponible."))),
       );
     }
   }
@@ -202,7 +399,14 @@ Future<bool> requireAutomotorsLogin(BuildContext context) async {
 }
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? initialMessage, initialEmail;
+  final bool initialMessageIsError;
+  const LoginPage({
+    super.key,
+    this.initialMessage,
+    this.initialEmail,
+    this.initialMessageIsError = false,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -217,6 +421,65 @@ class _LoginPageState extends State<LoginPage> {
   bool hidePassword = true;
   String? message;
   bool messageIsError = false;
+  bool showVerificationResend = false;
+  DateTime? lastVerificationResend;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text = widget.initialEmail ?? '';
+    message = widget.initialMessage;
+    messageIsError = widget.initialMessageIsError;
+    showVerificationResend = widget.initialMessageIsError;
+  }
+
+  String? get verificationRedirect =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+      ? emailConfirmationRedirect
+      : null;
+
+  Future<void> resendVerification() async {
+    if (loading) return;
+    final email = emailController.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() {
+        message = 'Introduce un correo válido';
+        messageIsError = true;
+      });
+      return;
+    }
+    if (lastVerificationResend != null &&
+        DateTime.now().difference(lastVerificationResend!) <
+            const Duration(seconds: 60)) {
+      setState(() {
+        message = 'Espera un minuto antes de solicitar otro correo.';
+        messageIsError = false;
+      });
+      return;
+    }
+    setState(() => loading = true);
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: verificationRedirect,
+      );
+      lastVerificationResend = DateTime.now();
+      if (mounted)
+        setState(() {
+          message = 'Si la cuenta está pendiente de verificar, recibirás un nuevo correo.';
+          messageIsError = false;
+        });
+    } catch (_) {
+      if (mounted)
+        setState(() {
+          message = 'No se pudo reenviar el correo. Comprueba la conexión e inténtalo de nuevo.';
+          messageIsError = true;
+        });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -236,13 +499,21 @@ class _LoginPageState extends State<LoginPage> {
       final email = emailController.text.trim();
       final password = passwordController.text;
       if (creatingAccount) {
-        final response = await auth.signUp(email: email, password: password);
+        final response = await auth.signUp(
+          email: email,
+          password: password,
+          emailRedirectTo: verificationRedirect,
+        );
+        if (!mounted) return;
         if (response.session != null) {
           if (mounted) Navigator.pop(context, true);
           return;
         }
         setState(() {
-          message = 'Cuenta creada. Revisa tu correo y confirma la dirección; después vuelve aquí para iniciar sesión.';
+          message = verificationRedirect == null
+              ? 'Cuenta creada. Revisa tu correo y confirma la dirección; después vuelve aquí para iniciar sesión.'
+              : 'Cuenta creada. Abre el correo en este iPhone y pulsa el enlace para verificar tu cuenta y volver a AUTOMOTORS.';
+          showVerificationResend = true;
           messageIsError = false;
           creatingAccount = false;
         });
@@ -255,6 +526,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         setState(() {
           message = error.message;
+          showVerificationResend = error.code == 'email_not_confirmed';
           messageIsError = true;
         });
       }
@@ -273,7 +545,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cuenta AUTOMOTORS')),
+      appBar: AppBar(title: Text(uiText(context, "Cuenta AUTOMOTORS"))),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -284,22 +556,45 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const AutomotorsBrandMark(size: 64),
+                  const AutomotorsBrandMark(size: 112),
                   const SizedBox(height: 12),
-                  const Text('AUTOMOTORS', textAlign: TextAlign.center,
-                    style: TextStyle(color: gold, fontSize: 26, fontWeight: FontWeight.bold)),
+                  Text(
+                    uiText(context, "AUTOMOTORS"),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: marketAccent,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(creatingAccount ? 'Crea tu cuenta para publicar y contactar.' : 'Inicia sesión para publicar y contactar.',
-                    textAlign: TextAlign.center),
+                  Text(
+                    creatingAccount
+                        ? uiText(
+                            context,
+                            "Crea tu cuenta para publicar y contactar.",
+                          )
+                        : uiText(
+                            context,
+                            "Inicia sesión para publicar y contactar.",
+                          ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.email_outlined)),
+                    decoration: InputDecoration(
+                      labelText: uiText(context, "Correo electrónico"),
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
                     validator: (value) {
                       final text = value?.trim() ?? '';
-                      if (text.isEmpty || !text.contains('@') || !text.contains('.')) return 'Introduce un correo válido';
+                      if (text.isEmpty ||
+                          !text.contains('@') ||
+                          !text.contains('.'))
+                        return uiText(context, 'Introduce un correo válido');
                       return null;
                     },
                   ),
@@ -307,43 +602,123 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: passwordController,
                     obscureText: hidePassword,
-                    autofillHints: creatingAccount ? const [AutofillHints.newPassword] : const [AutofillHints.password],
+                    autofillHints: creatingAccount
+                        ? const [AutofillHints.newPassword]
+                        : const [AutofillHints.password],
                     decoration: InputDecoration(
-                      labelText: 'Contraseña',
+                      labelText: uiText(context, "Contraseña"),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        onPressed: () => setState(() => hidePassword = !hidePassword),
-                        icon: Icon(hidePassword ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () =>
+                            setState(() => hidePassword = !hidePassword),
+                        icon: Icon(
+                          hidePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
                       ),
                     ),
                     validator: (value) {
                       final text = value ?? '';
-                      if (text.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+                      if (text.length < 6)
+                        return uiText(
+                          context,
+                          'La contraseña debe tener al menos 6 caracteres',
+                        );
                       return null;
                     },
                   ),
                   if (message != null) ...[
                     const SizedBox(height: 14),
-                    Text(message!, style: TextStyle(color: messageIsError ? Colors.redAccent : gold)),
+                    Semantics(
+                      liveRegion: true,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: marketTint,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              messageIsError
+                                  ? Icons.info_outline
+                                  : Icons.check_circle_outline,
+                              color: messageIsError
+                                  ? Colors.red.shade800
+                                  : marketInk,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                uiText(context, message!),
+                                style: TextStyle(
+                                  color: messageIsError
+                                      ? Colors.red.shade800
+                                      : marketInk,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 20),
                   FilledButton(
                     onPressed: loading ? null : submit,
-                    style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: gold,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                     child: loading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(creatingAccount ? 'Crear cuenta' : 'Iniciar sesión'),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            creatingAccount
+                                ? uiText(context, "Crear cuenta")
+                                : uiText(context, "Iniciar sesión"),
+                          ),
                   ),
                   TextButton(
-                    onPressed: loading ? null : () => setState(() {
-                      creatingAccount = !creatingAccount;
-                      message = null;
-                    }),
-                    child: Text(creatingAccount ? 'Ya tengo una cuenta · Iniciar sesión' : '¿No tienes cuenta? Crear cuenta'),
+                    onPressed: loading
+                        ? null
+                        : () => setState(() {
+                            creatingAccount = !creatingAccount;
+                            message = null;
+                          }),
+                    child: Text(
+                      creatingAccount
+                          ? uiText(
+                              context,
+                              "Ya tengo una cuenta · Iniciar sesión",
+                            )
+                          : uiText(context, "¿No tienes cuenta? Crear cuenta"),
+                    ),
                   ),
+                  if (showVerificationResend)
+                    TextButton(
+                      onPressed: loading ? null : resendVerification,
+                      child: Text(
+                        uiText(context, 'Reenviar correo de verificación'),
+                      ),
+                    ),
+                  const SupportLinks(),
                   const SizedBox(height: 8),
-                  const Text('Puedes seguir viendo los anuncios sin registrarte.', textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  Text(
+                    uiText(
+                      context,
+                      "Puedes seguir viendo los anuncios sin registrarte.",
+                    ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: marketMuted, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -353,6 +728,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
 
 class Car {
   final String brand;
@@ -390,6 +766,7 @@ class Car {
   final int? tankLiters;
   final List<String> equipment;
   final List<Uint8List> photos;
+  final List<String> photoPaths;
   final String? listingId;
   final String? ownerId;
   final String status;
@@ -431,11 +808,97 @@ class Car {
     this.tankLiters,
     this.equipment = const [],
     this.photos = const [],
+    this.photoPaths = const [],
     this.listingId,
     this.ownerId,
     this.status = 'published',
     this.isFeatured = false,
   });
+  int get photoCount => photoPaths.isNotEmpty ? photoPaths.length : photos.length;
+
+  factory Car.fromListing(Map<String, dynamic> raw, {
+    List<Uint8List> photos = const [], List<String> photoPaths = const [],
+    bool isFeatured = false,
+  }) {
+    final brandData = raw['vehicle_brands'];
+    final modelData = raw['vehicle_models'];
+    return Car(
+        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
+        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
+        year: (raw['year'] as num?)?.toInt() ?? 0,
+        km: (raw['km'] as num?)?.toInt() ?? 0,
+        price: (raw['price'] as num?)?.toDouble() ?? 0,
+        fuel: raw['fuel']?.toString() ?? '',
+        description: raw['description']?.toString() ?? '',
+        phone: raw['phone']?.toString() ?? '',
+        matricula: raw['show_matricula_publicly'] == true ? raw['matricula']?.toString() : null,
+        vin: raw['show_vin_publicly'] == true ? raw['vin']?.toString() : null,
+        showMatriculaPublicly: raw['show_matricula_publicly'] == true,
+        showVinPublicly: raw['show_vin_publicly'] == true,
+        cv: (raw['cv'] as num?)?.toInt(),
+        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
+        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
+        version: raw['version']?.toString(),
+        transmission: raw['transmission']?.toString(),
+        bodyType: raw['body_type']?.toString(),
+        doors: (raw['doors'] as num?)?.toInt(),
+        seats: (raw['seats'] as num?)?.toInt(),
+        color: raw['color']?.toString(),
+        torqueNm: (raw['torque_nm'] as num?)?.toInt(),
+        acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
+        maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
+        consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
+        emissionsStandard: raw['emissions_standard']?.toString(),
+        equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
+        photos: photos,
+        photoPaths: photoPaths,
+        isFeatured: isFeatured,
+        listingId: raw['id']?.toString(),
+        ownerId: raw['owner_id']?.toString(),
+        status: raw['status']?.toString() ?? 'published',
+      );
+  }
+
+}
+
+Future<Map<String, dynamic>> getOrCreateConversation({
+  required SupabaseClient supabase,
+  required String listingId,
+  required String buyerId,
+  required String sellerId,
+}) async {
+  Future<Map<String, dynamic>?> findConversation() async {
+    final row = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('buyer_id', buyerId)
+        .eq('seller_id', sellerId)
+        .maybeSingle();
+    return row == null ? null : Map<String, dynamic>.from(row);
+  }
+
+  final existing = await findConversation();
+  if (existing != null) return existing;
+
+  try {
+    final inserted = await supabase
+        .from('chat_conversations')
+        .insert({
+          'listing_id': listingId,
+          'buyer_id': buyerId,
+          'seller_id': sellerId,
+        })
+        .select('id')
+        .single();
+    return Map<String, dynamic>.from(inserted);
+  } on PostgrestException catch (error) {
+    // Reuse the row created by a simultaneous request for the same listing.
+    if (error.code != '23505') rethrow;
+    final concurrentInsert = await findConversation();
+    if (concurrentInsert != null) return concurrentInsert;
+    rethrow;
+  }
 }
 
 class _CarFeaturePill extends StatelessWidget {
@@ -447,14 +910,14 @@ class _CarFeaturePill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
     decoration: BoxDecoration(
-      color: const Color(0xFF202830),
+      color: marketSurface,
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xFF34414B)),
+      border: Border.all(color: const Color(0xFFE4E5DF)),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 13, color: gold),
+      Icon(icon, size: 13, color: marketAccent),
       const SizedBox(width: 5),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
+      Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 11, fontWeight: FontWeight.w600)),
     ]),
   );
 }
@@ -480,7 +943,7 @@ class _VehicleStatusBadge extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 14, color: Colors.white),
         const SizedBox(width: 5),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .5)),
+        Text(uiText(context, label), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .5)),
       ]),
     );
   }
@@ -510,11 +973,11 @@ class _ReservedRibbon extends StatelessWidget {
         BoxShadow(color: const Color(0xFF168BFF).withValues(alpha: .45), blurRadius: 12, offset: const Offset(0, 3)),
       ],
     ),
-    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+    child:  Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.lock_rounded, size: 13, color: Colors.white),
       SizedBox(width: 6),
-      Text('RESERVADO', style: TextStyle(
-        color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900,
+      Text(uiText(context, "RESERVADO"), style: TextStyle(
+        color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700,
         letterSpacing: 1.1, shadows: [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1))],
       )),
     ]),
@@ -544,7 +1007,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
         _selectedForComparison.add(car);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Puedes comparar un máximo de 3 coches.')),
+           SnackBar(content: Text(uiText(context, "Puedes comparar un máximo de 3 coches."))),
         );
       }
     });
@@ -553,12 +1016,12 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Resultados de búsqueda'),
+      title:  Text(uiText(context, "Resultados de búsqueda")),
       actions: [
         if (_selectedForComparison.isNotEmpty)
           Center(child: Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Text('${_selectedForComparison.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+            child: Text('${_selectedForComparison.length}/3', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
           )),
       ],
     ),
@@ -566,29 +1029,29 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
       ? SafeArea(child: Padding(
           padding: const EdgeInsets.all(12),
           child: FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk, padding: const EdgeInsets.symmetric(vertical: 15)),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison)),
+              builder: (_) => VehicleComparisonPage(cars: List<Car>.from(_selectedForComparison), onOpenCar: widget.onOpenCar),
             )),
             icon: const Icon(Icons.compare_arrows_rounded),
-            label: Text('Comparar ${_selectedForComparison.length} coches'),
+            label: Text(uiText(context, "Comparar {0} coches", [_selectedForComparison.length])),
           ),
         ))
       : null,
     body: widget.cars.isEmpty
-      ? const Center(child: Padding(padding: EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.search_off_rounded, size: 54, color: gold), SizedBox(height: 14),
-          Text('No hay vehículos con estos filtros', textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-          SizedBox(height: 8), Text('Cambia o limpia alguno de los filtros e inténtalo de nuevo.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)),
+      ?  Center(child: Padding(padding: EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.search_off_rounded, size: 54, color: marketAccent), SizedBox(height: 14),
+          Text(uiText(context, "No hay vehículos con estos filtros"), textAlign: TextAlign.center, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+          SizedBox(height: 8), Text(uiText(context, "Cambia o limpia alguno de los filtros e inténtalo de nuevo."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted)),
         ])))
       : Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(children: [
-              Expanded(child: Text('${widget.cars.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))),
-              const Icon(Icons.compare_arrows_rounded, color: gold, size: 18),
+              Expanded(child: Text(uiText(context, "{0} vehículos encontrados", [widget.cars.length]), style: const TextStyle(color: marketMuted))),
+              const Icon(Icons.compare_arrows_rounded, color: marketAccent, size: 18),
               const SizedBox(width: 6),
-              const Flexible(child: Text('Selecciona hasta 3 para comparar', style: TextStyle(color: gold, fontSize: 12))),
+               Flexible(child: Text(uiText(context, "Selecciona hasta 3 para comparar"), style: TextStyle(color: marketAccent, fontSize: 12))),
             ]),
           ),
           Expanded(child: ListView.separated(
@@ -599,16 +1062,16 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
               final car = widget.cars[index];
               final isSelected = _selectedForComparison.contains(car);
               return Card(color: panel, clipBehavior: Clip.antiAlias, child: Row(children: [
-                SizedBox(width: 112, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: const Color(0xFF292929), child: const Icon(Icons.directions_car, size: 42, color: gold))),
+                SizedBox(width: 112, height: 132, child: car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover) : Container(color: marketSurface, child: const Icon(Icons.directions_car, size: 42, color: marketAccent))),
                 Expanded(child: InkWell(
                   onTap: () => widget.onOpenCar(car),
                   child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    if (car.isFeatured) const Padding(padding: EdgeInsets.only(bottom: 5), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: gold, size: 15), SizedBox(width: 4), Text('DESTACADO', style: TextStyle(color: gold, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: .7))])),
-                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    if (car.isFeatured)  Padding(padding: EdgeInsets.only(bottom: 5), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.star_rounded, color: marketAccent, size: 15), SizedBox(width: 4), Text(uiText(context, "DESTACADO"), style: TextStyle(color: marketAccent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .7))])),
+                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     const SizedBox(height: 6),
-                    Text(priceText(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900, fontSize: 18)),
+                    Text(priceText(car.price), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700, fontSize: 18)),
                     const SizedBox(height: 6),
-                    Text('${car.year} · ${car.km} km · ${car.fuel}', style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(uiText(context, "{0} · {1} km · {2}", [car.year, car.km, car.fuel]), style: const TextStyle(color: marketMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ])),
                 )),
                 Checkbox(value: isSelected, activeColor: gold, checkColor: black, onChanged: (_) => _toggleComparison(car)),
@@ -621,16 +1084,14 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
 
 class VehicleComparisonPage extends StatelessWidget {
   final List<Car> cars;
-  const VehicleComparisonPage({super.key, required this.cars});
-
-  String _price(double value) =>
-      '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
-  String _value(Object? value, [String suffix = '']) =>
-      value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
-
+  final ValueChanged<Car>? onOpenCar;
+  const VehicleComparisonPage({super.key, required this.cars, this.onOpenCar});
+  String _price(double value) => value <= 0 ? 'No indicado' : '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+  String _value(Object? value, [String suffix = '']) => value == null || value.toString().trim().isEmpty ? 'No indicado' : '$value$suffix';
   @override
   Widget build(BuildContext context) {
     final rows = <List<String>>[
+      ['Modelo', ...cars.map((c) => '${c.brand} ${c.model}')],
       ['Precio', ...cars.map((c) => _price(c.price))],
       ['Año', ...cars.map((c) => _value(c.year == 0 ? null : c.year))],
       ['Kilometraje', ...cars.map((c) => '${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
@@ -648,48 +1109,28 @@ class VehicleComparisonPage extends StatelessWidget {
       ['Color', ...cars.map((c) => _value(c.color))],
       ['Puertas', ...cars.map((c) => _value(c.doors))],
       ['Plazas', ...cars.map((c) => _value(c.seats))],
-      ['Equipamiento', ...cars.map((c) => c.equipment.isEmpty ? 'No indicado' : c.equipment.join(', '))],
+      ['Equipamiento', ...cars.map((c) => c.equipment.isEmpty ? 'No indicado' : c.equipment.map((item) => uiText(context, item)).join(', '))],
     ];
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Comparar vehículos')),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text('Compara los datos publicados de ${cars.length} vehículos. Los campos sin información aparecen como “No indicado”.',
-            style: const TextStyle(color: Colors.white70)),
-        ),
-        Expanded(child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(const Color(0xFF242B32)),
-              dataRowMinHeight: 48,
-              dataRowMaxHeight: 110,
-              columns: [
-                const DataColumn(label: Text('Característica', style: TextStyle(color: gold, fontWeight: FontWeight.w800))),
-                ...cars.map((car) => DataColumn(label: SizedBox(
-                  width: 165,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    if (car.photos.isNotEmpty) ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(car.photos.first, width: 145, height: 78, fit: BoxFit.cover),
-                    ) else const Icon(Icons.directions_car, size: 40, color: gold),
-                    const SizedBox(height: 5),
-                    Text('${car.brand} ${car.model}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                    Text('${car.year}', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                  ]),
-                ))),
-              ],
-              rows: rows.map((row) => DataRow(cells: [
-                DataCell(SizedBox(width: 115, child: Text(row[0], style: const TextStyle(fontWeight: FontWeight.w700)))),
-                ...row.skip(1).map((value) => DataCell(SizedBox(width: 165, child: Text(value, softWrap: true)))),
-              ])).toList(),
-            ),
-          ),
-        )),
-      ]),
+    final fields = rows.where((row) => row.first != 'Equipamiento').map((row) => MarketComparisonField(
+      row.first, row.skip(1).map((value) => value == 'No indicado' ? null : value).toList())).toList();
+    final equipmentNames = <String, String>{};
+    for (final car in cars) {
+      for (final item in car.equipment) {
+        final normalized = normalizeVehicleSearch(item);
+        if (normalized.isNotEmpty) equipmentNames.putIfAbsent(normalized, () => item.trim());
+      }
+    }
+    fields.add(MarketComparisonField('Equipamiento anunciado', cars.map((car) => car.equipment.isEmpty ? null : uiText(context, '{0} elementos', [car.equipment.length])).toList()));
+    final sortedEquipment = equipmentNames.keys.toList()..sort();
+    for (final name in sortedEquipment) {
+      fields.add(MarketComparisonField(equipmentNames[name]!, cars.map((car) => car.equipment.any((item) => normalizeVehicleSearch(item) == name) ? 'Anunciado' : null).toList(), equipment: true));
+    }
+    return MarketComparisonView(
+      cars: cars.map((car) => MarketComparisonCar(title: '${car.brand} ${car.model}',
+        price: _price(car.price) == 'No indicado' ? uiText(context, 'No indicado') : _price(car.price),
+        year: car.year, photo: car.photos.isEmpty ? null : car.photos.first)).toList(),
+      fields: fields,
+      onOpen: onOpenCar == null ? null : (index) => onOpenCar!(cars[index]),
     );
   }
 }
@@ -702,16 +1143,69 @@ class AutomotorsApp extends StatefulWidget {
 }
 
 class _AutomotorsAppState extends State<AutomotorsApp> {
+  StreamSubscription<Uri>? confirmationSubscription;
+  final confirmationLinks = AppLinks();
+  late final EmailConfirmationHandler confirmationHandler =
+      EmailConfirmationHandler(
+        verify: (code) => exchangeEmailConfirmation(
+          code,
+          () => SupabaseClient(
+            automotorsSupabaseUrl,
+            automotorsSupabaseKey,
+            authOptions: AuthClientOptions(
+              autoRefreshToken: false,
+              pkceAsyncStorage: SharedPreferencesGotrueAsyncStorage(),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> openConfirmation(Uri uri) async {
+    final result = await confirmationHandler.handle(uri);
+    if (result == null || !mounted) return;
+    final navigator = automotorsNavigatorKey.currentState;
+    if (navigator == null) return;
+    unawaited(
+      navigator.pushAndRemoveUntil<bool>(
+        MaterialPageRoute(
+          builder: (_) => LoginPage(
+            initialMessage: result.message,
+            initialEmail: result.email,
+            initialMessageIsError: !result.verified,
+          ),
+        ),
+        (route) => route.isFirst,
+      ),
+    );
+  }
+
+  Future<void> startConfirmationLinks() async {
+    if (!mounted || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return;
+    confirmationSubscription = confirmationLinks.uriLinkStream.listen(
+      (uri) => unawaited(openConfirmation(uri)),
+      onError: (_) {},
+    );
+    try {
+      final initial = await confirmationLinks.getInitialLink();
+      if (initial != null && mounted) await openConfirmation(initial);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     AutomotorsLocaleController.instance.addListener(_refreshLocale);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(startConfirmationLinks()),
+    );
   }
 
   void _refreshLocale() => setState(() {});
 
   @override
   void dispose() {
+    unawaited(confirmationSubscription?.cancel());
     AutomotorsLocaleController.instance.removeListener(_refreshLocale);
     super.dispose();
   }
@@ -722,98 +1216,10 @@ class _AutomotorsAppState extends State<AutomotorsApp> {
       locale: AutomotorsLocaleController.instance.locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
+      navigatorKey: automotorsNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Automotors',
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: black,
-        canvasColor: black,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: gold,
-          brightness: Brightness.dark,
-          surface: panel,
-        ).copyWith(
-          primary: gold,
-          secondary: const Color(0xFFBFA45A),
-          surface: panel,
-          onSurface: const Color(0xFFF1F5FA),
-          outline: const Color(0xFF4A4130),
-        ),
-        dividerColor: const Color(0xFF34312A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: black,
-          foregroundColor: Color(0xFFF1F5FA),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: false,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF18181B),
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-            side: BorderSide(color: Color(0xFF34312A)),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: panel,
-          hintStyle: const TextStyle(color: Color(0xFFAAA6A0)),
-          labelStyle: const TextStyle(color: Color(0xFFD0CBC2)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF3B362B)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: gold, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFFF6B81)),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFFF6B81), width: 1.5),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: gold,
-            foregroundColor: const Color(0xFF06111B),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            textStyle: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: gold,
-            side: const BorderSide(color: Color(0xFF6A5728)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF151518),
-          indicatorColor: gold.withValues(alpha: .16),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-            color: states.contains(WidgetState.selected) ? gold : const Color(0xFFAAA6A0),
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
-            fontSize: 12,
-          )),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: const Color(0xFF29292D),
-          contentTextStyle: const TextStyle(color: Color(0xFFF1F5FA)),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
+      theme: automotorsMarketTheme(),
       home: const HomePage(),
     );
   }
@@ -826,7 +1232,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePage> {
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
   String selectedFuel = 'Todos';
@@ -845,6 +1251,12 @@ class _HomePageState extends State<HomePage> {
   final List<Car> cars = [];
   bool loadingCars = true;
   int unreadChatsCount = 0;
+  int unreadBuyerAlerts=0;
+  Future<void> loadUnreadBuyerAlerts() async {
+    final db=Supabase.instance.client;final uid=db.auth.currentUser?.id;
+    if(uid==null){if(mounted)setState(()=>unreadBuyerAlerts=0);return;}
+    try{final rows=await db.from('vehicle_search_alerts').select('id').eq('user_id',uid).isFilter('read_at',null).limit(100);if(mounted && db.auth.currentUser?.id==uid)setState(()=>unreadBuyerAlerts=rows.length);}catch(_){/* Keep search usable when alerts are offline. */}
+  }
   RealtimeChannel? _chatUnreadChannel;
 
   @override
@@ -904,9 +1316,9 @@ class _HomePageState extends State<HomePage> {
       label: Text(
         unreadChatsCount > 99 ? '99+' : '$unreadChatsCount',
         style: const TextStyle(
-          color: Colors.white,
+          color: marketInk,
           fontSize: 10,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
         ),
       ),
       child: Icon(icon),
@@ -914,18 +1326,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> loadCars() async {
+    unawaited(loadUnreadBuyerAlerts());
     try {
       final supabase = Supabase.instance.client;
       final rows = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select(buyerListingProjection)
           .inFilter('status', ['published', 'reserved'])
           .order('created_at', ascending: false);
 
       final loadedCars = <Car>[];
       final featuredIds = <String>{};
       try {
-        final promotions = await supabase.from('vehicle_promotions').select('vehicle_id').eq('status', 'active').lte('starts_at', DateTime.now().toUtc().toIso8601String()).gt('ends_at', DateTime.now().toUtc().toIso8601String());
+        final promotions = await supabase.rpc('get_featured_vehicle_ids');
         for (final promotion in List<Map<String, dynamic>>.from(promotions)) {
           final id = promotion['vehicle_id']?.toString();
           if (id != null && id.isNotEmpty) featuredIds.add(id);
@@ -934,8 +1347,6 @@ class _HomePageState extends State<HomePage> {
         // Si las promociones no están disponibles, mostramos los anuncios con normalidad.
       }
       for (final raw in List<Map<String, dynamic>>.from(rows)) {
-        final brandData = raw['vehicle_brands'];
-        final modelData = raw['vehicle_models'];
         final photoData = raw['vehicle_photos'];
         final photoRows = photoData is List
             ? List<Map<String, dynamic>>.from(photoData)
@@ -943,56 +1354,13 @@ class _HomePageState extends State<HomePage> {
         photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
             .compareTo((b['position'] as num?)?.toInt() ?? 0));
 
-        // Descargar en paralelo las fotos de cada anuncio, manteniendo el
-        // orden de posición. Una foto fallida no debe ocultar el vehículo.
-        final downloadedPhotos = await Future.wait<Uint8List?>(
-          photoRows.map((photo) async {
-            final storagePath = photo['storage_path']?.toString();
-            if (storagePath == null || storagePath.isEmpty) return null;
-            try {
-              return await supabase.storage
-                  .from('vehicle-photos')
-                  .download(storagePath);
-            } catch (_) {
-              return null;
-            }
-          }),
-        );
-        final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
+        final photoPaths = photoRows.map((p) => p['storage_path']?.toString() ?? '')
+            .where((p) => p.isNotEmpty).toList();
+        final photoBytes = await loadListingCover(photoPaths,
+            (path) => supabase.storage.from('vehicle-photos').download(path));
 
-        loadedCars.add(Car(
-          brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-          model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-          year: (raw['year'] as num?)?.toInt() ?? 0,
-          km: (raw['km'] as num?)?.toInt() ?? 0,
-          price: (raw['price'] as num?)?.toDouble() ?? 0,
-          fuel: raw['fuel']?.toString() ?? '',
-          description: raw['description']?.toString() ?? '',
-          phone: raw['phone']?.toString() ?? '',
-          matricula: raw['matricula']?.toString(),
-          cv: (raw['cv'] as num?)?.toInt(),
-          cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-          etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-          version: raw['version']?.toString(),
-          transmission: raw['transmission']?.toString(),
-          bodyType: raw['body_type']?.toString(),
-          doors: (raw['doors'] as num?)?.toInt(),
-          seats: (raw['seats'] as num?)?.toInt(),
-          color: raw['color']?.toString(),
-          torqueNm: (raw['torque_nm'] as num?)?.toInt(),
-          acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
-          maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
-          consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
-          emissionsStandard: raw['emissions_standard']?.toString(),
-          equipment: raw['equipment'] is List
-              ? List<String>.from((raw['equipment'] as List).map((item) => item.toString()))
-              : const <String>[],
-          photos: photoBytes,
-          listingId: raw['id']?.toString(),
-          ownerId: raw['owner_id']?.toString(),
-          status: raw['status']?.toString() ?? 'published',
-          isFeatured: featuredIds.contains(raw['id']?.toString()),
-        ));
+        loadedCars.add(Car.fromListing(raw, photos: photoBytes, photoPaths: photoPaths,
+          isFeatured: featuredIds.contains(raw['id']?.toString())));
       }
 
       if (!mounted) return;
@@ -1018,7 +1386,7 @@ class _HomePageState extends State<HomePage> {
         } else if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Este anuncio ya no está disponible.')),
+               SnackBar(content: Text(uiText(context, "Este anuncio ya no está disponible."))),
             );
           });
         }
@@ -1027,7 +1395,7 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() => loadingCars = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron cargar los anuncios desde Supabase: $error'), duration: const Duration(seconds: 8)),
+        SnackBar(content: Text(uiText(context, "No se pudieron cargar los anuncios desde Supabase: {0}", [error])), duration: const Duration(seconds: 8)),
       );
     }
   }
@@ -1036,7 +1404,7 @@ class _HomePageState extends State<HomePage> {
     final query = searchController.text.toLowerCase().trim();
     return cars.where((car) {
       final matchesSearch =
-          '${car.brand} ${car.model}'.toLowerCase().contains(query);
+          matchesVehicleSearch(query, [car.brand, car.model, car.version, car.fuel, car.transmission, car.bodyType]);
       final matchesBrand = selectedBrand == 'Todas' || car.brand == selectedBrand;
       final matchesModel = selectedModel == 'Todos' || car.model == selectedModel;
       final matchesFuel =
@@ -1047,7 +1415,7 @@ class _HomePageState extends State<HomePage> {
       final matchesMaxYear = maxYear == null || car.year <= maxYear!;
       final matchesMinKm = minKm == null || car.km >= minKm!;
       final matchesMaxKm = maxKm == null || car.km <= maxKm!;
-      final matchesTransmission = selectedTransmission == 'Todas' || car.transmission == selectedTransmission;
+      final matchesTransmission = matchesVehicleTransmission(car.transmission, selectedTransmission);
       final matchesBodyType = selectedBodyType == 'Todos' || car.bodyType == selectedBodyType;
       final matchesLabel = selectedLabel == 'Todas' || car.etiquetaMedioambiental == selectedLabel;
       final matchesColor = selectedColor.trim().isEmpty || (car.color ?? '').toLowerCase().contains(selectedColor.trim().toLowerCase());
@@ -1067,45 +1435,48 @@ class _HomePageState extends State<HomePage> {
     }).toList()..sort((a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0));
   }
 
+  Future<void> _openSavedSearches() async {
+    if (Supabase.instance.client.auth.currentUser == null) {
+      final loggedIn = await requireAutomotorsLogin(context);
+      if (!loggedIn || !mounted) return;
+    }
+    if (!mounted) return;
+    await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedSearchesPage(onApply: (criteria) {
+      if (!mounted) return;
+      num? numeric(String key) {
+        final value = num.tryParse('${criteria[key] ?? ''}');
+        return value != null && value.isFinite ? value : null;
+      }
+      setState(() {
+        searchController.text = criteria['query']?.toString() ?? '';
+        selectedBrand = criteria['brand']?.toString() ?? 'Todas';
+        selectedModel = criteria['model']?.toString() ?? 'Todos';
+        selectedFuel = criteria['fuel']?.toString() ?? 'Todos';
+        minPrice = numeric('min_price')?.toDouble(); maxPrice = numeric('max_price')?.toDouble();
+        minYear = numeric('min_year')?.toInt(); maxYear = numeric('max_year')?.toInt();
+        minKm = numeric('min_km')?.toInt(); maxKm = numeric('max_km')?.toInt();
+        minCv = numeric('min_cv')?.toInt(); maxCv = numeric('max_cv')?.toInt();
+        minCc = numeric('min_cc')?.toInt(); maxDoors = numeric('max_doors')?.toInt(); minSeats = numeric('min_seats')?.toInt();
+        selectedTransmission = criteria['transmission']?.toString() ?? 'Todas';
+        selectedBodyType = criteria['body_type']?.toString() ?? 'Todos';
+        selectedLabel = criteria['label']?.toString() ?? 'Todas'; selectedColor = criteria['color']?.toString() ?? '';
+        selectedEquipmentFilters..clear()..addAll((criteria['equipment'] is List ? criteria['equipment'] as List : const []).whereType<String>());
+      });
+    })));
+  }
+
   Future<void> saveCurrentSearch() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       final loggedIn = await requireAutomotorsLogin(context);
       if (!loggedIn || !mounted) return;
     }
-    final nameController = TextEditingController(
-      text: [
-        if (selectedBrand != 'Todas') selectedBrand,
-        if (selectedModel != 'Todos') selectedModel,
-        if (selectedFuel != 'Todos') selectedFuel,
-      ].join(' ').trim(),
-    );
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Guardar búsqueda'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          maxLength: 80,
-          decoration: const InputDecoration(
-            labelText: 'Nombre de la búsqueda',
-            hintText: 'Ej. SUV diésel hasta 20.000 €',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              final value = nameController.text.trim();
-              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    nameController.dispose();
+    final initialName = [
+      if (selectedBrand != 'Todas') selectedBrand,
+      if (selectedModel != 'Todos') selectedModel,
+      if (selectedFuel != 'Todos') selectedFuel,
+    ].join(' ').trim();
+    final name = await promptMarketSavedSearchName(context, initialName);
     if (name == null || !mounted) return;
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) return;
@@ -1138,12 +1509,12 @@ class _HomePageState extends State<HomePage> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Búsqueda guardada en tu cuenta.')),
+         SnackBar(content: Text(uiText(context, "Búsqueda guardada en tu cuenta.")),action:SnackBarAction(label:uiText(context,'Ver búsquedas'),onPressed:_openSavedSearches)),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo guardar la búsqueda. Inténtalo de nuevo.')),
+         SnackBar(content: Text(uiText(context, "No se pudo guardar la búsqueda. Inténtalo de nuevo."))),
       );
     }
   }
@@ -1170,13 +1541,13 @@ class _HomePageState extends State<HomePage> {
     var fuel = selectedFuel;
     var brand = selectedBrand;
     var model = selectedModel;
-    final brands = ['Todas', ...cars.map((car) => car.brand).toSet().toList()..sort()];
+    final brands = ['Todas', ...{if (brand != 'Todas') brand, ...cars.map((car) => car.brand)}.toList()..sort()];
     final models = ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()];
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF151518),
+      backgroundColor: marketSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1195,22 +1566,22 @@ class _HomePageState extends State<HomePage> {
                     child: Container(
                       width: 42, height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: marketLine,
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Filtrar vehículos',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
+                   Text(uiText(context, "Filtrar vehículos"),
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 5),
-                  const Text('Encuentra el coche que encaja contigo.',
-                    style: TextStyle(color: Colors.white60)),
+                   Text(uiText(context, "Encuentra el coche que encaja contigo."),
+                    style: TextStyle(color: marketMuted)),
                   const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField<String>(isExpanded: true,
                     value: brands.contains(brand) ? brand : 'Todas',
-                    decoration: const InputDecoration(labelText: 'Marca'),
-                    items: brands.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    decoration:  InputDecoration(labelText: uiText(context, "Marca")),
+                    items: brands.map((value) => DropdownMenuItem(value: value, child: Text(value == 'Todas' || value == 'Todos' ? uiText(context, value) : value))).toList(),
                     onChanged: (value) {
                       if (value != null) setSheetState(() {
                         brand = value;
@@ -1220,22 +1591,22 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField<String>(isExpanded: true,
                     value: (brand == 'Todas' ? cars.map((car) => car.model).toSet() : cars.where((car) => car.brand == brand).map((car) => car.model).toSet()).contains(model) ? model : 'Todos',
-                    decoration: const InputDecoration(labelText: 'Modelo'),
-                    items: ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                    decoration:  InputDecoration(labelText: uiText(context, "Modelo")),
+                    items: ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()].map((value) => DropdownMenuItem(value: value, child: Text(value == 'Todas' || value == 'Todos' ? uiText(context, value) : value))).toList(),
                     onChanged: (value) { if (value != null) setSheetState(() => model = value); },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField<String>(isExpanded: true,
                     value: fuel,
-                    decoration: const InputDecoration(labelText: 'Combustible'),
-                    items: const [
-                      DropdownMenuItem(value: 'Todos', child: Text('Todos')),
-                      DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
-                      DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
-                      DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
-                      DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
+                    decoration:  InputDecoration(labelText: uiText(context, "Combustible")),
+                    items:  [
+                      DropdownMenuItem(value: 'Todos', child: Text(uiText(context, "Todos"))),
+                      DropdownMenuItem(value: 'Diésel', child: Text(uiText(context, "Diésel"))),
+                      DropdownMenuItem(value: 'Gasolina', child: Text(uiText(context, "Gasolina"))),
+                      DropdownMenuItem(value: 'Híbrido', child: Text(uiText(context, "Híbrido"))),
+                      DropdownMenuItem(value: 'Eléctrico', child: Text(uiText(context, "Eléctrico"))),
                     ],
                     onChanged: (value) {
                       if (value != null) setSheetState(() => fuel = value);
@@ -1246,43 +1617,43 @@ class _HomePageState extends State<HomePage> {
                     Expanded(child: TextField(
                       controller: minPriceController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Precio mínimo (€)'),
+                      decoration:  InputDecoration(labelText: uiText(context, "Precio mínimo (€)")),
                     )),
                     const SizedBox(width: 12),
                     Expanded(child: TextField(
                       controller: maxPriceController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Precio máximo (€)'),
+                      decoration:  InputDecoration(labelText: uiText(context, "Precio máximo (€)")),
                     )),
                   ]),
                   const SizedBox(height: 12),
                   Row(children: [
-                    Expanded(child: TextField(controller: minYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Año desde'))),
+                    Expanded(child: TextField(controller: minYearController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Año desde")))),
                     const SizedBox(width: 12),
-                    Expanded(child: TextField(controller: maxYearController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Año hasta'))),
+                    Expanded(child: TextField(controller: maxYearController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Año hasta")))),
                   ]),
                   const SizedBox(height: 12),
                   Row(children: [
-                    Expanded(child: TextField(controller: minKmController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Km desde'))),
+                    Expanded(child: TextField(controller: minKmController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Km desde")))),
                     const SizedBox(width: 12),
-                    Expanded(child: TextField(controller: maxKmController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Km hasta'))),
+                    Expanded(child: TextField(controller: maxKmController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Km hasta")))),
                   ]),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(value: transmission, decoration: const InputDecoration(labelText: 'Transmisión'), items: const ['Todas','Manual','Automático','Automático (DSG)'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => transmission = v); }),
+                  DropdownButtonFormField<String>(isExpanded: true, value: transmission, decoration:  InputDecoration(labelText: uiText(context, "Transmisión")), items: const ['Todas','Manual','Automático','Automático (DSG)'].map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) { if (v != null) setSheetState(() => transmission = v); }),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(value: bodyType, decoration: const InputDecoration(labelText: 'Tipo de carrocería'), items: const ['Todos','Berlina','Compacto','SUV','Familiar','Coupé','Cabrio','Monovolumen','Furgoneta','Pickup'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => bodyType = v); }),
+                  DropdownButtonFormField<String>(isExpanded: true, value: bodyType, decoration:  InputDecoration(labelText: uiText(context, "Tipo de carrocería")), items: const ['Todos','Berlina','Compacto','SUV','Familiar','Coupé','Cabrio','Monovolumen','Furgoneta','Pickup'].map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) { if (v != null) setSheetState(() => bodyType = v); }),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(value: label, decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: const ['Todas','Sin etiqueta','B','C','ECO','CERO'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setSheetState(() => label = v); }),
+                  DropdownButtonFormField<String>(isExpanded: true, value: label, decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: const ['Todas','Sin etiqueta','B','C','ECO','CERO'].map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) { if (v != null) setSheetState(() => label = v); }),
                   const SizedBox(height: 12),
-                  TextField(controller: colorController, decoration: const InputDecoration(labelText: 'Color exterior')),
+                  TextField(controller: colorController, decoration:  InputDecoration(labelText: uiText(context, "Color exterior"))),
                   const SizedBox(height: 12),
-                  Row(children: [Expanded(child: TextField(controller: minCvController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CV desde'))), const SizedBox(width: 12), Expanded(child: TextField(controller: maxCvController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CV hasta')))]),
+                  Row(children: [Expanded(child: TextField(controller: minCvController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "CV desde")))), const SizedBox(width: 12), Expanded(child: TextField(controller: maxCvController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "CV hasta"))))]),
                   const SizedBox(height: 12),
-                  Row(children: [Expanded(child: TextField(controller: minCcController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cilindrada mínima (cc)'))), const SizedBox(width: 12), Expanded(child: TextField(controller: doorsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Máximo de puertas')))]),
-                  TextField(controller: seatsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Plazas mínimas')),
+                  Row(children: [Expanded(child: TextField(controller: minCcController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Cilindrada mínima (cc)")))), const SizedBox(width: 12), Expanded(child: TextField(controller: doorsController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Máximo de puertas"))))]),
+                  TextField(controller: seatsController, keyboardType: TextInputType.number, decoration:  InputDecoration(labelText: uiText(context, "Plazas mínimas"))),
                   const SizedBox(height: 8),
-                  const Text('Equipamiento', style: TextStyle(fontWeight: FontWeight.w700)),
-                  ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(item), value: equipmentFilters.contains(item), activeColor: gold, onChanged: (checked) => setSheetState(() { if (checked == true) { equipmentFilters.add(item); } else { equipmentFilters.remove(item); } }))),
+                   Text(uiText(context, "Equipamiento"), style: TextStyle(fontWeight: FontWeight.w700)),
+                  ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(uiText(context, item)), value: equipmentFilters.contains(item), activeColor: gold, onChanged: (checked) => setSheetState(() { if (checked == true) { equipmentFilters.add(item); } else { equipmentFilters.remove(item); } }))),
                   const SizedBox(height: 22),
                   Row(children: [
                     Expanded(child: OutlinedButton(
@@ -1299,7 +1670,7 @@ class _HomePageState extends State<HomePage> {
                         });
                         Navigator.pop(sheetContext);
                       },
-                      child: const Text('Limpiar'),
+                      child:  Text(uiText(context, "Limpiar")),
                     )),
                     const SizedBox(width: 12),
                     Expanded(child: FilledButton(
@@ -1326,7 +1697,7 @@ class _HomePageState extends State<HomePage> {
                         Navigator.pop(sheetContext);
                         Navigator.push<void>(context, MaterialPageRoute(builder: (_) => VehicleSearchResultsPage(cars: filteredCars, onOpenCar: openCarDetails)));
                       },
-                      child: const Text('Ver resultados'),
+                      child:  Text(uiText(context, "Ver resultados")),
                     )),
                   ]),
                 ],
@@ -1360,35 +1731,25 @@ class _HomePageState extends State<HomePage> {
     if (car.listingId == null || car.ownerId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este vehículo de demostración aún no tiene un chat disponible.')),
+         SnackBar(content: Text(uiText(context, "Este vehículo de demostración aún no tiene un chat disponible."))),
       );
       return;
     }
     if (car.ownerId == user.id) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No puedes iniciar un chat contigo mismo.')),
+         SnackBar(content: Text(uiText(context, "No puedes iniciar un chat contigo mismo."))),
       );
       return;
     }
     try {
       final supabase = Supabase.instance.client;
-      final existing = await supabase
-          .from('chat_conversations')
-          .select('id')
-          .eq('listing_id', car.listingId!)
-          .eq('buyer_id', user.id)
-          .eq('seller_id', car.ownerId!)
-          .maybeSingle();
-      final conversation = existing ?? await supabase
-          .from('chat_conversations')
-          .insert({
-            'listing_id': car.listingId,
-            'buyer_id': user.id,
-            'seller_id': car.ownerId,
-          })
-          .select('id')
-          .single();
+      final conversation = await getOrCreateConversation(
+        supabase: supabase,
+        listingId: car.listingId!,
+        buyerId: user.id,
+        sellerId: car.ownerId!,
+      );
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => ChatPage(
@@ -1399,7 +1760,7 @@ class _HomePageState extends State<HomePage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir el chat. Comprueba la configuración de Supabase. ($error)'),
+        SnackBar(content: Text(uiText(context, "No se pudo abrir el chat. Comprueba la configuración de Supabase. ({0})", [error])),
           duration: const Duration(seconds: 6)),
       );
     }
@@ -1410,21 +1771,15 @@ class _HomePageState extends State<HomePage> {
       final loggedIn = await requireAutomotorsLogin(context);
       if (!loggedIn || !mounted) return;
     }
-    final publishFree = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const PublishOptionsPage()),
-    );
-    if (publishFree != true || !mounted) return;
-
     final car = await Navigator.push<Car>(
       context,
-      MaterialPageRoute(builder: (_) => const AddCarPage()),
+      MaterialPageRoute(builder: (_) => const PublishOptionsPage()),
     );
     if (car != null && mounted) setState(() => cars.insert(0, car));
   }
 
-  void openCarDetails(Car car) {
-    Navigator.push<void>(
+  Future<void> openCarDetails(Car car) async {
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -1434,6 +1789,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+    if (mounted) await loadCars();
   }
 
   @override
@@ -1454,8 +1810,12 @@ class _HomePageState extends State<HomePage> {
       selectedModel != 'Todos',
       minPrice != null,
       maxPrice != null,
-      minYear != null,
-      maxKm != null,
+      minYear != null, maxYear != null,
+      minKm != null, maxKm != null,
+      selectedTransmission != 'Todas', selectedBodyType != 'Todos',
+      selectedLabel != 'Todas', selectedColor.trim().isNotEmpty,
+      minCv != null, maxCv != null, minCc != null,
+      maxDoors != null, minSeats != null, selectedEquipmentFilters.isNotEmpty,
     ].where((active) => active).length;
 
     return Scaffold(
@@ -1466,183 +1826,80 @@ class _HomePageState extends State<HomePage> {
           children: [
             const AutomotorsBrandMark(size: 36),
             const SizedBox(width: 10),
-            const Column(
+             Expanded(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AUTOMOTORS',
+                Text(uiText(context, "AUTOMOTORS"),
                     style: TextStyle(
                       fontSize: 17,
                       letterSpacing: 1.1,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     )),
-                Text('MOTOR MARKET',
+                Text(uiText(context, "MOTOR MARKET"),
                     style: TextStyle(
-                      color: gold, fontSize: 9, letterSpacing: 2.1,
+                      color: marketAccent, fontSize: 9, letterSpacing: 2.1,
                       fontWeight: FontWeight.w700,
                     )),
               ],
-            ),
+            ))),
           ],
         ),
         actions: [
           PopupMenuButton<String>(
             tooltip: AppLocalizations.of(context).language,
-            icon: const Icon(Icons.language_rounded, color: gold),
-            initialValue: AutomotorsLocaleController.instance.locale.languageCode,
             onSelected: (code) async {
               await AutomotorsLocaleController.instance.select(code);
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'es', child: Text('Español')),
-              PopupMenuItem(value: 'en', child: Text('English')),
-              PopupMenuItem(value: 'ca', child: Text('Català')),
+            itemBuilder: (_) =>  [
+              PopupMenuItem(value: 'es', child: Text(uiText(context, "Español"))),
+              PopupMenuItem(value: 'en', child: Text(uiText(context, "English"))),
+              PopupMenuItem(value: 'ca', child: Text(uiText(context, "Català"))),
             ],
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.language, color: marketAccent, size: 19), const SizedBox(width: 4), Text(AutomotorsLocaleController.instance.locale.languageCode.toUpperCase(), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700))])),
           ),
           IconButton(
-            tooltip: 'Alertas de búsqueda',
+            tooltip: appText('Alertas de búsqueda', 'Search alerts'),
             onPressed: () async {
               final user = Supabase.instance.client.auth.currentUser;
               if (user == null) {
                 final loggedIn = await requireAutomotorsLogin(context);
                 if (!loggedIn || !mounted) return;
               }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const VehicleSearchAlertsPage()));
+              if (!context.mounted) return;
+              await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => VehicleSearchAlertsPage(onOpenCar: openCarDetails)));
+              if(mounted)await loadUnreadBuyerAlerts();
             },
-            icon: const Icon(Icons.notifications_active_outlined, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Búsquedas guardadas',
-            onPressed: () async {
-              final user = Supabase.instance.client.auth.currentUser;
-              if (user == null) {
-                final loggedIn = await requireAutomotorsLogin(context);
-                if (!loggedIn || !mounted) return;
-              }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedSearchesPage(
-                onApply: (criteria) {
-                  setState(() {
-                    selectedBrand = (criteria['brand'] ?? 'Todas').toString();
-                    selectedModel = (criteria['model'] ?? 'Todos').toString();
-                    selectedFuel = (criteria['fuel'] ?? 'Todos').toString();
-                    selectedTransmission = (criteria['transmission'] ?? 'Todas').toString();
-                    selectedBodyType = (criteria['body_type'] ?? 'Todos').toString();
-                    selectedLabel = (criteria['label'] ?? 'Todas').toString();
-                    selectedColor = (criteria['color'] ?? '').toString();
-                    minPrice = double.tryParse(criteria['min_price']?.toString() ?? '');
-                    maxPrice = double.tryParse(criteria['max_price']?.toString() ?? '');
-                    minYear = int.tryParse(criteria['min_year']?.toString() ?? '');
-                    maxKm = int.tryParse(criteria['max_km']?.toString() ?? '');
-                    minCv = int.tryParse(criteria['min_cv']?.toString() ?? '');
-                    maxCv = int.tryParse(criteria['max_cv']?.toString() ?? '');
-                    minCc = int.tryParse(criteria['min_cc']?.toString() ?? '');
-                    maxDoors = int.tryParse(criteria['max_doors']?.toString() ?? '');
-                    minSeats = int.tryParse(criteria['min_seats']?.toString() ?? '');
-                    selectedEquipmentFilters
-                      ..clear()
-                      ..addAll((criteria['equipment'] is List) ? List<String>.from(criteria['equipment']) : <String>[]);
-                    searchController.text = (criteria['query'] ?? '').toString();
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Filtros aplicados a la búsqueda.')));
-                },
-              )));
-            },
-            icon: const Icon(Icons.bookmarks_outlined, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Mis favoritos',
-            onPressed: () async {
-              final user = Supabase.instance.client.auth.currentUser;
-              if (user == null) {
-                final loggedIn = await requireAutomotorsLogin(context);
-                if (!loggedIn || !mounted) return;
-              }
-              if (!mounted) return;
-              Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SavedVehiclesPage(
-                cars: List<Car>.from(cars),
-                onOpenCar: openCarDetails,
-              )));
-            },
-            icon: const Icon(Icons.favorite_border_rounded, color: gold),
-          ),
-          IconButton(
-            tooltip: 'Actualizar anuncios',
-            onPressed: loadCars,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Badge(isLabelVisible:unreadBuyerAlerts>0,label:Text(unreadBuyerAlerts>=100 ? '99+' : '$unreadBuyerAlerts'),child:const Icon(Icons.notifications_active_outlined,color:marketAccent)),
           ),
           const SizedBox(width: 6),
         ],
       ),
       body: RefreshIndicator(
-        color: gold,
+        color: marketAccent,
         onRefresh: loadCars,
         child: ListView(
           padding: EdgeInsets.fromLTRB(isWide ? 28 : 16, 10, isWide ? 28 : 16, 28),
           children: [
             Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF282319), Color(0xFF0D0D0F)],
-                ),
-                border: Border.all(color: Colors.white.withValues(alpha: .08)),
-              ),
-              child: Stack(
-                children: [
-                  const Positioned(
-                    right: -10,
-                    bottom: -24,
-                    child: Icon(Icons.directions_car_filled,
-                        size: 135, color: Color(0x18D4AF37)),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: gold.withValues(alpha: .13),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: const Text('VEHÍCULOS VERIFICADOS',
-                          style: TextStyle(color: gold, fontSize: 10,
-                            letterSpacing: 1.1, fontWeight: FontWeight.w800)),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text('Encuentra\ntu próximo coche.',
-                        style: TextStyle(fontSize: 29, height: 1.08,
-                          fontWeight: FontWeight.w900, letterSpacing: -.6)),
-                      const SizedBox(height: 8),
-                      const Text('Vehículos de particulares y profesionales.',
-                        style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      const SizedBox(height: 14),
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.push<void>(context,
-                          MaterialPageRoute(builder: (_) => AllVehiclesPage(
-                            cars: List<Car>.from(cars),
-                            onOpenCar: openCarDetails,
-                          ))),
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                        label: Text(AppLocalizations.of(context).viewVehicles),
-                        style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(children: [
-                        const Icon(Icons.verified_user_outlined, color: gold, size: 17),
-                        const SizedBox(width: 7),
-                        Text('${cars.length} vehículos anunciados',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      ]),
-                    ],
-                  ),
-                ],
-              ),
+              key: const Key('market-search-hero'),
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+              decoration: const BoxDecoration(color: Colors.transparent),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(width: 22, height: 2, color: gold), const SizedBox(width: 9),
+                  Expanded(child: Text(uiText(context, 'TU PRÓXIMO COCHE'),
+                    style: const TextStyle(color: gold, letterSpacing: 1.6, fontSize: 10, fontWeight: FontWeight.w700))),
+                ]),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(uiText(context, 'Encuentra el que\nva contigo.'),
+                  style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 8),
+                Text(uiText(context, 'Particulares y profesionales. En un mismo lugar.'),
+                  style: const TextStyle(color: marketMuted, fontSize: 13, height: 1.4)),
+              ]),
             ),
-            const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
@@ -1651,8 +1908,8 @@ class _HomePageState extends State<HomePage> {
                     focusNode: searchFocusNode,
                     optionsBuilder: (value) {
                       final query = value.text.trim().toLowerCase();
-                      if (query.isEmpty) return const Iterable<String>.empty();
-                      final options = <String>{};
+                      if (query.isEmpty) return recentVehicleQueries;
+                      final options = <String>{...recentVehicleQueries.where((item) => matchesVehicleSearch(query, [item]))};
                       for (final car in cars) {
                         if (car.brand.toLowerCase().contains(query)) options.add(car.brand);
                         if (car.model.toLowerCase().contains(query)) options.add(car.model);
@@ -1663,23 +1920,27 @@ class _HomePageState extends State<HomePage> {
                     },
                     onSelected: (value) {
                       searchController.text = value;
+                      rememberVehicleSearch(value);
                       setState(() {});
                     },
                     fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) => TextField(
                       controller: controller,
                       focusNode: focusNode,
                       onChanged: (_) => setState(() {}),
-                      onSubmitted: (_) => onFieldSubmitted(),
+                      onSubmitted: (_) { rememberVehicleSearch(controller.text); onFieldSubmitted(); },
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: 'Escribe marca o modelo...',
+                        hintText: appText('Escribe marca o modelo...', 'Search make or model...'),
                         prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: controller.text.isEmpty ? null : IconButton(
-                          tooltip: 'Borrar búsqueda', icon: const Icon(Icons.close_rounded),
+                        suffixIcon: controller.text.isEmpty ? IconButton(
+                          tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded),
+                          onPressed: () => openVehicleSearchHistory((query) { searchController.text = query; searchFocusNode.unfocus(); setState(() {}); }),
+                        ) : IconButton(
+                          tooltip: appText('Borrar búsqueda', 'Clear search'), icon: const Icon(Icons.close_rounded),
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
                         filled: true,
-                        fillColor: const Color(0xFF1A1A1D),
+                        fillColor: marketSurface,
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -1690,7 +1951,7 @@ class _HomePageState extends State<HomePage> {
                     optionsViewBuilder: (context, onSelected, options) => Align(
                       alignment: Alignment.topLeft,
                       child: Material(
-                        color: const Color(0xFF202024),
+                        color: marketSurface,
                         elevation: 8,
                         borderRadius: BorderRadius.circular(14),
                         child: ConstrainedBox(
@@ -1700,7 +1961,7 @@ class _HomePageState extends State<HomePage> {
                             shrinkWrap: true,
                             children: options.map((option) => ListTile(
                               dense: true,
-                              leading: const Icon(Icons.search, color: gold, size: 19),
+                              leading: const Icon(Icons.search, color: marketAccent, size: 19),
                               title: Text(option.toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
                               onTap: () => onSelected(option),
                             )).toList(),
@@ -1718,22 +1979,22 @@ class _HomePageState extends State<HomePage> {
                     onPressed: openFilters,
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.zero,
-                      side: BorderSide(color: activeFilterCount > 0 ? gold : Colors.white24),
+                      side: BorderSide(color: activeFilterCount > 0 ? gold : marketLine),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Icon(Icons.tune_rounded, color: gold),
+                        Semantics(label: AppLocalizations.of(context).filters, child: const Icon(Icons.tune_rounded, color: marketInk)),
                         if (activeFilterCount > 0)
                           Positioned(
                             right: -9, top: -9,
                             child: Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                              decoration: const BoxDecoration(color: marketAccent, shape: BoxShape.circle),
                               child: Text('$activeFilterCount',
                                 style: const TextStyle(color: Colors.black, fontSize: 10,
-                                  fontWeight: FontWeight.w900)),
+                                  fontWeight: FontWeight.w700)),
                             ),
                           ),
                       ],
@@ -1742,85 +2003,72 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 13),
-            SizedBox(
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _fuelChip('Todos'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Diésel'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Gasolina'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Híbrido'),
-                  const SizedBox(width: 8),
-                  _fuelChip('Eléctrico'),
-                ],
-              ),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            MarketQuickFilters(
+              automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
+              electric: selectedFuel == 'Eléctrico', budget: maxPrice == 20000,
+              onAutomatic: () => setState(() => selectedTransmission = selectedTransmission == 'Automático' ? 'Todas' : 'Automático'),
+              onSuv: () => setState(() => selectedBodyType = selectedBodyType == 'SUV' ? 'Todos' : 'SUV'),
+              onElectric: () => setState(() => selectedFuel = selectedFuel == 'Eléctrico' ? 'Todos' : 'Eléctrico'),
+              onBudget: () => setState(() { maxPrice = maxPrice == 20000 ? null : 20000; if (maxPrice != null && minPrice != null && minPrice! > maxPrice!) minPrice = null; }),
             ),
             const SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Expanded(child: Text('Últimos vehículos', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900))),
+                 Expanded(child: Text(searchController.text.trim().isNotEmpty || activeFilterCount > 0 ? AppLocalizations.of(context).vehiclesFound(filtered.length) : uiText(context, "Últimos vehículos"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700))),
                 TextButton(onPressed: () => Navigator.push<void>(context,
                   MaterialPageRoute(builder: (_) => AllVehiclesPage(
-                    cars: List<Car>.from(cars), onOpenCar: openCarDetails))),
-                  child: const Text('Ver todos  →', style: TextStyle(color: gold, fontWeight: FontWeight.w800))),
+                    cars: List<Car>.from(filtered), onOpenCar: openCarDetails))),
+                  child:  Text(uiText(context, "Ver todos  →"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w700))),
               ],
             ),
             const SizedBox(height: 10),
             if (loadingCars)
-              const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: gold)))
-            else if (cars.isNotEmpty)
-              SizedBox(
-                height: 245,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: cars.length > 2 ? 2 : cars.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    final car = cars[index];
-                    return SizedBox(
-                      width: 230,
-                      child: Card(
-                        color: const Color(0xFF171717), margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .25))),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(onTap: () => openCarDetails(car), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [car.photos.isNotEmpty ? Image.memory(car.photos.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, size: 58, color: gold))) : const Center(child: Icon(Icons.directions_car, size: 58, color: gold)), Positioned(left: 8, bottom: 8, child: _VehicleStatusBadge(status: car.status)), Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car))]))),
-                          Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
-                            Text('${car.year} · ${car.km} km · ${car.fuel}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-                            const SizedBox(height: 4), Text(euros(car.price), style: const TextStyle(color: gold, fontSize: 17, fontWeight: FontWeight.w900)),
-                          ])),
-                        ])),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              const MarketLoadingCard()
+            else if (filtered.isNotEmpty) ...[
+              Align(alignment:Alignment.centerLeft,child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:540),child:SizedBox(height: (MediaQuery.sizeOf(context).width-32).clamp(288,540)*.75+185*MediaQuery.textScalerOf(context).scale(1),child:MarketVehicleCard(
+                title:'${filtered.first.brand} ${filtered.first.model}',price:euros(filtered.first.price),details:'${filtered.first.year} · ${_formatCompactKm(filtered.first.km)} · ${uiText(context,filtered.first.fuel)}',
+                version:filtered.first.version,photoCount:filtered.first.photoCount,photo:filtered.first.photos.firstOrNull,favorite:SaveVehicleButton(car:filtered.first),
+                status:filtered.first.status=='reserved' ? _VehicleStatusBadge(status:filtered.first.status) : null,onTap:()=>openCarDetails(filtered.first),
+              )))),
+              for(final car in filtered.skip(1).take(3)) Padding(padding:const EdgeInsets.only(top:12),child:MarketEditorialCarRow(
+                title:'${car.brand} ${car.model}',price:euros(car.price),details:'${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context,car.fuel)}',version:car.version,photo:car.photos.firstOrNull,favorite:SaveVehicleButton(car:car),status:car.status=='reserved' ? _VehicleStatusBadge(status:car.status) : null,onTap:()=>openCarDetails(car),
+              )),
+            ],
+            if (!loadingCars && filtered.isEmpty)
+              MarketEmptyState(icon:Icons.search_off_rounded,title:AppLocalizations.of(context).noVehiclesFound,message:'Prueba otra marca o ajusta los filtros para ampliar tu búsqueda.',actionLabel:AppLocalizations.of(context).filters,onAction:openFilters),
+            const SizedBox(height: 24),
+            Text(uiText(context, 'Tu próxima búsqueda'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.5)),
+            const SizedBox(height: 12),
+            MarketQuickLink(title: 'Mis favoritos', subtitle: 'Sigue los coches que te interesan', icon: Icons.favorite_border_rounded,
+              onTap: () async {if(!await requireAutomotorsLogin(context) || !context.mounted)return;await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>SavedVehiclesPage(cars:cars,onOpenCar:openCarDetails)));}),
+            const SizedBox(height: 10),
+            MarketQuickLink(title: 'Tus búsquedas', subtitle: 'Recupera tus filtros guardados',
+              icon: Icons.bookmark_outline_rounded, onTap: _openSavedSearches),
+            const SizedBox(height: 10),
+            MarketQuickLink(title: 'Guardar esta búsqueda', subtitle: 'Vuelve a los coches que encajan contigo',
+              icon: Icons.saved_search_rounded, onTap: saveCurrentSearch),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFF282319), Color(0xFF0D0D0F)])),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: marketAccent.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFFAF9F6)])),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('¿Tienes un vehículo?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                 Text(uiText(context, "¿Tienes un vehículo?"), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 5),
-                const Text('Publica tu anuncio y llega a miles de compradores.', style: TextStyle(color: Colors.white70)),
+                 Text(uiText(context, "Publica tu anuncio y llega a miles de compradores."), style: TextStyle(color: marketMuted)),
                 const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label: const Text('Publicar mi vehículo'), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w900)))),
+                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w700)))),
               ]),
             ),
             const SizedBox(height: 12),
-            Card(color: const Color(0xFF0D0D0F), margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: gold.withValues(alpha: .35))), child: ListTile(
-              leading: const Icon(Icons.diamond_outlined, color: gold, size: 34),
-              title: const Text('Packs y suscripción', style: TextStyle(fontWeight: FontWeight.w900)),
-              subtitle: const Text('Destaca tus anuncios y consigue más visibilidad.', style: TextStyle(color: Colors.white70)),
-              trailing: const Icon(Icons.chevron_right_rounded, color: gold),
+            Card(color: marketPaper, margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: marketAccent.withValues(alpha: .35))), child: ListTile(
+              leading: const Icon(Icons.diamond_outlined, color: marketAccent, size: 34),
+              title:  Text(uiText(context, "Packs y suscripción"), style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: marketMuted)),
+              trailing: const Icon(Icons.chevron_right_rounded, color: marketAccent),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PublishOptionsPage())),
             )),
 
@@ -1828,7 +2076,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF151518),
+        backgroundColor: marketSurface,
         indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -1864,37 +2112,18 @@ class _HomePageState extends State<HomePage> {
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: AppLocalizations.of(context).home),
           NavigationDestination(icon: _chatNavigationIcon(Icons.chat_bubble_outline), selectedIcon: _chatNavigationIcon(Icons.chat_bubble), label: AppLocalizations.of(context).chats),
-          NavigationDestination(icon: const Icon(Icons.add_circle_outline), selectedIcon: const Icon(Icons.add_circle), label: AppLocalizations.of(context).publishVehicle),
+          NavigationDestination(icon: const MarketPublishIcon(), selectedIcon: const MarketPublishIcon(), label: uiText(context,'Publicar')),
           NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: AppLocalizations.of(context).profile),
         ],
       ),
     );
   }
 
-  Widget _fuelChip(String fuel) {
-    final selected = selectedFuel == fuel;
-    return ChoiceChip(
-      label: Text(fuel),
-      selected: selected,
-      onSelected: (_) => setState(() => selectedFuel = fuel),
-      selectedColor: gold,
-      backgroundColor: const Color(0xFF1B1E24),
-      labelStyle: TextStyle(
-        color: selected ? Colors.black : Colors.white70,
-        fontSize: 12,
-        fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-      ),
-      side: BorderSide(color: selected ? gold : Colors.white12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-      showCheckmark: false,
-    );
-  }
-
   Widget _carMeta(IconData icon, String label) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 14, color: Colors.white54),
+      Icon(icon, size: 14, color: marketMuted),
       const SizedBox(width: 4),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 11)),
     ]);
   }
 
@@ -1912,11 +2141,13 @@ class AllVehiclesPage extends StatefulWidget {
   State<AllVehiclesPage> createState() => _AllVehiclesPageState();
 }
 
-class _AllVehiclesPageState extends State<AllVehiclesPage> {
+class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSearchState<AllVehiclesPage> {
   final search = TextEditingController();
   String brand = 'Todas';
   String model = 'Todos';
   String fuel = 'Todos';
+  String transmission = 'Todas';
+  String bodyType = 'Todos';
   double minPrice = 0, maxPrice = 200000;
   int minKm = 0, maxKm = 300000, minCv = 0, maxCv = 1000;
   int minYear = 1990, maxYear = DateTime.now().year + 1;
@@ -1924,6 +2155,70 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   String sortOrder = 'featured';
   final Set<String> _comparisonIds = <String>{};
 
+  bool savingSearch = false;
+  Map<String, dynamic> get catalogCriteria => {
+    'query': search.text.trim(),
+    'brand': brand,
+    'model': model,
+    'fuel': fuel,
+    'transmission': transmission,
+    'body_type': bodyType,
+    'min_price': minPrice,
+    'max_price': maxPrice,
+    'min_km': minKm,
+    'max_km': maxKm,
+    if (minCv != 0 || maxCv != 1000) ...{'min_cv': minCv, 'max_cv': maxCv},
+    if (minYear != 1990 || maxYear != DateTime.now().year + 1) ...{
+      'min_year': minYear,
+      'max_year': maxYear,
+    },
+  };
+  Future<void> saveCatalogSearch() async {
+    if (savingSearch) return;
+    final criteria = Map<String, dynamic>.from(catalogCriteria);
+    final db = Supabase.instance.client;
+    if (db.auth.currentUser == null) {
+      if (!await requireAutomotorsLogin(context) || !mounted) return;
+    }
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) return;
+    final suggested = [
+      if (brand != 'Todas') brand,
+      if (model != 'Todos') model,
+      if (search.text.trim().isNotEmpty) search.text.trim(),
+    ].join(' ');
+    setState(() => savingSearch = true);
+    try {
+      final name = await promptMarketSavedSearchName(context, suggested);
+      if (name == null || !mounted || db.auth.currentUser?.id != uid) return;
+      await db.from('saved_vehicle_searches').insert({
+        'user_id': uid,
+        'name': name,
+        'criteria': criteria,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(uiText(context, 'Búsqueda guardada en tu cuenta.')),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              uiText(
+                context,
+                'No se pudo guardar la búsqueda. Inténtalo de nuevo.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => savingSearch = false);
+    }
+  }
   void _toggleCompare(Car car) {
     final id = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
     setState(() {
@@ -1933,7 +2228,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
         _comparisonIds.add(id);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Puedes comparar hasta 3 vehículos.')),
+          SnackBar(content: Text(AppLocalizations.of(context).comparisonLimit)),
         );
       }
     });
@@ -1947,6 +2242,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
       brand = 'Todas';
       model = 'Todos';
       fuel = 'Todos';
+      transmission = 'Todas'; bodyType = 'Todos';
       minPrice = 0;
       maxPrice = 200000;
       minKm = 0;
@@ -1966,8 +2262,9 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   List<String> get models => ['Todos', ...widget.cars.where((c) => brand == 'Todas' || c.brand == brand).map((c) => c.model).toSet().toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
-    return ('${c.brand} ${c.model} ${c.version ?? ''} ${c.fuel}'.toLowerCase().contains(q)) &&
+    return matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
+      matchesVehicleTransmission(c.transmission, transmission) && (bodyType == 'Todos' || normalizeVehicleSearch(c.bodyType ?? '') == normalizeVehicleSearch(bodyType)) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
       c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
       ((minCv == 0 && maxCv == 1000) || (c.cv != null && c.cv! >= minCv && c.cv! <= maxCv)) &&
@@ -1989,11 +2286,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   });
 
   Widget rangeField(String label, int value, int min, int max, ValueChanged<int> onChanged) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(children: [Expanded(child: Text(label)), Text(number(value), style: const TextStyle(color: gold, fontWeight: FontWeight.bold))]),
+    Row(children: [Expanded(child: Text(uiText(context, label))), Text(number(value), style: const TextStyle(color: marketAccent, fontWeight: FontWeight.bold))]),
     Slider(value: value.clamp(min, max).toDouble(), min: min.toDouble(), max: max.toDouble(), divisions: 100, activeColor: gold, onChanged: (v) => onChanged(v.round())),
   ]);
   Widget priceRange() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Row(children: [const Expanded(child: Text('Precio (€)')), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: gold, fontSize: 12))]),
+    Row(children: [Expanded(child: Text(AppLocalizations.of(context).priceEuros)), Text('${euros(minPrice)} – ${euros(maxPrice)}', style: const TextStyle(color: marketAccent, fontSize: 12))]),
     RangeSlider(values: RangeValues(minPrice.clamp(0, 200000).toDouble(), maxPrice.clamp(0, 200000).toDouble()), min: 0, max: 200000, divisions: 200, activeColor: gold, onChanged: (v) => setState(() { minPrice = v.start; maxPrice = v.end; })),
   ]);
 
@@ -2001,51 +2298,70 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
   Widget build(BuildContext context) {
     final found = results;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0F12),
+      backgroundColor: marketPaper,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF151518),
-        title: Text(AppLocalizations.of(context).viewVehicles, style: TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: marketSurface,
+        title: Text(AppLocalizations.of(context).viewVehicles, maxLines:1,overflow:TextOverflow.ellipsis,style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(tooltip:uiText(context,'Guardar búsqueda'),onPressed:savingSearch ? null : saveCatalogSearch,icon:const Icon(Icons.bookmark_add_outlined,color:marketAccent)),
           if (_comparisonIds.isNotEmpty)
             Center(child: Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
+              child: Text('${_comparisonIds.length}/3', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
             )),
           if (_comparisonIds.isNotEmpty)
             IconButton(
-              tooltip: 'Vaciar comparador',
+              tooltip: AppLocalizations.of(context).clearComparison,
               onPressed: _clearComparison,
-              icon: const Icon(Icons.clear_all_rounded, color: gold),
+              icon: const Icon(Icons.clear_all_rounded, color: marketAccent),
             ),
-          IconButton(tooltip: 'Restablecer filtros', onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: gold)),
+          IconButton(tooltip: AppLocalizations.of(context).resetFilters, onPressed: _resetFilters, icon: const Icon(Icons.restart_alt, color: marketAccent)),
         ],
       ),
       bottomNavigationBar: _comparisonIds.length >= 2
         ? SafeArea(child: Padding(
             padding: const EdgeInsets.all(12),
             child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black, padding: const EdgeInsets.symmetric(vertical: 15)),
+              style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk, padding: const EdgeInsets.symmetric(vertical: 15)),
               onPressed: () {
                 final selected = widget.cars.where((car) => _comparisonIds.contains(car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}')).toList();
                 if (selected.length >= 2) {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected)));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => VehicleComparisonPage(cars: selected, onOpenCar: widget.onOpenCar)));
                 }
               },
               icon: const Icon(Icons.compare_arrows_rounded),
-              label: Text('Comparar ${_comparisonIds.length} vehículos'),
+              label: Text(AppLocalizations.of(context).compareVehicles(_comparisonIds.length)),
             ),
           ))
         : null,
       body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: 'Buscar marca, modelo, versión...', prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [Expanded(child: Text('${found.length} vehículos encontrados', style: const TextStyle(color: Colors.white70))), OutlinedButton.icon(onPressed: () => setState(() => showFilters = !showFilters), icon: const Icon(Icons.tune, color: gold), label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters), style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold))) ])),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => setState(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); setState(() {}); })) : IconButton(onPressed: () { search.clear(); setState(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
+        if (!showFilters) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
+          automatic: transmission == 'Automático', suv: bodyType == 'SUV',
+          electric: fuel == 'Eléctrico', budget: maxPrice == 20000,
+          onAutomatic: () => setState(() => transmission = transmission == 'Automático' ? 'Todas' : 'Automático'),
+          onSuv: () => setState(() => bodyType = bodyType == 'SUV' ? 'Todos' : 'SUV'),
+          onElectric: () => setState(() => fuel = fuel == 'Eléctrico' ? 'Todos' : 'Eléctrico'),
+          onBudget: () => setState(() { maxPrice = maxPrice == 20000 ? 200000 : 20000; if (minPrice > maxPrice) minPrice = 0; }),
+        )),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12, runSpacing: 4, children: [
+              Text(AppLocalizations.of(context).vehiclesFound(found.length), style: const TextStyle(color: marketMuted)),
+              OutlinedButton.icon(onPressed: () {
+                FocusScope.of(context).unfocus();
+                setState(() => showFilters = !showFilters);
+              }, icon: const Icon(Icons.tune, color: marketAccent),
+                label: Text(showFilters ? AppLocalizations.of(context).hideFilters : AppLocalizations.of(context).filters)),
+            ])),
+        if (!showFilters)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: DropdownButtonFormField<String>(
+          child: DropdownButtonFormField<String>(isExpanded: true,
             value: sortOrder,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context).sortVehicles,
-              prefixIcon: const Icon(Icons.sort_rounded, color: gold),
+              prefixIcon: const Icon(Icons.sort_rounded, color: marketAccent),
               isDense: true,
             ),
             items: [
@@ -2058,39 +2374,74 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
             onChanged: (value) => setState(() => sortOrder = value ?? 'featured'),
           ),
         ),
-        if (showFilters) Expanded(flex: 0, child: ConstrainedBox(constraints: const BoxConstraints(maxHeight: 390), child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Column(children: [
-          Row(children: [Expanded(child: DropdownButtonFormField<String>(value: brand, isExpanded: true, decoration: const InputDecoration(labelText: 'Marca'), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(value: models.contains(model)?model:'Todos', isExpanded:true, decoration: const InputDecoration(labelText:'Modelo'), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
-          const SizedBox(height:8), DropdownButtonFormField<String>(value:fuel, decoration: const InputDecoration(labelText:'Combustible'), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
-          const SizedBox(height:8), priceRange(),
-          rangeField('Kilometraje mínimo (km)', minKm, 0, 300000, (v)=>setState(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
-          rangeField('Kilometraje máximo (km)', maxKm, 0, 300000, (v)=>setState(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
-          rangeField('Potencia mínima (CV)', minCv, 0, 1000, (v)=>setState(() { minCv=v; if (maxCv < minCv) maxCv=minCv; })),
-          rangeField('Potencia máxima (CV)', maxCv, 0, 1000, (v)=>setState(() { maxCv=v; if (minCv > maxCv) minCv=maxCv; })),
-          rangeField('Año mínimo', minYear, 1990, DateTime.now().year+1, (v)=>setState(() { minYear=v; if (maxYear < minYear) maxYear=minYear; })),
-          rangeField('Año máximo', maxYear, 1990, DateTime.now().year+1, (v)=>setState(() { maxYear=v; if (minYear > maxYear) minYear=maxYear; })),
-          SizedBox(width: double.infinity, child: FilledButton(
-            onPressed: () => setState(() => showFilters = false),
-            style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
-            child: const Text('Ver resultados'),
+        if (!showFilters && (transmission != 'Todas' || bodyType != 'Todos' || brand != 'Todas' || model != 'Todos' || fuel != 'Todos' || minPrice != 0 || maxPrice != 200000 || minKm != 0 || maxKm != 300000 || minCv != 0 || maxCv != 1000 || minYear != 1990 || maxYear != DateTime.now().year + 1))
+          SizedBox(height: 48, child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              if (transmission != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, transmission)), onDeleted: () => setState(() => transmission = 'Todas'))),
+              if (bodyType != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, bodyType)), onDeleted: () => setState(() => bodyType = 'Todos'))),
+              if (brand != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(brand), onDeleted: () => setState(() { brand = 'Todas'; model = 'Todos'; }))),
+              if (model != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(model), onDeleted: () => setState(() => model = 'Todos'))),
+              if (fuel != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, fuel)), onDeleted: () => setState(() => fuel = 'Todos'))),
+              if (minPrice != 0 || maxPrice != 200000) Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text('${euros(minPrice)} – ${euros(maxPrice)}'), onDeleted: () => setState(() { minPrice = 0; maxPrice = 200000; }))),
+              if (minKm != 0 || maxKm != 300000) Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text('${number(minKm)} – ${number(maxKm)} km'), onDeleted: () => setState(() { minKm = 0; maxKm = 300000; }))),
+              if (minCv != 0 || maxCv != 1000) Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text('$minCv – $maxCv ${uiText(context, "CV")}'), onDeleted: () => setState(() { minCv = 0; maxCv = 1000; }))),
+              if (minYear != 1990 || maxYear != DateTime.now().year + 1) InputChip(label: Text('$minYear – $maxYear'), onDeleted: () => setState(() { minYear = 1990; maxYear = DateTime.now().year + 1; })),
+            ],
           )),
-        ])))),
+        if (showFilters) Expanded(child: Column(children: [
+          Expanded(child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(children: [
+          Row(children: [Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: brand, decoration: InputDecoration(labelText: AppLocalizations.of(context).brand), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => setState(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: models.contains(model)?model:'Todos', decoration: InputDecoration(labelText: AppLocalizations.of(context).model), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>setState(()=>model=v??'Todos')))]),
+          const SizedBox(height:8), DropdownButtonFormField<String>(isExpanded: true, value:fuel, decoration: InputDecoration(labelText: AppLocalizations.of(context).fuel), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(uiText(context, v)))).toList(), onChanged:(v)=>setState(()=>fuel=v??'Todos')),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(isExpanded: true, initialValue: transmission,
+            decoration: InputDecoration(labelText: uiText(context, 'Transmisión')),
+            items: ['Todas', 'Manual', 'Automático', 'Automático (DSG)'].map((value) => DropdownMenuItem(value: value, child: Text(uiText(context, value)))).toList(),
+            onChanged: (value) => setState(() => transmission = value ?? 'Todas')),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(isExpanded: true, initialValue: bodyType,
+            decoration: InputDecoration(labelText: uiText(context, 'Carrocería')),
+            items: {'Todos', 'SUV', ...widget.cars.map((car) => car.bodyType).whereType<String>().where((value) => value.trim().isNotEmpty)}.map((value) => DropdownMenuItem(value: value, child: Text(uiText(context, value)))).toList(),
+            onChanged: (value) => setState(() => bodyType = value ?? 'Todos')),
+          const SizedBox(height:8), priceRange(),
+          rangeField(AppLocalizations.of(context).minMileage, minKm, 0, 300000, (v)=>setState(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
+          rangeField(AppLocalizations.of(context).maxMileage, maxKm, 0, 300000, (v)=>setState(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
+          rangeField(AppLocalizations.of(context).minPower, minCv, 0, 1000, (v)=>setState(() { minCv=v; if (maxCv < minCv) maxCv=minCv; })),
+          rangeField(AppLocalizations.of(context).maxPower, maxCv, 0, 1000, (v)=>setState(() { maxCv=v; if (minCv > maxCv) minCv=maxCv; })),
+          rangeField(AppLocalizations.of(context).minYear, minYear, 1990, DateTime.now().year+1, (v)=>setState(() { minYear=v; if (maxYear < minYear) maxYear=minYear; })),
+          rangeField(AppLocalizations.of(context).maxYear, maxYear, 1990, DateTime.now().year+1, (v)=>setState(() { maxYear=v; if (minYear > maxYear) minYear=maxYear; })),
+            ]),
+          )),
+          SafeArea(top: false, child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(width: double.infinity, child: FilledButton(
+              key: const Key('apply-catalog-filters'),
+              onPressed: () => setState(() => showFilters = false),
+              child: Text('${AppLocalizations.of(context).viewResults} · ${found.length}'),
+            )),
+          )),
+        ])),
+        if (!showFilters)
         Expanded(child: found.isEmpty ? Center(
-          child: Padding(
+          child: SingleChildScrollView(child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.search_off_rounded, color: gold, size: 48),
+              const Icon(Icons.search_off_rounded, color: marketAccent, size: 48),
               const SizedBox(height: 12),
-              const Text('No hay vehículos que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context).noVehiclesFound, textAlign: TextAlign.center, style: const TextStyle(color: marketMuted)),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Restablecer filtros'),
-                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: black),
+                label: Text(AppLocalizations.of(context).resetFilters),
+                style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: marketInk),
               ),
             ]),
           ),
-        ) : LayoutBuilder(builder:(context, constraints) {
+        )) : LayoutBuilder(builder:(context, constraints) {
           final columns = constraints.maxWidth >= 1100 ? 3 : constraints.maxWidth >= 650 ? 2 : 1;
           return GridView.builder(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
@@ -2099,135 +2450,27 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
               crossAxisCount: columns,
               crossAxisSpacing: 14,
               mainAxisSpacing: 16,
-              mainAxisExtent: columns == 1 ? 390 : 380,
+              mainAxisExtent: ((constraints.maxWidth-28-(columns-1)*14)/columns)*.75+185*MediaQuery.textScalerOf(context).scale(1),
             ),
             itemBuilder: (context, index) {
               final car = found[index];
               final compareId = car.listingId ?? '${car.brand}-${car.model}-${car.year}-${car.km}';
               final isCompared = _comparisonIds.contains(compareId);
-              return Card(
-                color: const Color(0xFF11171D),
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: gold.withValues(alpha: .30)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => widget.onOpenCar(car),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Stack(fit: StackFit.expand, children: [
-                          car.photos.isNotEmpty
-                              ? Image.memory(car.photos.first, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car, color: gold, size: 64)))
-                              : const Center(child: Icon(Icons.directions_car, color: gold, size: 64)),
-                          Positioned(right: 8, top: 8, child: SaveVehicleButton(car: car)),
-                          Positioned(
-                            left: 10, top: 10,
-                            child: Material(
-                              color: Colors.black.withValues(alpha: .72),
-                              borderRadius: BorderRadius.circular(10),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(10),
-                                onTap: () => _toggleCompare(car),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                    Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined, color: gold, size: 18),
-                                    const SizedBox(width: 5),
-                                    Text(isCompared ? 'Comparar' : 'Añadir', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                                  ]),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 10, bottom: 12,
-                            child: _VehicleStatusBadge(status: car.status),
-                          ),
-                          Positioned(
-                            right: 12, bottom: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                              decoration: BoxDecoration(color: Colors.black.withValues(alpha: .82), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withValues(alpha: .55))),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                const Icon(Icons.photo_camera_outlined, color: gold, size: 14),
-                                const SizedBox(width: 5),
-                                Text('${car.photos.length} fotos', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                              ]),
-                            ),
-                          ),
-                        ]),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 12, 15, 13),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${car.brand} ${car.model}', maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white)),
-                        const SizedBox(height: 9),
-                        Wrap(spacing: 7, runSpacing: 6, children: [
-                          _CarFeaturePill(icon: Icons.calendar_month_outlined, label: '${car.year}'),
-                          _CarFeaturePill(icon: Icons.speed_rounded, label: '${number(car.km)} km'),
-                          if (car.cv != null) _CarFeaturePill(icon: Icons.bolt_rounded, label: '${car.cv} CV'),
-                          _CarFeaturePill(icon: Icons.local_gas_station_outlined, label: car.fuel),
-                        ]),
-                        const SizedBox(height: 11),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: gold.withValues(alpha: .07),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: gold.withValues(alpha: .24)),
-                          ),
-                          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'PRECIO',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: .62),
-                                      fontSize: 10,
-                                      letterSpacing: 1.1,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    euros(car.price),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: gold,
-                                      fontSize: 23,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: gold.withValues(alpha: .12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.arrow_forward_rounded, color: gold, size: 19),
-                            ),
-                          ]),
-                        ),
-                      ]),
-                    ),
-                  ]),
-                ),
+              return MarketVehicleCard(
+                title: '${car.brand} ${car.model}', price: euros(car.price),
+                details: '${car.year} · ${number(car.km)} km · ${uiText(context, car.fuel)}',
+                version: car.version, photoCount: car.photoCount, photo: car.photos.isEmpty ? null : car.photos.first,
+                favorite: SaveVehicleButton(car: car),
+                comparison: Material(color: marketSurface, borderRadius: BorderRadius.circular(12),
+                  child: IconButton(
+                    tooltip: AppLocalizations.of(context).compare,
+                    onPressed: () => _toggleCompare(car),
+                    icon: Icon(isCompared ? Icons.check_box_rounded : Icons.add_box_outlined,
+                      color: isCompared ? marketAccent : marketInk))),
+                status: car.status == 'reserved' || car.status == 'sold' ? _VehicleStatusBadge(status: car.status) : null,
+                onTap: () => widget.onOpenCar(car),
               );
+
             },
           );
         })),
@@ -2237,88 +2480,258 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> {
 }
 
 class VehicleSearchAlertsPage extends StatefulWidget {
-  const VehicleSearchAlertsPage({super.key});
+  final ValueChanged<Car> onOpenCar;
+  const VehicleSearchAlertsPage({super.key, required this.onOpenCar});
   @override
-  State<VehicleSearchAlertsPage> createState() => _VehicleSearchAlertsPageState();
+  State<VehicleSearchAlertsPage> createState() =>
+      _VehicleSearchAlertsPageState();
 }
+
 class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
   bool loading = true;
   String? error;
   List<Map<String, dynamic>> alerts = [];
   @override
-  void initState() { super.initState(); loadAlerts(); }
+  void initState() {
+    super.initState();
+    loadAlerts();
+  }
+
   Future<void> loadAlerts() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        setState(() { loading = false; error = 'Inicia sesión para consultar tus alertas.'; });
+        setState(() {
+          loading = false;
+          error = 'Inicia sesión para consultar tus alertas.';
+        });
         return;
       }
-      final rows = await Supabase.instance.client.from('vehicle_search_alerts')
-          .select('id, search_id, listing_id, alert_type, title, message, created_at, read_at')
-          .eq('user_id', user.id).order('created_at', ascending: false).limit(100);
+      final rows = await Supabase.instance.client
+          .from('vehicle_search_alerts')
+          .select(
+            'id, search_id, listing_id, alert_type, title, message, created_at, read_at, previous_price, current_price',
+          )
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(100);
       if (!mounted) return;
-      setState(() { alerts = List<Map<String, dynamic>>.from(rows); loading = false; });
+      setState(() {
+        alerts = List<Map<String, dynamic>>.from(rows);
+        loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { loading = false; error = 'No se pudieron cargar las alertas. Comprueba la conexión e inténtalo de nuevo.'; });
+      setState(() {
+        loading = false;
+        error = 'No se pudieron cargar las alertas. Comprueba la conexión e inténtalo de nuevo.';
+      });
     }
   }
+
   Future<void> markRead(Map<String, dynamic> alert) async {
     if (alert['read_at'] != null) return;
     try {
       final now = DateTime.now().toUtc().toIso8601String();
-      await Supabase.instance.client.from('vehicle_search_alerts').update({'read_at': now}).eq('id', alert['id']);
+      await Supabase.instance.client
+          .from('vehicle_search_alerts')
+          .update({'read_at': now})
+          .eq('id', alert['id']);
       if (!mounted) return;
       setState(() => alert['read_at'] = now);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo marcar la alerta como leída.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            uiText(context, "No se pudo marcar la alerta como leída."),
+          ),
+        ),
+      );
     }
   }
+
+  Future<void> openAlert(Map<String, dynamic> alert) async {
+    await markRead(alert);
+    if (!mounted) return;
+    if (alert['alert_type'] != 'review_requested') {
+      try {
+        final raw = await Supabase.instance.client
+            .from('vehicle_listings')
+            .select(buyerListingProjection)
+            .eq('id', alert['listing_id'])
+            .maybeSingle();
+        if (raw == null) throw StateError('unavailable');
+        final car = await buyerCarFromListing(raw);
+        if (mounted) widget.onOpenCar(car);
+      } catch (_) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                uiText(context, 'Este aviso ya no está disponible.'),
+              ),
+            ),
+          );
+      }
+      return;
+    }
+    final listingId = alert['listing_id']?.toString();
+    if (listingId == null || listingId.isEmpty) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
+      ),
+    );
+    if (mounted) await loadAlerts();
+  }
+
   @override
   Widget build(BuildContext context) {
     final unread = alerts.where((a) => a['read_at'] == null).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Alertas de búsqueda'), actions: [
-        IconButton(tooltip: 'Actualizar', onPressed: loadAlerts, icon: const Icon(Icons.refresh_rounded, color: gold)),
-      ]),
+      appBar: AppBar(
+        title: Text(uiText(context, "Notificaciones")),
+        actions: [
+          IconButton(
+            tooltip: uiText(context, "Actualizar"),
+            onPressed: loadAlerts,
+            icon: const Icon(Icons.refresh_rounded, color: marketAccent),
+          ),
+        ],
+      ),
       body: loading
-        ? const Center(child: CircularProgressIndicator(color: gold))
-        : error != null
-          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.notifications_off_outlined, color: gold, size: 40), const SizedBox(height: 12),
-              Text(error!, textAlign: TextAlign.center), const SizedBox(height: 14),
-              FilledButton(onPressed: loadAlerts, child: const Text('Reintentar')),
-            ])))
+          ? const Center(child: CircularProgressIndicator(color: marketAccent))
+          : error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.notifications_off_outlined,
+                      color: marketAccent,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(uiText(context, error!), textAlign: TextAlign.center),
+                    const SizedBox(height: 14),
+                    FilledButton(
+                      onPressed: loadAlerts,
+                      child: Text(uiText(context, "Reintentar")),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : alerts.isEmpty
-            ? Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.notifications_none_rounded, size: 54, color: gold), const SizedBox(height: 14),
-                const Text('Todavía no tienes alertas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                const Text('Cuando aparezca un coche que coincida con tus búsquedas guardadas o baje de precio, lo verás aquí.',
-                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
-              ])))
-            : ListView(padding: const EdgeInsets.all(16), children: [
-                Text('${unread} sin leer · ${alerts.length} alertas', style: const TextStyle(color: gold, fontWeight: FontWeight.w700)),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 54,
+                      color: marketAccent,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      uiText(context, "Todavía no tienes alertas"),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      uiText(
+                        context,
+                        "Aquí verás las invitaciones para valorar tus compras y las alertas de tus búsquedas guardadas.",
+                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: marketMuted),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  uiText(context, "{0} sin leer · {1} alertas", [
+                    unread,
+                    alerts.length,
+                  ]),
+                  style: const TextStyle(
+                    color: marketAccent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 for (final alert in alerts)
                   Card(
-                    color: alert['read_at'] == null ? const Color(0xFF25231C) : const Color(0xFF18181B),
+                    color: alert['read_at'] == null
+                        ? marketSurface
+                        : marketSurface,
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
-                      leading: Icon(alert['alert_type'] == 'price_drop' ? Icons.trending_down_rounded : Icons.directions_car_filled_rounded,
-                        color: alert['read_at'] == null ? gold : Colors.white54),
-                      title: Text(alert['title']?.toString() ?? 'Alerta', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(alert['message']?.toString() ?? '')),
+                      leading: Icon(
+                        alert['alert_type'] == 'review_requested'
+                            ? Icons.rate_review_outlined
+                            : alert['alert_type'] == 'price_drop'
+                            ? Icons.trending_down_rounded
+                            : Icons.directions_car_filled_rounded,
+                        color: alert['read_at'] == null ? gold : marketMuted,
+                      ),
+                      title: Text(
+                        alert['title']?.toString() ?? uiText(context, 'Alerta'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(alert['message']?.toString() ?? ''),
+                            if (alert['previous_price'] is num &&
+                                alert['current_price'] is num)
+                              Text(
+                                '${watchPrice(alert['previous_price'] as num)} → ${watchPrice(alert['current_price'] as num)}',
+                                style: const TextStyle(
+                                  color: marketAccent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                       trailing: alert['read_at'] == null
-                        ? IconButton(tooltip: 'Marcar como leída', onPressed: () => markRead(alert), icon: const Icon(Icons.mark_email_read_outlined, color: gold))
-                        : const Icon(Icons.check_circle_outline, color: Colors.white38),
-                      onTap: () => markRead(alert),
+                          ? IconButton(
+                              tooltip: uiText(context, "Marcar como leída"),
+                              onPressed: () => markRead(alert),
+                              icon: const Icon(
+                                Icons.mark_email_read_outlined,
+                                color: marketAccent,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.check_circle_outline,
+                              color: marketMuted,
+                            ),
+                      onTap: () => openAlert(alert),
                     ),
                   ),
-              ]),
+              ],
+            ),
     );
   }
 }
@@ -2370,11 +2783,11 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar búsqueda'),
-        content: Text('¿Quieres eliminar «${item['name']}»?'),
+        title:  Text(uiText(context, "Eliminar búsqueda")),
+        content: Text(uiText(context, "¿Quieres eliminar «{0}»?", [item['name']])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Eliminar')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child:  Text(uiText(context, "Cancelar"))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child:  Text(uiText(context, "Eliminar"))),
         ],
       ),
     );
@@ -2383,11 +2796,23 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
       await Supabase.instance.client.from('saved_vehicle_searches').delete().eq('id', item['id']);
       if (!mounted) return;
       setState(() => searches.removeWhere((s) => s['id'] == item['id']));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Búsqueda eliminada.')));
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Búsqueda eliminada."))));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo eliminar la búsqueda.')));
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "No se pudo eliminar la búsqueda."))));
     }
+  }
+
+  final updatingSearches=<String>{};
+  Future<void> updatePreference(Map<String,dynamic> item,String key,bool value) async {
+    final db=Supabase.instance.client;final uid=db.auth.currentUser?.id;
+    final id=item['id'].toString();if(uid==null || updatingSearches.contains(id))return;
+    setState(()=>updatingSearches.add(id));
+    try{
+      final row=await db.from('saved_vehicle_searches').update({key:value}).eq('id',id).eq('user_id',uid).select('notify_new_listings,notify_price_drops').single();
+      if(mounted && db.auth.currentUser?.id==uid)setState(()=>item.addAll(row));
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo guardar la preferencia. Inténtalo de nuevo.'))));}
+    finally{if(mounted)setState(()=>updatingSearches.remove(id));}
   }
 
   String criteriaSummary(Map<String, dynamic> criteria) {
@@ -2416,31 +2841,31 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Búsquedas guardadas'), actions: [
-        IconButton(tooltip: 'Actualizar', onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: gold)),
+      appBar: AppBar(title:  Text(uiText(context, "Búsquedas guardadas")), actions: [
+        IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: marketAccent)),
       ]),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: gold))
+          ? const Center(child: CircularProgressIndicator(color: marketAccent))
           : error != null
               ? Center(child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.lock_outline_rounded, color: gold, size: 38),
+                    const Icon(Icons.lock_outline_rounded, color: marketAccent, size: 38),
                     const SizedBox(height: 12),
-                    Text(error!, textAlign: TextAlign.center),
+                    Text(uiText(context, error!), textAlign: TextAlign.center),
                     const SizedBox(height: 14),
-                    FilledButton(onPressed: loadSearches, child: const Text('Reintentar')),
+                    FilledButton(onPressed: loadSearches, child:  Text(uiText(context, "Reintentar"))),
                   ]),
                 ))
               : searches.isEmpty
                   ? Center(child: Padding(
                       padding: const EdgeInsets.all(28),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.bookmark_border_rounded, size: 52, color: gold),
+                        const Icon(Icons.bookmark_border_rounded, size: 52, color: marketAccent),
                         const SizedBox(height: 14),
-                        const Text('Todavía no tienes búsquedas guardadas', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800), textAlign: TextAlign.center),
+                         Text(uiText(context, "Todavía no tienes búsquedas guardadas"), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
                         const SizedBox(height: 8),
-                        const Text('Abre los filtros del buscador y pulsa «Guardar búsqueda» para tenerlos aquí.', textAlign: TextAlign.center),
+                         Text(uiText(context, "Abre los filtros del buscador y pulsa «Guardar búsqueda» para tenerlos aquí."), textAlign: TextAlign.center),
                       ]),
                     ))
                   : ListView.separated(
@@ -2453,21 +2878,23 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                         final criteria = rawCriteria is Map ? Map<String, dynamic>.from(rawCriteria) : <String, dynamic>{};
                         return Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1D),
+                            color: marketSurface,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: gold.withValues(alpha: .35)),
+                            border: Border.all(color: marketAccent.withValues(alpha: .35)),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                const Icon(Icons.bookmark_rounded, color: gold),
+                                const Icon(Icons.bookmark_rounded, color: marketAccent),
                                 const SizedBox(width: 10),
-                                Expanded(child: Text(item['name']?.toString() ?? 'Búsqueda guardada', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-                                IconButton(tooltip: 'Eliminar búsqueda', onPressed: () => deleteSearch(item), icon: const Icon(Icons.delete_outline_rounded)),
+                                Expanded(child: Text(item['name']?.toString() ?? uiText(context, 'Búsqueda guardada'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                                IconButton(tooltip: uiText(context, "Eliminar búsqueda"), onPressed: () => deleteSearch(item), icon: const Icon(Icons.delete_outline_rounded)),
                               ]),
                               const SizedBox(height: 6),
-                              Text(criteriaSummary(criteria), style: TextStyle(color: Colors.white.withValues(alpha: .72), height: 1.4)),
+                              Text(criteriaSummary(criteria), style: TextStyle(color: marketInk.withValues(alpha: .72), height: 1.4)),
+                              MarketAlertPreferences(newListings:item['notify_new_listings']==true,priceDrops:item['notify_price_drops']==true,busy:updatingSearches.contains(item['id'].toString()),onNewListings:(v)=>updatePreference(item,'notify_new_listings',v),onPriceDrops:(v)=>updatePreference(item,'notify_price_drops',v)),
+                              Text(uiText(context,'Avisos en el buzón de la app'),style:const TextStyle(color:marketMuted,fontSize:12)),
                               const SizedBox(height: 12),
                               SizedBox(width: double.infinity, child: FilledButton.icon(
                                 onPressed: () {
@@ -2475,7 +2902,7 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
                                   Navigator.pop(context);
                                 },
                                 icon: const Icon(Icons.filter_alt_rounded),
-                                label: const Text('Aplicar filtros'),
+                                label:  Text(uiText(context, "Aplicar filtros")),
                               )),
                             ]),
                           ),
@@ -2541,7 +2968,7 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
     }
     final id = widget.car.listingId;
     if (user == null || id == null || id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este anuncio no se puede guardar ahora mismo.')));
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Este anuncio no se puede guardar ahora mismo."))));
       return;
     }
     setState(() => loading = true);
@@ -2555,11 +2982,11 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
       if (!mounted) return;
       setState(() => isSaved = !isSaved);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(isSaved ? 'Vehículo guardado en favoritos.' : 'Vehículo eliminado de favoritos.'),
+        content: Text(isSaved ? uiText(context, "Vehículo guardado en favoritos.") : uiText(context, "Vehículo eliminado de favoritos.")),
       ));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No se pudo guardar el anuncio. Inténtalo de nuevo.'),
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+        content: Text(uiText(context, "No se pudo guardar el anuncio. Inténtalo de nuevo.")),
       ));
     } finally {
       if (mounted) setState(() => loading = false);
@@ -2568,14 +2995,15 @@ class _SaveVehicleButtonState extends State<SaveVehicleButton> {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.black.withValues(alpha: .68),
+    color: marketSurface,
     shape: const CircleBorder(),
     child: IconButton(
-      tooltip: isSaved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      tooltip: isSaved ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
       onPressed: loading ? null : _toggle,
       icon: loading
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: gold))
-          : Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isSaved ? Colors.redAccent : gold),
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent))
+          : AnimatedSwitcher(duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 180),
+              child: Icon(isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(isSaved), color: isSaved ? Colors.redAccent : marketInk)),
     ),
   );
 }
@@ -2655,13 +3083,13 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
       setState(() => isSaved = !isSaved);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(isSaved
-            ? 'Vehículo guardado en favoritos.'
-            : 'Vehículo eliminado de favoritos.'),
+            ? uiText(context, "Vehículo guardado en favoritos.")
+            : uiText(context, "Vehículo eliminado de favoritos.")),
       ));
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No se pudo actualizar favoritos. Inténtalo de nuevo.'),
+        ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+          content: Text(uiText(context, "No se pudo actualizar favoritos. Inténtalo de nuevo.")),
         ));
       }
     } finally {
@@ -2671,32 +3099,57 @@ class _SaveListingIdButtonState extends State<SaveListingIdButton> {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.black.withValues(alpha: .72),
+    color: marketSurface,
     shape: const CircleBorder(),
     child: IconButton(
-      tooltip: isSaved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      tooltip: isSaved ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
       visualDensity: VisualDensity.compact,
       onPressed: loading ? null : _toggle,
       icon: loading
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+              child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent),
             )
           : Icon(
               isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              color: isSaved ? Colors.redAccent : gold,
+              color: isSaved ? Colors.redAccent : marketInk,
               size: 21,
             ),
     ),
   );
 }
 
+Future<Car> buyerCarFromListing(Map<String, dynamic> raw) async {
+  final photoRows = raw['vehicle_photos'] is List
+      ? List<Map<String, dynamic>>.from(raw['vehicle_photos'])
+      : <Map<String, dynamic>>[];
+  photoRows.sort(
+    (a, b) => ((a['position'] as num?)?.toInt() ?? 0).compareTo(
+      (b['position'] as num?)?.toInt() ?? 0,
+    ),
+  );
+  final paths = photoRows
+      .map((p) => p['storage_path']?.toString() ?? '')
+      .where((p) => p.isNotEmpty)
+      .toList();
+  final photos = await loadListingCover(
+    paths,
+    (path) =>
+        Supabase.instance.client.storage.from('vehicle-photos').download(path),
+  );
+  return Car.fromListing(raw, photos: photos, photoPaths: paths);
+}
+
 class SavedVehiclesPage extends StatefulWidget {
   final List<Car> cars;
   final void Function(Car) onOpenCar;
 
-  const SavedVehiclesPage({super.key, required this.cars, required this.onOpenCar});
+  const SavedVehiclesPage({
+    super.key,
+    required this.cars,
+    required this.onOpenCar,
+  });
 
   @override
   State<SavedVehiclesPage> createState() => _SavedVehiclesPageState();
@@ -2705,8 +3158,53 @@ class SavedVehiclesPage extends StatefulWidget {
 class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   bool loading = true;
   String? error;
-  List<Car> savedCars = [];
+  List<Map<String, dynamic>> favorites = [];
+  Map<String, Car> cars = {};
+  final busy = <String>{};
+  String favoriteSort = 'recent';
+  final selectedFavorites = <String>{};
+  List<Map<String, dynamic>> get orderedFavorites {
+    final rows = List<Map<String, dynamic>>.from(favorites);
+    if (favoriteSort == 'recent') return rows;
+    final positions = {
+      for (var i = 0; i < favorites.length; i++)
+        favorites[i]['listing_id'].toString(): i,
+    };
+    rows.sort((a, b) {
+      final aId = a['listing_id'].toString(), bId = b['listing_id'].toString();
+      final ca = cars[aId], cb = cars[bId];
+      final aMissing =
+          ca == null ||
+          (favoriteSort == 'price_asc' ? ca.price <= 0 : ca.year <= 0);
+      final bMissing =
+          cb == null ||
+          (favoriteSort == 'price_asc' ? cb.price <= 0 : cb.year <= 0);
+      if (aMissing != bMissing) return aMissing ? 1 : -1;
+      final difference = aMissing
+          ? 0
+          : favoriteSort == 'price_asc'
+          ? ca.price.compareTo(cb!.price)
+          : cb!.year.compareTo(ca.year);
+      return difference != 0
+          ? difference
+          : positions[aId]!.compareTo(positions[bId]!);
+    });
+    return rows;
+  }
 
+  void toggleFavoriteComparison(String id) {
+    setState(() {
+      if (selectedFavorites.contains(id)) {
+        selectedFavorites.remove(id);
+      } else if (selectedFavorites.length < 3) {
+        selectedFavorites.add(id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).comparisonLimit)),
+        );
+      }
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -2714,57 +3212,177 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
   }
 
   Future<void> loadFavorites() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        setState(() { loading = false; error = 'Inicia sesión para consultar tus favoritos.'; });
-        return;
-      }
-      final rows = await Supabase.instance.client.from('saved_vehicles')
-          .select('listing_id').eq('user_id', user.id).order('created_at', ascending: false);
-      final ids = List<Map<String, dynamic>>.from(rows)
-          .map((row) => row['listing_id'].toString()).toSet();
-      if (mounted) setState(() {
-        savedCars = widget.cars.where((car) => car.listingId != null && ids.contains(car.listingId)).toList();
+      final db = Supabase.instance.client;
+      final uid = db.auth.currentUser?.id;
+      if (uid == null) throw StateError('login');
+      final rows = await db
+          .from('saved_vehicles')
+          .select('listing_id,reference_price,notify_price_drops')
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+      final records = List<Map<String, dynamic>>.from(rows);
+      final ids = records.map((f) => f['listing_id'].toString()).toList();
+      final listings = ids.isEmpty
+          ? <Map<String, dynamic>>[]
+          : List<Map<String, dynamic>>.from(
+              await db
+                  .from('vehicle_listings')
+                  .select(buyerListingProjection)
+                  .inFilter('id', ids),
+            );
+      final fresh = await Future.wait(listings.map(buyerCarFromListing));
+      if (!mounted || db.auth.currentUser?.id != uid) return;
+      setState(() {
+        favorites = records;
+        cars = {for (final car in fresh) car.listingId!: car};
+        selectedFavorites.removeWhere((id)=>!cars.containsKey(id) || !['published','reserved'].contains(cars[id]!.status));
         loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() { loading = false; error = 'No se pudieron cargar los favoritos. Desliza para reintentar.'; });
+      if (mounted) {
+        setState(() {
+          loading = false;
+          error =
+              'No se pudieron cargar los favoritos. Desliza para reintentar.';
+        });
+      }
     }
   }
 
-  String _price(double value) => '${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
+  Future<void> changeFavorite(
+    Map<String, dynamic> item, {
+    bool? watch,
+    bool remove = false,
+  }) async {
+    final id = item['listing_id'].toString();
+    if (busy.contains(id)) return;
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) return;
+    setState(() => busy.add(id));
+    try {
+      if (remove) {
+        await db
+            .from('saved_vehicles')
+            .delete()
+            .eq('user_id', uid)
+            .eq('listing_id', id);
+      } else {
+        final updated = await db
+            .from('saved_vehicles')
+            .update({'notify_price_drops': watch})
+            .eq('user_id', uid)
+            .eq('listing_id', id)
+            .select('reference_price,notify_price_drops')
+            .single();
+        item.addAll(updated);
+      }
+      if (mounted && db.auth.currentUser?.id == uid) {
+        setState(() {
+          if (remove) {favorites.remove(item);selectedFavorites.remove(id);}
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              uiText(
+                context,
+                'No se pudo actualizar favoritos. Inténtalo de nuevo.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy.remove(id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Mis favoritos')),
+    appBar: AppBar(
+      title: Text(uiText(context, 'Mis favoritos')),
+      actions: [
+        IconButton(
+          tooltip: uiText(context, 'Actualizar'),
+          onPressed: loadFavorites,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
+    bottomNavigationBar:selectedFavorites.length<2 ? null : SafeArea(child:Padding(padding:const EdgeInsets.all(12),child:FilledButton.icon(
+      onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>VehicleComparisonPage(cars:selectedFavorites.map((id)=>cars[id]!).toList(),onOpenCar:widget.onOpenCar))),
+      icon:const Icon(Icons.compare_arrows_rounded),label:Text(AppLocalizations.of(context).compareVehicles(selectedFavorites.length)),
+    ))),
     body: RefreshIndicator(
-      color: gold,
       onRefresh: loadFavorites,
-      child: loading
-        ? ListView(children: const [SizedBox(height: 220), Center(child: CircularProgressIndicator())])
-        : error != null
-          ? ListView(children: [Padding(padding: const EdgeInsets.all(28), child: Center(child: Text(error!, textAlign: TextAlign.center)))])
-          : savedCars.isEmpty
-            ? ListView(children: const [SizedBox(height: 100), Icon(Icons.favorite_border_rounded, size: 56, color: gold), SizedBox(height: 16), Center(child: Text('Aún no tienes coches favoritos.', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))), SizedBox(height: 8), Center(child: Text('Abre un anuncio y pulsa “Guardar en favoritos”.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white60)))])
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: savedCars.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final car = savedCars[index];
-                  return Card(color: panel, clipBehavior: Clip.antiAlias, child: ListTile(
-                    onTap: () => widget.onOpenCar(car),
-                    leading: SizedBox(width: 76, height: 62, child: car.photos.isNotEmpty
-                      ? Image.memory(car.photos.first, fit: BoxFit.cover)
-                      : const Icon(Icons.directions_car_rounded, color: gold, size: 38)),
-                    title: Text('${car.brand} ${car.model}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                    subtitle: Text('${car.year} · ${car.km} km'),
-                    trailing: Text(_price(car.price), style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
-                  ));
-                },
-              ),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Padding(padding:const EdgeInsets.only(bottom:20,top:8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(uiText(context,'TU SELECCIÓN'),style:const TextStyle(color:marketAccent,fontSize:11,letterSpacing:1.6,fontWeight:FontWeight.w600)),
+            const SizedBox(height:8),Text(uiText(context,'Los que te gustan.'),style:Theme.of(context).textTheme.headlineMedium),
+          ])),
+          if(!loading && error==null && favorites.isNotEmpty) ...[
+            DropdownButtonFormField<String>(key:const Key('favorite-sort'),initialValue:favoriteSort,isExpanded:true,decoration:InputDecoration(labelText:uiText(context,'Ordenar favoritos')),
+              items:[DropdownMenuItem(value:'recent',child:Text(uiText(context,'Guardados más recientes'))),DropdownMenuItem(value:'price_asc',child:Text(AppLocalizations.of(context).priceLowHigh)),DropdownMenuItem(value:'year_desc',child:Text(AppLocalizations.of(context).newestFirst))],
+              onChanged:(value)=>setState(()=>favoriteSort=value??'recent')),
+            const SizedBox(height:12),
+          ],
+
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.all(60),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (error != null)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(uiText(context, error!), textAlign: TextAlign.center),
+            )
+          else if (favorites.isEmpty)
+            MarketEmptyState(icon:Icons.favorite_border_rounded,title:'Aún no tienes coches favoritos.',message:'Guarda los coches que te gustan y compáralos aquí.',actionLabel:'Explorar vehículos',onAction:()=>Navigator.pop(context))
+          else
+            ...orderedFavorites.map((item) {
+              final id = item['listing_id'].toString();
+              final car = cars[id];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: MarketFavoriteCard(
+                  title: car == null
+                      ? uiText(context, 'Anuncio no disponible')
+                      : '${car.brand} ${car.model}',
+                  details: car == null
+                      ? ''
+                      : '${car.year} · ${car.km} km · ${uiText(context, car.fuel)}',
+                  price: car?.price ?? 0,
+                  referencePrice: item['reference_price'] as num?,
+                  photo: car?.photos.firstOrNull,
+                  comparing:selectedFavorites.contains(id),
+                  onCompare:car!=null && ['published','reserved'].contains(car.status) ? ()=>toggleFavoriteComparison(id) : null,
+                  watching: item['notify_price_drops'] == true,
+                  busy: busy.contains(id),
+                  available:
+                      car != null &&
+                      ['published', 'reserved'].contains(car.status),
+                  onOpen: () {
+                    if (car != null) widget.onOpenCar(car);
+                  },
+                  onRemove: () => changeFavorite(item, remove: true),
+                  onWatch: (value) => changeFavorite(item, watch: value),
+                ),
+              );
+            }),
+        ],
+      ),
     ),
   );
 }
@@ -2773,12 +3391,14 @@ class CarDetailsPage extends StatefulWidget {
   final Car car;
   final String priceText;
   final VoidCallback onContact;
+  final ListingPhotoDownload? downloadPhoto;
 
   const CarDetailsPage({
     super.key,
     required this.car,
     required this.priceText,
     required this.onContact,
+    this.downloadPhoto,
   });
 
   @override
@@ -2791,7 +3411,12 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   VoidCallback get onContact => widget.onContact;
   bool isFavorite = false;
   bool favoriteLoading = false;
+  bool reporting = false;
   int currentPhotoIndex = 0;
+  late List<Uint8List> detailPhotos;
+  late final Future<void> galleryReady;
+  late final Future<Map<String, dynamic>?> sellerProfile;
+  late Future<int?> listingFavoriteCount;
   late final PageController _photoController = PageController();
 
   @override
@@ -2803,7 +3428,44 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   void initState() {
     super.initState();
+    detailPhotos = List.of(car.photos);
+    galleryReady = _loadGallery();
+    sellerProfile = _loadPublicSeller();
+    listingFavoriteCount = _loadListingFavoriteCount();
     _loadFavorite();
+  }
+
+  Future<int?> _loadListingFavoriteCount() async {
+    if(car.listingId==null)return null;
+    try {
+      final value=await Supabase.instance.client.rpc('listing_favorite_count',params:{'p_listing_id':car.listingId});
+      return value is num && value>=0 ? value.toInt() : null;
+    } catch (_) {return null;}
+  }
+
+  Future<Map<String, dynamic>?> _loadPublicSeller() async {
+    if (car.ownerId == null) return null;
+    try {
+      return await Supabase.instance.client.from('public_seller_profiles')
+        .select('full_name,business_name,city,profile_photo_path').eq('id', car.ownerId!).maybeSingle();
+    } catch (_) {
+      return null; // Keep the existing profile action available on network failure.
+    }
+  }
+
+  Future<void> _openSeller() async {
+    if (car.ownerId == null) return;
+    final loggedIn = await requireAutomotorsLogin(context);
+    if (!loggedIn || !mounted) return;
+    await Navigator.push<void>(context, MaterialPageRoute(
+      builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!)));
+  }
+
+  Future<void> _loadGallery() async {
+    if (car.photoPaths.isEmpty) return;
+    final loaded = await loadListingGallery(car.photoPaths, car.photos,
+      widget.downloadPhoto ?? (path) => Supabase.instance.client.storage.from('vehicle-photos').download(path));
+    if (mounted) setState(() => detailPhotos = loaded);
   }
 
   Future<void> _loadFavorite() async {
@@ -2845,14 +3507,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         });
       }
       if (mounted) {
-        setState(() => isFavorite = !isFavorite);
+        setState(() {isFavorite = !isFavorite; listingFavoriteCount=_loadListingFavoriteCount();});
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isFavorite ? 'Vehículo guardado en favoritos.' : 'Vehículo eliminado de favoritos.'),
+          content: Text(isFavorite ? uiText(context, "Vehículo guardado en favoritos.") : uiText(context, "Vehículo eliminado de favoritos.")),
         ));
       }
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo actualizar favoritos. Inténtalo de nuevo.')),
+         SnackBar(content: Text(uiText(context, "No se pudo actualizar favoritos. Inténtalo de nuevo."))),
       );
     } finally {
       if (mounted) setState(() => favoriteLoading = false);
@@ -2860,15 +3522,20 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   }
 
   Future<void> _reportListing() async {
+    if (reporting) return;
+    setState(() => reporting = true);
+    try { await _showListingReport(); }
+    finally { if (mounted) setState(() => reporting = false); }
+  }
+
+  Future<void> _showListingReport() async {
     final listingId = car.listingId;
     if (listingId == null || listingId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Este anuncio no se puede reportar desde esta ficha.')),
+         SnackBar(content: Text(uiText(context, "Este anuncio no se puede reportar desde esta ficha."))),
       );
       return;
     }
-    final loggedIn = await requireAutomotorsLogin(context);
-    if (!loggedIn || !mounted) return;
     final reasons = <String>[
       'Información falsa',
       'Precio sospechoso',
@@ -2881,34 +3548,40 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: panel,
-        title: const Text('Reportar anuncio'),
+        title: Text(uiText(context, "Denunciar anuncio")),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Align(
+             Align(
               alignment: Alignment.centerLeft,
-              child: Text('¿Qué problema has detectado?'),
+              child: Text(uiText(context, "¿Qué problema has detectado?")),
             ),
             const SizedBox(height: 10),
             ...reasons.map((item) => ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.flag_outlined, color: gold),
-              title: Text(item),
+              leading: const Icon(Icons.flag_outlined, color: marketAccent),
+              title: Text(uiText(context, item)),
               onTap: () => Navigator.pop(dialogContext, item),
             )),
           ],
         ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
+          child: Text(uiText(context, "Cancelar")))],
       ),
     );
     if (reason == null || !mounted) return;
+    final loggedIn = await requireAutomotorsLogin(context);
+    if (!loggedIn || !mounted) return;
+
 
     // Optional context helps the review team understand the report.
     final detailsController = TextEditingController();
-    final details = await showDialog<String>(
+    final detailsRoute = DialogRoute<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: panel,
-        title: const Text('Añadir detalles (opcional)'),
+        title:  Text(uiText(context, "Añadir detalles (opcional)")),
         content: TextField(
           controller: detailsController,
           autofocus: true,
@@ -2916,26 +3589,28 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           maxLines: 5,
           maxLength: 1000,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            hintText: 'Describe brevemente qué has observado…',
+          decoration:  InputDecoration(
+            hintText: uiText(context, "Describe brevemente qué has observado…"),
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, ''),
-            child: const Text('Omitir'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(uiText(context, "Cancelar")),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(
               dialogContext,
               detailsController.text.trim(),
             ),
-            child: const Text('Enviar reporte'),
+            child:  Text(uiText(context, "Enviar reporte")),
           ),
         ],
       ),
     );
+    final details = await Navigator.of(context, rootNavigator: true).push(detailsRoute);
+    await detailsRoute.completed;
     detailsController.dispose();
     if (details == null || !mounted) return;
 
@@ -2950,13 +3625,13 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gracias. Hemos recibido tu reporte para revisión.')),
+           SnackBar(content: Text(uiText(context, "Gracias. Hemos recibido tu reporte para revisión."))),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo enviar. Es posible que ya hayas reportado este anuncio.')),
+           SnackBar(content: Text(uiText(context, "No se pudo enviar. Es posible que ya hayas reportado este anuncio."))),
         );
       }
     }
@@ -2990,20 +3665,20 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Compartir anuncio'),
+          title:  Text(uiText(context, "Compartir anuncio")),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (!hasListingId)
-                const Padding(
+                 Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text(
-                    'Este anuncio no tiene identificador para crear un enlace directo a su ficha. Puedes compartir los datos, pero el enlace no abrirá este coche directamente.',
+                    uiText(context, "Este anuncio no tiene identificador para crear un enlace directo a su ficha. Puedes compartir los datos, pero el enlace no abrirá este coche directamente."),
                   ),
                 ),
               ListTile(
                 leading: const Icon(Icons.chat_rounded),
-                title: const Text('WhatsApp'),
+                title:  Text(uiText(context, "WhatsApp")),
                 onTap: () async {
                   final uri = Uri.parse(
                     'https://wa.me/?text=${Uri.encodeComponent(summary)}',
@@ -3014,7 +3689,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.send_rounded),
-                title: const Text('Telegram'),
+                title:  Text(uiText(context, "Telegram")),
                 onTap: () async {
                   final uri = Uri.parse(
                     'https://t.me/share/url?url=${Uri.encodeComponent(shareUri.toString())}&text=${Uri.encodeComponent(title)}',
@@ -3025,7 +3700,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.email_outlined),
-                title: const Text('Correo electrónico'),
+                title:  Text(uiText(context, "Correo electrónico")),
                 onTap: () async {
                   final uri = Uri(
                     scheme: 'mailto',
@@ -3040,7 +3715,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.copy_rounded),
-                title: const Text('Copiar enlace y datos'),
+                title:  Text(uiText(context, "Copiar enlace y datos")),
                 onTap: () async {
                   await Clipboard.setData(ClipboardData(text: summary));
                   if (dialogContext.mounted) Navigator.of(dialogContext).pop();
@@ -3049,8 +3724,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                       SnackBar(
                         content: Text(
                           hasListingId
-                              ? 'Enlace y datos del anuncio copiados.'
-                              : 'Datos copiados. Este anuncio aún no tiene enlace directo.',
+                              ? uiText(context, "Enlace y datos del anuncio copiados.")
+                              : uiText(context, "Datos copiados. Este anuncio aún no tiene enlace directo."),
                         ),
                       ),
                     );
@@ -3062,7 +3737,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancelar'),
+              child:  Text(uiText(context, "Cancelar")),
             ),
           ],
         ),
@@ -3082,7 +3757,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       await Clipboard.setData(ClipboardData(text: summary));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enlace del anuncio copiado. Ya puedes pegarlo para compartir la ficha.')),
+           SnackBar(content: Text(uiText(context, "Enlace del anuncio copiado. Ya puedes pegarlo para compartir la ficha."))),
         );
       }
     }
@@ -3111,16 +3786,21 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     await Clipboard.setData(ClipboardData(text: details));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ficha del vehículo copiada al portapapeles.')),
+         SnackBar(content: Text(uiText(context, "Ficha del vehículo copiada al portapapeles."))),
       );
     }
   }
 
-  void _openFullScreenGallery(BuildContext context, int initialIndex) {
+  Future<void> _openFullScreenGallery(BuildContext context, int initialIndex) async {
+    await galleryReady;
+    if (!context.mounted || detailPhotos.isEmpty) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => FullScreenGalleryPage(
-          photos: car.photos,
+      PageRouteBuilder<void>(
+        transitionDuration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 220),
+        reverseTransitionDuration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 160),
+        transitionsBuilder: (_, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
+        pageBuilder: (_, animation, secondaryAnimation) => FullScreenGalleryPage(
+          photos: detailPhotos,
           initialIndex: initialIndex,
           title: '${car.brand} ${car.model}',
         ),
@@ -3139,12 +3819,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: gold, size: 21),
+          Icon(icon, color: marketAccent, size: 21),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            child: Text(uiText(context, label),
+              style: const TextStyle(color: marketMuted, fontSize: 14),
             ),
           ),
           const SizedBox(width: 12),
@@ -3153,7 +3832,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               value,
               textAlign: TextAlign.end,
               style: const TextStyle(
-                color: Colors.white,
+                color: marketInk,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -3166,19 +3845,20 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
 
   Widget _gallery(BuildContext context, {required double height}) {
     return Container(
+      key: const Key('vehicle-photo-gallery'),
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF181818),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        color: marketSurface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: marketLine),
       ),
       clipBehavior: Clip.antiAlias,
-      child: car.photos.isNotEmpty
+      child: detailPhotos.isNotEmpty
           ? Stack(
               children: [
                 PageView.builder(
                   controller: _photoController,
-                  itemCount: car.photos.length,
+                  itemCount: detailPhotos.length,
                   onPageChanged: (index) {
                     if (mounted && currentPhotoIndex != index) {
                       setState(() => currentPhotoIndex = index);
@@ -3187,23 +3867,23 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   itemBuilder: (context, index) => InkWell(
                     onTap: () => _openFullScreenGallery(context, index),
                     child: Padding(
-                      padding: const EdgeInsets.all(8),
+                      padding: EdgeInsets.zero,
                       child: Image.memory(
-                        car.photos[index],
+                        detailPhotos[index],
                         width: double.infinity,
                         height: double.infinity,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         alignment: Alignment.center,
                       ),
                     ),
                   ),
                 ),
-                if (car.photos.length > 1)
+                if (detailPhotos.length > 1)
                   Positioned(
                     right: 12,
                     bottom: 12,
                     child: Material(
-                      color: Colors.black.withValues(alpha: 0.82),
+                      color: marketSurface,
                       borderRadius: BorderRadius.circular(20),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
@@ -3215,19 +3895,19 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: gold.withValues(alpha: 0.65)),
+                            border: Border.all(color: marketAccent.withValues(alpha: 0.65)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.photo_library_outlined, color: gold, size: 16),
+                              const Icon(Icons.photo_library_outlined, color: marketAccent, size: 16),
                               const SizedBox(width: 7),
                               Text(
-                                '${currentPhotoIndex + 1} / ${car.photos.length} fotos',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                                uiText(context, "{0} / {1} fotos", [currentPhotoIndex + 1, detailPhotos.length]),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.open_in_full, color: Colors.white70, size: 13),
+                              const Icon(Icons.open_in_full, color: marketMuted, size: 13),
                             ],
                           ),
                         ),
@@ -3248,31 +3928,31 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               ],
             )
           : const Center(
-              child: Icon(Icons.directions_car, size: 100, color: gold),
+              child: Icon(Icons.directions_car, size: 100, color: marketAccent),
             ),
     );
   }
 
   Widget _photoThumbnails() {
-    if (car.photos.length < 2) return const SizedBox.shrink();
+    if (detailPhotos.length < 2) return const SizedBox.shrink();
     return SizedBox(
       height: 74,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(top: 10),
-        itemCount: car.photos.length,
+        itemCount: detailPhotos.length,
         separatorBuilder: (_, __) => const SizedBox(width: 9),
         itemBuilder: (context, index) {
           final selected = currentPhotoIndex == index;
           return Semantics(
             button: true,
-            label: 'Ver foto ${index + 1} de ${car.photos.length}',
+            label: uiText(context, "Ver foto {0} de {1}", [index + 1, detailPhotos.length]),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () {
                 _photoController.animateToPage(
                   index,
-                  duration: const Duration(milliseconds: 240),
+                  duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 240),
                   curve: Curves.easeOut,
                 );
               },
@@ -3282,16 +3962,32 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: selected ? gold : Colors.white24,
+                    color: selected ? gold : marketLine,
                     width: selected ? 2 : 1,
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Image.memory(car.photos[index], fit: BoxFit.cover),
+                child: Image.memory(detailPhotos[index], fit: BoxFit.cover),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _featureControl() {
+    if (car.listingId == null ||
+        car.ownerId != Supabase.instance.client.auth.currentUser?.id) {
+      return const SizedBox.shrink();
+    }
+    return VehicleFeatureControl(
+
+      manage: (enabled) async => Map<String, dynamic>.from(
+        await Supabase.instance.client.rpc('manage_vehicle_feature', params: {
+          'p_vehicle_id': car.listingId,
+          'p_enabled': enabled,
+        }) as Map,
       ),
     );
   }
@@ -3302,79 +3998,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: gold),
+          Icon(icon, size: 18, color: marketAccent),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontSize: 13, height: 1.4))),
-        ],
-      ),
-    );
-  }
-
-  Widget _listingCompletenessCard() {
-    final checks = <MapEntry<String, bool>>[
-      MapEntry('Fotografías del vehículo', car.photos.isNotEmpty),
-      MapEntry('Descripción del anuncio', car.description.trim().length >= 40),
-      MapEntry('Año de matriculación', car.year > 0),
-      MapEntry('Kilometraje', car.km >= 0),
-      MapEntry('Combustible', car.fuel.trim().isNotEmpty),
-      MapEntry('Potencia', car.cv != null),
-      MapEntry('Transmisión', car.transmission?.trim().isNotEmpty == true),
-      MapEntry('Carrocería', car.bodyType?.trim().isNotEmpty == true),
-      MapEntry('Color', car.color?.trim().isNotEmpty == true),
-      MapEntry('Equipamiento', car.equipment.isNotEmpty),
-    ];
-    final completed = checks.where((item) => item.value).length;
-    final progress = completed / checks.length;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gold.withValues(alpha: 0.38)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.fact_check_outlined, color: gold, size: 22),
-            const SizedBox(width: 9),
-            const Expanded(child: Text('Calidad de la ficha', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
-            Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w800)),
-          ]),
-          const SizedBox(height: 8),
-          Text(
-            'Datos incluidos en este anuncio. Una ficha más completa ayuda a comparar vehículos.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.72), height: 1.4, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 7,
-              backgroundColor: Colors.white12,
-              valueColor: const AlwaysStoppedAnimation<Color>(gold),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 7,
-            children: checks.map((item) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-              decoration: BoxDecoration(
-                color: item.value ? gold.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: item.value ? gold.withValues(alpha: 0.35) : Colors.white12),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(item.value ? Icons.check_circle_outline : Icons.radio_button_unchecked, size: 14, color: item.value ? gold : Colors.white54),
-                const SizedBox(width: 5),
-                Text(item.key, style: TextStyle(fontSize: 11, color: item.value ? Colors.white : Colors.white60)),
-              ]),
-            )).toList(),
-          ),
+          Expanded(child: Text(uiText(context, message), style: TextStyle(color: marketInk.withValues(alpha: 0.88), fontSize: 13, height: 1.4))),
         ],
       ),
     );
@@ -3384,12 +4010,12 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Padding(
       padding: const EdgeInsets.only(top: 14, bottom: 4),
       child: Text(
-        label.toUpperCase(),
+        uiText(context, label).toUpperCase(),
         style: TextStyle(
-          color: gold,
+          color: marketAccent,
           fontSize: 11,
           letterSpacing: 1.05,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -3399,23 +4025,23 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF20252A),
+        color: marketSurface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: marketLine),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: gold),
+          Icon(icon, size: 15, color: marketAccent),
           const SizedBox(width: 6),
-          Text(
-            label,
+          Flexible(child: Text(uiText(context, label),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Colors.white,
+              color: marketInk,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -3443,12 +4069,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         children: [
           Icon(icon, color: color, size: 17),
           const SizedBox(width: 7),
-          Text(
-            label,
+          Text(uiText(context, label),
             style: TextStyle(
               color: color,
               fontSize: 12,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
           ),
@@ -3457,76 +4082,97 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     );
   }
 
-  Widget _vehicleInformation(BuildContext context) {
+  Widget _editorialListingHeading(BuildContext context) => Column(
+    key: const Key('editorial-listing-heading'),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        '${car.brand} ${car.model}',
+        style: const TextStyle(
+          fontSize: 27,
+          height: 1.15,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      _listingStatusChip(),
+      const SizedBox(height: 12),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: const Border(bottom: BorderSide(color: marketLine)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              uiText(context, "PRECIO ANUNCIADO"),
+              style: TextStyle(
+                color: marketInk.withValues(alpha: 0.68),
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              priceText,
+              style: const TextStyle(
+                color: marketInk,
+                fontSize: 34,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+      if(car.listingId!=null) Padding(padding:const EdgeInsets.only(top:10),child:FutureBuilder<int?>(future:listingFavoriteCount,builder:(context,snapshot)=>Row(children:[
+        const Icon(Icons.favorite_border_rounded,size:17,color:marketMuted),const SizedBox(width:6),
+        Flexible(child:Text(snapshot.connectionState==ConnectionState.waiting ? uiText(context,'Cargando favoritos…') : snapshot.data==null ? uiText(context,'Favoritos no disponibles') : snapshot.data==1 ? uiText(context,'1 favorito') : uiText(context,'{0} favoritos',[snapshot.data]),style:const TextStyle(color:marketMuted,fontSize:13))),
+      ]))),
+    ],
+  );
+
+  Widget _vehicleInformation(BuildContext context, {bool showHeading=true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${car.brand} ${car.model}',
-          style: const TextStyle(
-            fontSize: 27,
-            height: 1.15,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        _listingStatusChip(),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: gold.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: gold.withValues(alpha: 0.38)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'PRECIO ANUNCIADO',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.68),
-                  fontSize: 11,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                priceText,
-                style: const TextStyle(
-                  color: gold,
-                  fontSize: 30,
-                  height: 1.1,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
+        if(showHeading) _editorialListingHeading(context),
+        if (car.ownerId != null) ...[
+          const SizedBox(height: 16),
+          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller, photoUrlForPath: (path) => Supabase.instance.client.storage.from('profile-photos').getPublicUrl(path)),
+        ],
         const SizedBox(height: 18),
-        const Text(
-          'DATOS PRINCIPALES',
+         Text(
+          uiText(context, "DATOS PRINCIPALES"),
+          key: const Key('vehicle-main-specs'),
           style: TextStyle(
-            color: Colors.white70,
+            color: marketMuted,
             fontSize: 11,
             letterSpacing: 1.15,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 9),
-        // Resumen visual de los datos clave del vehículo.
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        // Spacious two-column overview, with all source values preserved.
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 2.4 / MediaQuery.textScalerOf(context).scale(1),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
           children: [
             if (car.year > 0)
               _quickSpec(Icons.calendar_today_outlined, '${car.year}'),
-            _quickSpec(Icons.speed_rounded, '${_formatKm(car.km)} km'),
+            _quickSpec(Icons.speed_rounded, uiText(context, "{0} km", [_formatKm(car.km)])),
             if (car.fuel.trim().isNotEmpty)
               _quickSpec(Icons.local_gas_station_outlined, car.fuel),
             if (car.cv != null)
-              _quickSpec(Icons.bolt_outlined, '${car.cv} CV'),
+              _quickSpec(Icons.bolt_outlined, uiText(context, "{0} CV", [car.cv])),
             if (car.transmission?.trim().isNotEmpty == true)
               _quickSpec(Icons.settings_outlined, car.transmission!.trim()),
           ],
@@ -3536,10 +4182,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           Expanded(child: OutlinedButton.icon(
             onPressed: () => _shareListing(context),
             icon: const Icon(Icons.ios_share_rounded, size: 18),
-            label: const Text('Compartir anuncio'),
+            label:  Text(uiText(context, "Compartir anuncio")),
             style: OutlinedButton.styleFrom(
-              foregroundColor: gold,
-              side: BorderSide(color: gold.withValues(alpha: 0.65)),
+              foregroundColor: marketAccent,
+              side: BorderSide(color: marketAccent.withValues(alpha: 0.65)),
               padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -3553,146 +4199,127 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                     color: isFavorite ? Colors.pinkAccent : gold, size: 18),
             label: Text(isFavorite ? AppLocalizations.of(context).saved : AppLocalizations.of(context).favorites),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: marketInk,
               side: BorderSide(color: isFavorite ? Colors.pinkAccent : gold.withValues(alpha: .65)),
               padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           )),
         ]),
-        const SizedBox(height: 18),
-        _listingCompletenessCard(),
+        if (car.listingId?.isNotEmpty == true) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('report-listing-button'),
+            onPressed: reporting ? null : _reportListing,
+            icon: const Icon(Icons.flag_outlined),
+            label: Text(uiText(context, "Denunciar anuncio")),
+          ),
+        ],
         const SizedBox(height: 18),
         if (car.description.trim().isNotEmpty) ...[
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF24231F), Color(0xFF171717)]),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)]),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: gold.withValues(alpha: 0.42)),
-              boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 6))],
+              border: const Border.fromBorderSide(BorderSide(color: marketLine)),
+
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [const Icon(Icons.notes_rounded, color: gold, size: 21), const SizedBox(width: 9), const Text('Descripción', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const Spacer(), Container(width: 26, height: 3, decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(4)))]),
+              Row(children: [const Icon(Icons.notes_rounded, color: marketAccent, size: 21), const SizedBox(width: 9),  Expanded(child: Text(uiText(context, "Descripción"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700))), const SizedBox(width: 8), Container(width: 26, height: 3, decoration: BoxDecoration(color: marketAccent, borderRadius: BorderRadius.circular(4)))]),
               const SizedBox(height: 12),
-              SelectableText(car.description.trim(), style: TextStyle(fontSize: 15, height: 1.65, color: Colors.white.withValues(alpha: 0.92))),
+              SelectableText(car.description.trim(), style: TextStyle(fontSize: 15, height: 1.65, color: marketInk.withValues(alpha: 0.92))),
             ]),
           ),
           const SizedBox(height: 20),
         ],
+        const SizedBox(height:20),
+        MarketDetailSection(sectionKey:const Key('listing-technical-details'),title:'Ficha técnica',icon:Icons.tune_rounded,children:[
         Card(
           color: panel,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: Colors.white10),
+            side: const BorderSide(color: marketLine),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                 Padding(
                   padding: EdgeInsets.only(top: 12, bottom: 2),
                   child: Text(
-                    'Características',
+                    uiText(context, "Características"),
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 _technicalRow(
                   Icons.directions_car_outlined,
-                  'Marca y modelo',
+                  uiText(context, "Marca y modelo"),
                   '${car.brand} ${car.model}',
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.calendar_today_outlined,
-                  'Año',
-                  car.year > 0 ? '${car.year}' : 'No indicado',
+                  uiText(context, "Año"),
+                  car.year > 0 ? '${car.year}' : uiText(context, "No indicado"),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.speed,
-                  'Kilómetros',
-                  '${_formatKm(car.km)} km',
+                  uiText(context, "Kilómetros"),
+                  uiText(context, "{0} km", [_formatKm(car.km)]),
                 ),
-                const Divider(height: 1, color: Colors.white12),
+                const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.local_gas_station_outlined,
-                  'Combustible',
-                  car.fuel.isNotEmpty ? car.fuel : 'No indicado',
+                  uiText(context, "Combustible"),
+                  car.fuel.isNotEmpty ? car.fuel : uiText(context, "No indicado"),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        const Row(children: [
-          Icon(Icons.tune_rounded, color: gold, size: 22),
-          SizedBox(width: 9),
-          Text('Ficha técnica', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        ]),
-        const SizedBox(height: 14),
         if (car.version?.trim().isNotEmpty == true)
-          _technicalRow(Icons.badge_outlined, 'Versión', car.version!),
+          _technicalRow(Icons.badge_outlined, uiText(context, "Versión"), car.version!),
         if (car.cv != null || car.cilindradaCc != null || car.transmission?.trim().isNotEmpty == true) ...[
-          _technicalSectionLabel('Motor y transmisión'),
-          if (car.cv != null) _technicalRow(Icons.speed, 'Potencia', '${car.cv} CV'),
-          if (car.cilindradaCc != null) _technicalRow(Icons.settings, 'Cilindrada', '${car.cilindradaCc} cc'),
-          if (car.transmission?.trim().isNotEmpty == true) _technicalRow(Icons.settings_outlined, 'Transmisión', car.transmission!),
+          _technicalSectionLabel(uiText(context, "Motor y transmisión")),
+          if (car.cv != null) _technicalRow(Icons.speed, uiText(context, "Potencia"), uiText(context, "{0} CV", [car.cv])),
+          if (car.cilindradaCc != null) _technicalRow(Icons.settings, uiText(context, "Cilindrada"), uiText(context, "{0} cc", [car.cilindradaCc])),
+          if (car.transmission?.trim().isNotEmpty == true) _technicalRow(Icons.settings_outlined, uiText(context, "Transmisión"), car.transmission!),
         ],
-        if (car.etiquetaMedioambiental != null && car.etiquetaMedioambiental!.trim().isNotEmpty) ...[
-          _technicalSectionLabel('Emisiones'),
+        if (car.etiquetaMedioambiental != null && car.etiquetaMedioambiental!.trim().isNotEmpty && car.etiquetaMedioambiental!.toLowerCase() != 'sin etiqueta') ...[
+          _technicalSectionLabel(uiText(context, "Emisiones")),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 54),
-                const SizedBox(width: 12),
-                const Text('Etiqueta medioambiental'),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    car.etiquetaMedioambiental!,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: environmentalLabelColor(car.etiquetaMedioambiental),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: EnvironmentalSticker(label: car.etiquetaMedioambiental, size: 72),
           ),
         ],
         if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true || car.showVinPublicly && car.vin?.trim().isNotEmpty == true) ...[
-          _technicalSectionLabel('Identificación del vehículo'),
+          _technicalSectionLabel(uiText(context, "Identificación del vehículo")),
           if (car.showMatriculaPublicly && car.matricula?.trim().isNotEmpty == true)
-            _technicalRow(Icons.confirmation_number_outlined, 'Matrícula', car.matricula!),
+            _technicalRow(Icons.confirmation_number_outlined, uiText(context, "Matrícula"), car.matricula!),
           if (car.showVinPublicly && car.vin?.trim().isNotEmpty == true)
-            _technicalRow(Icons.qr_code_2_outlined, 'Número VIN / bastidor', car.vin!),
+            _technicalRow(Icons.qr_code_2_outlined, uiText(context, "Número VIN / bastidor"), car.vin!),
         ],
         if (car.emissionsStandard?.trim().isNotEmpty == true)
-          _technicalRow(Icons.eco_outlined, 'Normativa de emisiones', car.emissionsStandard!),
+          _technicalRow(Icons.eco_outlined, uiText(context, "Normativa de emisiones"), car.emissionsStandard!),
         if (car.bodyType?.trim().isNotEmpty == true || car.doors != null || car.seats != null || car.color?.trim().isNotEmpty == true) ...[
-          _technicalSectionLabel('Carrocería y habitáculo'),
-          if (car.bodyType?.trim().isNotEmpty == true) _technicalRow(Icons.directions_car_outlined, 'Carrocería', car.bodyType!),
-          if (car.doors != null) _technicalRow(Icons.door_front_door_outlined, 'Puertas', '${car.doors}'),
-          if (car.seats != null) _technicalRow(Icons.event_seat_outlined, 'Plazas', '${car.seats}'),
-          if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, 'Color', car.color!),
+          _technicalSectionLabel(uiText(context, "Carrocería y habitáculo")),
+          if (car.bodyType?.trim().isNotEmpty == true) _technicalRow(Icons.directions_car_outlined, uiText(context, "Carrocería"), car.bodyType!),
+          if (car.doors != null) _technicalRow(Icons.door_front_door_outlined, uiText(context, "Puertas"), '${car.doors}'),
+          if (car.seats != null) _technicalRow(Icons.event_seat_outlined, uiText(context, "Plazas"), '${car.seats}'),
+          if (car.color?.trim().isNotEmpty == true) _technicalRow(Icons.palette_outlined, uiText(context, "Color"), car.color!),
         ],
-        if (car.equipment.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          const Row(children: [
-            Icon(Icons.checklist_rounded, color: gold, size: 22),
-            SizedBox(width: 9),
-            Text('Equipamiento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ]),
-          const SizedBox(height: 5),
+        ]),
+        if(car.equipment.isNotEmpty) ...[
+          const SizedBox(height:12),
+          MarketDetailSection(sectionKey:const Key('listing-equipment'),title:'Equipamiento',icon:Icons.checklist_rounded,children:[
           Text(
-            '${car.equipment.length} elementos indicados en el anuncio',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+            uiText(context, "{0} elementos indicados en el anuncio", [car.equipment.length]),
+            style: TextStyle(color: marketInk.withValues(alpha: 0.65), fontSize: 12),
           ),
           const SizedBox(height: 10),
           Container(
@@ -3701,7 +4328,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             decoration: BoxDecoration(
               color: panel,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: marketLine),
             ),
             child: Wrap(
               spacing: 8,
@@ -3709,81 +4336,73 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               children: car.equipment.map((item) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
                 decoration: BoxDecoration(
-                  color: gold.withValues(alpha: 0.07),
+                  color: marketAccent.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: gold.withValues(alpha: 0.25)),
+                  border: Border.all(color: marketAccent.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_outline, size: 17, color: gold),
+                    const Icon(Icons.check_circle_outline, size: 17, color: marketAccent),
                     const SizedBox(width: 7),
-                    Flexible(child: Text(item, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                    Flexible(child: Text(uiText(context, item), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
                   ],
                 ),
               )).toList(),
             ),
           ),
+          ]),
         ],
         const SizedBox(height: 22),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF171715),
+            color: marketSurface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: gold.withValues(alpha: 0.42)),
+            border: const Border.fromBorderSide(BorderSide(color: marketLine)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(children: [
-                Icon(Icons.shield_outlined, color: gold, size: 22),
+               Row(children: [
+                Icon(Icons.shield_outlined, color: marketAccent, size: 22),
                 SizedBox(width: 9),
-                Expanded(child: Text('Consejos para comprar con seguridad', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+                Expanded(child: Text(uiText(context, "Consejos para comprar con seguridad"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
               ]),
               const SizedBox(height: 12),
-              _safetyTip(Icons.visibility_outlined, 'Comprueba el vehículo en persona y revisa su estado antes de pagar.'),
-              _safetyTip(Icons.description_outlined, 'Verifica la documentación, el VIN/bastidor y que coincidan con el vehículo.'),
-              _safetyTip(Icons.payments_outlined, 'No envíes anticipos ni claves bancarias si no has comprobado al vendedor y la operación.'),
-              _safetyTip(Icons.handshake_outlined, 'Deja por escrito el precio, las condiciones y los datos de comprador y vendedor.'),
+              _safetyTip(Icons.visibility_outlined, uiText(context, "Comprueba el vehículo en persona y revisa su estado antes de pagar.")),
+              _safetyTip(Icons.description_outlined, uiText(context, "Verifica la documentación, el VIN/bastidor y que coincidan con el vehículo.")),
+              _safetyTip(Icons.payments_outlined, uiText(context, "No envíes anticipos ni claves bancarias si no has comprobado al vendedor y la operación.")),
+              _safetyTip(Icons.handshake_outlined, uiText(context, "Deja por escrito el precio, las condiciones y los datos de comprador y vendedor.")),
               const SizedBox(height: 4),
-              Text('AUTOMOTORS recomienda estas precauciones; no constituyen una verificación del vehículo ni del vendedor.', style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 11, height: 1.4)),
+              Text(uiText(context, "AUTOMOTORS recomienda estas precauciones; no constituyen una verificación del vehículo ni del vendedor."), style: TextStyle(color: marketInk.withValues(alpha: 0.62), fontSize: 11, height: 1.4)),
             ],
           ),
         ),
         const SizedBox(height: 22),
-        if (car.ownerId != null) ...[
-          OutlinedButton.icon(
-            onPressed: () async {
-              final loggedIn = await requireAutomotorsLogin(context);
-              if (!loggedIn || !context.mounted) return;
-              await Navigator.push<void>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PublicSellerProfilePage(ownerId: car.ownerId!),
-                ),
-              );
-            },
-            icon: const Icon(Icons.account_circle_outlined, color: gold),
-            label: const Text('Ver perfil del vendedor'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-              side: const BorderSide(color: gold),
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
+
+      ],
+    );
+  }
+
+  Widget _contactBar(BuildContext context) {
+    return Container(
+      key: const Key('vehicle-contact-bar'),
+      decoration: BoxDecoration(color: panel,
+        border: Border(top: BorderSide(color: marketInk.withValues(alpha: .10)))),
+      child: SafeArea(top: false,
+        child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: car.status.toLowerCase() == 'sold'
-                  ? Colors.white24
+                  ? marketLine
                   : gold,
               foregroundColor: car.status.toLowerCase() == 'sold'
-                  ? Colors.white70
+                  ? marketMuted
                   : Colors.black,
               minimumSize: const Size.fromHeight(50),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -3793,10 +4412,10 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 ? Icons.check_circle_outline
                 : Icons.chat),
             label: Text(car.status.toLowerCase() == 'sold'
-                ? 'Vehículo vendido'
+                ? uiText(context, "Vehículo vendido")
                 : car.status.toLowerCase() == 'reserved'
-                    ? 'Consultar disponibilidad'
-                    : 'Enviar mensaje al vendedor'),
+                    ? uiText(context, "Consultar disponibilidad")
+                    : uiText(context, "Enviar mensaje al vendedor")),
           ),
         ),
         if (car.status.toLowerCase() != 'sold' &&
@@ -3806,38 +4425,48 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             width: double.infinity,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF25D366),
-                side: const BorderSide(color: Color(0xFF25D366)),
+                foregroundColor: const Color(0xFF1B7647),
+                side: const BorderSide(color: Color(0xFF1B7647)),
                 minimumSize: const Size.fromHeight(48),
               ),
               onPressed: () => openWhatsAppForCar(context, car),
               icon: const Icon(Icons.phone),
-              label: const Text('Contactar por WhatsApp'),
+              label:  Text(uiText(context, "Contactar por WhatsApp")),
             ),
           ),
         ],
-      ],
+          ]),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: _contactBar(context),
       appBar: AppBar(
         title: Text('${car.brand} ${car.model}'),
         actions: [
+          if (car.listingId?.isNotEmpty == true)
+            IconButton(
+              key: const Key('report-listing-action'),
+              tooltip: uiText(context, "Denunciar anuncio"),
+              onPressed: reporting ? null : _reportListing,
+              icon: const Icon(Icons.flag_outlined, color: marketAccent),
+            ),
           IconButton(
-            tooltip: isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
+            tooltip: isFavorite ? uiText(context, "Quitar de favoritos") : uiText(context, "Guardar en favoritos"),
             onPressed: favoriteLoading ? null : _toggleFavorite,
             icon: favoriteLoading
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: gold),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: marketAccent),
                   )
                 : Icon(
                     isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFavorite ? Colors.redAccent : gold,
+                    color: isFavorite ? Colors.redAccent : marketInk,
                   ),
           ),
         ],
@@ -3865,6 +4494,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                             children: [
                               _gallery(context, height: 430),
                               _photoThumbnails(),
+                              _featureControl(),
                             ],
                           ),
                         ),
@@ -3876,10 +4506,16 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                       ],
                     )
                   else ...[
-                    _gallery(context, height: constraints.maxWidth < 500 ? 270 : 360),
+                    _gallery(context, height: constraints.maxWidth < 500 ? constraints.maxWidth*.8 : 390),
                     _photoThumbnails(),
+                    _featureControl(),
                     const SizedBox(height: 20),
-                    _vehicleInformation(context),
+                    _editorialListingHeading(context),
+                    _vehicleInformation(context,showHeading:false),
+                  ],
+                  if (car.status == 'sold' && car.listingId != null && car.ownerId != null && car.ownerId != Supabase.instance.client.auth.currentUser?.id) ...[
+                    const SizedBox(height: 12),
+                    VehicleReviewForm(listingId: car.listingId!, sellerId: car.ownerId!),
                   ],
                   const SizedBox(height: 24),
                 ],
@@ -3919,13 +4555,20 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   Future<void> updateProfileListingStatus(Map<String, dynamic> listing, String status) async {
     if (!isOwnProfile) return;
     try {
+      if (status == 'sold') {
+        final sold = await showDialog<bool>(context: context, builder: (_) => MarkVehicleSoldDialog(listingId: listing['id'].toString()));
+        if (sold != true || !mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Anuncio marcado como vendido."))));
+        await refreshSeller();
+        return;
+      }
       await supabase.from('vehicle_listings').update({'status': status})
         .eq('id', listing['id'].toString()).eq('owner_id', widget.ownerId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'sold' ? 'Anuncio marcado como vendido.' : status == 'reserved' ? 'Anuncio marcado como reservado.' : 'Reserva retirada.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'sold' ? uiText(context, "Anuncio marcado como vendido.") : status == 'reserved' ? uiText(context, "Anuncio marcado como reservado.") : uiText(context, "Reserva retirada."))));
       await refreshSeller();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar el anuncio: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo actualizar el anuncio: {0}", [e]))));
     }
   }
 
@@ -3946,6 +4589,11 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       // Un fallo al cargar datos públicos del perfil no debe ocultar sus anuncios.
       profile = null;
     }
+    String aboutUs = '';
+    try {
+      final about = await supabase.from('seller_about_profiles').select('about_us').eq('user_id', widget.ownerId).maybeSingle();
+      aboutUs = about?['about_us']?.toString() ?? '';
+    } catch (_) {}
     final listings = await supabase.from('vehicle_listings')
         .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
@@ -3976,7 +4624,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       }
       listing['_firstPhotoBytes'] = firstPhoto;
     }
-    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows};
+    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows, 'aboutUs': aboutUs};
   }
 
   String? publicPhotoUrl(dynamic path) {
@@ -3986,13 +4634,13 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   }
 
   String displayName(Map<String, dynamic>? profile) {
-    if (profile == null) return 'Vendedor AUTOMOTORS';
+    if (profile == null) return uiText(context, 'Vendedor AUTOMOTORS');
     final type = (profile['account_type'] ?? 'particular').toString().toLowerCase();
-    if (type == 'empresa' && (profile['business_name']?.toString().trim().isNotEmpty ?? false)) {
+    if ((type == 'empresa' || type == 'autonomo') && (profile['business_name']?.toString().trim().isNotEmpty ?? false)) {
       return profile['business_name'].toString();
     }
     return (profile['full_name']?.toString().trim().isNotEmpty ?? false)
-        ? profile!['full_name'].toString() : 'Vendedor AUTOMOTORS';
+        ? profile!['full_name'].toString() : uiText(context, 'Vendedor AUTOMOTORS');
   }
 
   String euros(double price) =>
@@ -4002,7 +4650,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     final listingId = listing['id']?.toString();
     if (listingId == null || listingId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo identificar este anuncio.')),
+         SnackBar(content: Text(uiText(context, "No se pudo identificar este anuncio."))),
       );
       return;
     }
@@ -4015,12 +4663,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           .maybeSingle();
       if (raw == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Este anuncio ya no está disponible.')),
+           SnackBar(content: Text(uiText(context, "Este anuncio ya no está disponible."))),
         );
         return;
       }
-      final brandData = raw['vehicle_brands'];
-      final modelData = raw['vehicle_models'];
       final photoData = raw['vehicle_photos'];
       final photoRows = photoData is List
           ? List<Map<String, dynamic>>.from(photoData)
@@ -4041,39 +4687,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         }),
       );
       final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car(
-        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (raw['year'] as num?)?.toInt() ?? 0,
-        km: (raw['km'] as num?)?.toInt() ?? 0,
-        price: (raw['price'] as num?)?.toDouble() ?? 0,
-        fuel: raw['fuel']?.toString() ?? '',
-        description: raw['description']?.toString() ?? '',
-        phone: raw['phone']?.toString() ?? '',
-        matricula: raw['matricula']?.toString(),
-        vin: raw['vin']?.toString(),
-        showMatriculaPublicly: raw['show_matricula_publicly'] == true,
-        showVinPublicly: raw['show_vin_publicly'] == true,
-        cv: (raw['cv'] as num?)?.toInt(),
-        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-        version: raw['version']?.toString(),
-        transmission: raw['transmission']?.toString(),
-        bodyType: raw['body_type']?.toString(),
-        doors: (raw['doors'] as num?)?.toInt(),
-        seats: (raw['seats'] as num?)?.toInt(),
-        color: raw['color']?.toString(),
-        torqueNm: (raw['torque_nm'] as num?)?.toInt(),
-        acceleration0100: (raw['acceleration_0_100'] as num?)?.toDouble(),
-        maxSpeedKmh: (raw['max_speed_kmh'] as num?)?.toInt(),
-        consumptionL100: (raw['consumption_l_100'] as num?)?.toDouble(),
-        emissionsStandard: raw['emissions_standard']?.toString(),
-        equipment: raw['equipment'] is List ? List<String>.from((raw['equipment'] as List).map((item) => item.toString())) : const <String>[],
-        photos: photoBytes,
-        listingId: raw['id']?.toString(),
-        ownerId: raw['owner_id']?.toString(),
-        status: raw['status']?.toString() ?? 'published',
-      );
+      final car = Car.fromListing(raw, photos: photoBytes);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -4084,7 +4698,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       ));
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir el anuncio: $error')),
+        SnackBar(content: Text(uiText(context, "No se pudo abrir el anuncio: {0}", [error]))),
       );
     }
   }
@@ -4099,21 +4713,17 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     if (currentUser == null || car.listingId == null || car.ownerId == null) return;
     if (currentUser.id == car.ownerId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No puedes iniciar un chat contigo mismo.')),
+         SnackBar(content: Text(uiText(context, "No puedes iniciar un chat contigo mismo."))),
       );
       return;
     }
     try {
-      final existing = await supabase.from('chat_conversations').select('id')
-          .eq('listing_id', car.listingId!)
-          .eq('buyer_id', currentUser.id)
-          .eq('seller_id', car.ownerId!)
-          .maybeSingle();
-      final conversation = existing ?? await supabase.from('chat_conversations').insert({
-        'listing_id': car.listingId,
-        'buyer_id': currentUser.id,
-        'seller_id': car.ownerId,
-      }).select('id').single();
+      final conversation = await getOrCreateConversation(
+        supabase: supabase,
+        listingId: car.listingId!,
+        buyerId: currentUser.id,
+        sellerId: car.ownerId!,
+      );
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => ChatPage(
         conversationId: conversation['id'].toString(),
@@ -4121,7 +4731,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       )));
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo abrir el chat: $error')),
+        SnackBar(content: Text(uiText(context, "No se pudo abrir el chat: {0}", [error]))),
       );
     }
   }
@@ -4130,10 +4740,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
 
   Widget profileStat(String value, String label) => Expanded(
     child: Column(children: [
-      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: marketInk)),
       const SizedBox(height: 3),
-      Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70), textAlign: TextAlign.center),
+      Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center),
     ]),
+  );
+
+  Widget profileStatWidget(Widget value, String label) => Expanded(
+    child: Column(children: [value, const SizedBox(height: 3), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center)]),
   );
 
   Widget profileVehicleGrid(List<Map<String, dynamic>> rows, {required bool sold}) {
@@ -4141,9 +4755,9 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       return Center(child: Padding(
         padding: const EdgeInsets.all(28),
         child: Text(
-          sold ? 'Este vendedor todavía no tiene vehículos vendidos.' : 'Este vendedor no tiene anuncios disponibles.',
+          sold ? uiText(context, "Este vendedor todavía no tiene vehículos vendidos.") : uiText(context, "Este vendedor no tiene anuncios disponibles."),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70, fontSize: 15),
+          style: const TextStyle(color: marketMuted, fontSize: 15),
         ),
       ));
     }
@@ -4170,12 +4784,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           final isReserved = listing['status']?.toString() == 'reserved';
           final label = listing['etiqueta_medioambiental']?.toString();
           return Card(
-            color: const Color(0xFF10171D),
+            color: marketSurface,
             clipBehavior: Clip.antiAlias,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: Color(0xFF29323A)),
+              side: const BorderSide(color: Color(0xFFE4E5DF)),
             ),
             child: InkWell(
               onTap: () => openListingDetails(listing),
@@ -4183,7 +4797,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Expanded(child: SizedBox(width: double.infinity, child: Stack(fit: StackFit.expand, children: [
                   photo is Uint8List
                       ? Image.memory(photo, fit: BoxFit.cover)
-                      : const Center(child: Icon(Icons.directions_car, color: gold, size: 42)),
+                      : const Center(child: Icon(Icons.directions_car, color: marketAccent, size: 42)),
                   if (sold) Positioned.fill(child: Container(color: Colors.black.withValues(alpha: .15))),
                   if ((label ?? '').isNotEmpty && label!.toLowerCase() != 'sin etiqueta' && !sold)
                     Positioned(left: 5, top: 5, child: EnvironmentalSticker(label: label, size: 34)),
@@ -4206,7 +4820,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Icon(sold ? Icons.verified_rounded : Icons.lock_rounded, color: Colors.white, size: 13),
                         const SizedBox(width: 5),
-                        Text(sold ? 'VENDIDO' : 'RESERVADO', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: .8)),
+                        Text(sold ? uiText(context, "VENDIDO") : uiText(context, "RESERVADO"), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 10, letterSpacing: .8)),
                       ]),
                     ),
                   )),
@@ -4214,19 +4828,19 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(9, 9, 9, 11),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: marketInk)),
                     const SizedBox(height: 5),
-                    Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    Text(uiText(context, "{0} · {1} km", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0)]), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketMuted, fontSize: 11)),
                     const SizedBox(height: 7),
-                    Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: gold, fontSize: 15, fontWeight: FontWeight.w900)),
+                    Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketAccent, fontSize: 15, fontWeight: FontWeight.w700)),
                     if (isOwnProfile && !sold) ...[
                       const SizedBox(height: 10),
                       Row(children: [
-                        Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('Editar'), style: OutlinedButton.styleFrom(foregroundColor: gold, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label:  Text(uiText(context, "Editar")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
-                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? 'Quitar reserva' : 'Reservar', maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF64B5F6), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? uiText(context, "Quitar reserva") : uiText(context, "Reservar"), maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF64B5F6), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
-                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline, size: 16), label: const Text('Vendido'), style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline, size: 16), label:  Text(uiText(context, "Vendido")), style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                       ]),
                     ],
                   ]),
@@ -4241,23 +4855,35 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF080D11),
+    backgroundColor: marketPaper,
     appBar: AppBar(
-      backgroundColor: const Color(0xFF080D11),
-      foregroundColor: gold,
+      backgroundColor: marketPaper,
+      foregroundColor: marketAccent,
       automaticallyImplyLeading: true,
       title: null,
+      actions:[if(isOwnProfile) PopupMenuButton<String>(
+        key:const Key('own-account-menu'),tooltip:uiText(context,'Configuración de cuenta'),icon:const Icon(Icons.settings_outlined),
+        onSelected:(value) async {
+          await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>value=='delete' ? const DeleteAccountPage() : const ProfilePage()));
+          if (!mounted) return;
+          setState(() => dataFuture = loadSeller());
+        },
+        itemBuilder:(context)=>[
+          PopupMenuItem(value:'profile',child:Text(uiText(context,'Mi perfil'))),
+          PopupMenuItem(value:'delete',child:Text(uiText(context,'Eliminar mi cuenta'))),
+        ],
+      )],
       centerTitle: false,
     ),
     body: FutureBuilder<Map<String, dynamic>>(
       future: dataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: gold));
+          return const Center(child: CircularProgressIndicator(color: marketAccent));
         }
         if (snapshot.hasError) {
           return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(
-            'No se pudo cargar este perfil ahora mismo. Recarga la página e inténtalo de nuevo.',
+            uiText(context, "No se pudo cargar este perfil ahora mismo. Recarga la página e inténtalo de nuevo."),
             textAlign: TextAlign.center,
           )));
         }
@@ -4265,15 +4891,38 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final profile = result['profile'] as Map<String, dynamic>?;
         final listings = List<Map<String, dynamic>>.from(result['listings'] ?? []);
         final soldListings = List<Map<String, dynamic>>.from(result['soldListings'] ?? []);
+        final aboutUs = result['aboutUs']?.toString() ?? '';
         final name = displayName(profile);
         final type = (profile?['account_type'] ?? 'particular').toString().toLowerCase();
-        final verified = (profile?['estado_verificacion'] ?? '').toString().toLowerCase() == 'aprobada';
-        final isVerifiedBusiness = verified && (type == 'empresa' || type == 'autonomo');
+        final isProfessional = type == 'empresa' || type == 'autonomo';
+        final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
+        final profileTabs = <String>['Anuncios', 'Vendidos', if (isProfessional) 'Sobre nosotros', 'Valoraciones'];
+        final profileTabChildren = <Widget>[
+          Column(children: [
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos disponibles"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${listings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Anuncios publicados y reservados actualmente"), style: TextStyle(color: marketMuted, fontSize: 12)))),
+            profileVehicleGrid(listings, sold: false),
+          ]),
+          Column(children: [
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos vendidos"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${soldListings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+             Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Historial de vehículos vendidos por este vendedor"), style: TextStyle(color: marketMuted, fontSize: 12)))),
+            profileVehicleGrid(soldListings, sold: true),
+          ]),
+          if (isProfessional) ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
+             Text(uiText(context, "Sobre nosotros"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: marketInk)),
+            const SizedBox(height: 12),
+            if (aboutUs.trim().isNotEmpty) Text(aboutUs, style: const TextStyle(color: marketMuted, fontSize: 15, height: 1.5)),
+            if (aboutUs.trim().isEmpty) Text('$displayType · ${uiText(context, "Vendedor profesional")}', style: const TextStyle(color: marketMuted, fontSize: 16)),
+            finalCity(profile),
+            if (isOwnProfile) Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(onPressed: () async { await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())); if (mounted) await refreshSeller(); }, icon: const Icon(Icons.edit), label:  Text(uiText(context, "Editar Sobre nosotros")))),
+          ]),
+          SellerReviewsSection(sellerId: widget.ownerId),
+        ];
+        if (selectedProfileTab >= profileTabs.length) selectedProfileTab = 0;
         final cover = publicPhotoUrl(profile?['cover_photo_path']);
         final avatar = publicPhotoUrl(profile?['profile_photo_path']);
         final phone = profile?['phone']?.toString() ?? '';
         final digits = validWhatsAppDigits(phone);
-        final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
         return ScrollConfiguration(
           behavior: MaterialScrollBehavior().copyWith(
             dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
@@ -4282,89 +4931,51 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             primary: true,
             physics: const ClampingScrollPhysics(),
             child: Column(children: [
-          if (isVerifiedBusiness)
-            SizedBox(
-              height: 178,
-              width: double.infinity,
-              child: Stack(fit: StackFit.expand, children: [
-                if (cover != null)
-                  Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: panel))
-                else
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF25211A), Color(0xFF080D11)]),
-                    ),
-                    child: const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 72)),
-                  ),
-                Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: .12), Colors.black.withValues(alpha: .82)]))),
-                Positioned(left: 18, right: 18, bottom: 18, child: Row(children: [
-                  const Icon(Icons.directions_car_filled, color: gold, size: 30),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(name.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.1))),
-                ])),
-              ]),
-            ),
+          if (isProfessional)
+            MarketProfessionalHeader(name: name, accountLabel: uiText(context, displayType), coverUrl: cover, avatarUrl: avatar,
+              location: [profile?['city'], profile?['province']].where((v) => v != null && v.toString().trim().isNotEmpty).join(', ')),
           Padding(
             // Extra clearance prevents clipping under the iOS standalone
             // app's status/navigation area for personal seller profiles.
-            padding: EdgeInsets.fromLTRB(18, isVerifiedBusiness ? 0 : 36, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, isProfessional ? 16 : 36, 18, 14),
             child: Transform.translate(
               // Only business profiles overlap their cover image.
-              offset: Offset(0, isVerifiedBusiness ? -26 : 0),
+              offset: Offset.zero,
               child: Column(children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                if (!isProfessional) Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Container(
                     padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: gold, boxShadow: [BoxShadow(color: gold.withValues(alpha: .22), blurRadius: 14)]),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: marketAccent, boxShadow: [BoxShadow(color: marketAccent.withValues(alpha: .22), blurRadius: 14)]),
                     child: CircleAvatar(
-                      radius: 42,
-                      backgroundColor: const Color(0xFF15191D),
+                      radius: 48,
+                      backgroundColor: marketSurface,
                       backgroundImage: avatar == null ? null : NetworkImage(avatar),
                       onBackgroundImageError: avatar == null ? null : (_, __) {},
-                      child: avatar == null ? const Icon(Icons.person, color: gold, size: 42) : null,
+                      child: avatar == null ? const Icon(Icons.person, color: marketAccent, size: 42) : null,
                     ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
-                      if (isVerifiedBusiness) const Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.verified, color: Color(0xFF168BFF), size: 20)),
+                      Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: marketInk))),
                     ]),
                     const SizedBox(height: 3),
-                    Text(displayType, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                    if (finalCity(profile) is Widget) finalCity(profile),
+                    Text(displayType, style: const TextStyle(color: marketMuted, fontSize: 14)),
+                    finalCity(profile),
                   ])),
 
                 ]),
+                if(aboutUs.trim().isNotEmpty) Padding(padding:const EdgeInsets.only(top:16),child:Text(aboutUs.trim(),maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:marketMuted,height:1.5))),
                 const SizedBox(height: 19),
                 Row(children: [
-                  profileStat('${listings.length}', 'Anuncios'),
-                  Container(width: 1, height: 34, color: const Color(0xFF29323A)),
-                  profileStat('${soldListings.length}', 'Vendidos'),
-                  Container(width: 1, height: 34, color: const Color(0xFF29323A)),
-                  profileStat(isVerifiedBusiness ? 'Verificado' : '—', 'Confianza'),
+                  profileStat('${listings.length}', uiText(context, "Anuncios")),
+                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
+                  profileStat('${soldListings.length}', uiText(context, "Vendidos")),
+                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
+                  profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await Navigator.push<void>(context, MaterialPageRoute(
-                          builder: (_) => const ProfilePage(),
-                        ));
-                        if (!mounted) return;
-                        setState(() => dataFuture = loadSeller());
-                      },
-                      icon: const Icon(Icons.manage_accounts_outlined),
-                      label: const Text('Mis datos y editar perfil'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: gold,
-                        side: const BorderSide(color: gold),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                      ),
-                    ),
-                  ),
+                  const ModerationEntry(),
                 ],
                 if (supabase.auth.currentUser?.id != widget.ownerId) ...[
                 const SizedBox(height: 17),
@@ -4372,16 +4983,16 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   if (digits != null)
                     Container(
                       decoration: const BoxDecoration(
-                        color: Color(0xFF25D366),
+                        color: Color(0xFF1B7647),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        tooltip: 'Abrir WhatsApp',
+                        tooltip: uiText(context, "Abrir WhatsApp"),
                         onPressed: () async {
                           final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         },
-                        icon: const Icon(Icons.chat, color: Colors.white, size: 25),
+                        icon: const Icon(Icons.chat, color: marketInk, size: 25),
                         iconSize: 28,
                         padding: const EdgeInsets.all(13),
                       ),
@@ -4397,32 +5008,33 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                       final currentUser = supabase.auth.currentUser;
                       if (currentUser == null) return;
                       if (currentUser.id == widget.ownerId) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este es tu propio perfil.')));
+                        ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Este es tu propio perfil."))));
                         return;
                       }
                       try {
                         final rows = await supabase.from('vehicle_listings').select('id')
                           .eq('owner_id', widget.ownerId).inFilter('status', ['published', 'reserved']).order('created_at', ascending: false).limit(1);
                         if (rows.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este vendedor no tiene anuncios disponibles para iniciar un chat.')));
+                          ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Este vendedor no tiene anuncios disponibles para iniciar un chat."))));
                           return;
                         }
                         final listingId = rows.first['id'].toString();
-                        final existing = await supabase.from('chat_conversations').select('id')
-                          .eq('listing_id', listingId).eq('buyer_id', currentUser.id).eq('seller_id', widget.ownerId).maybeSingle();
-                        final conversation = existing ?? await supabase.from('chat_conversations').insert({
-                          'listing_id': listingId, 'buyer_id': currentUser.id, 'seller_id': widget.ownerId,
-                        }).select('id').single();
+                        final conversation = await getOrCreateConversation(
+                          supabase: supabase,
+                          listingId: listingId,
+                          buyerId: currentUser.id,
+                          sellerId: widget.ownerId,
+                        );
                         if (!context.mounted) return;
                         await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => ChatPage(
                           conversationId: conversation['id'].toString(), title: name,
                         )));
                       } catch (e) {
-                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo abrir el chat: $e')));
+                        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo abrir el chat: {0}", [e]))));
                       }
                     },
                     icon: const Icon(Icons.send_rounded, size: 17),
-                    label: const Text('Enviar mensaje'),
+                    label:  Text(uiText(context, "Enviar mensaje")),
                     style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 12)),
                   )),
                 ]),
@@ -4431,53 +5043,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             ),
           ),
           Container(
-            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF29323A)))),
+            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE4E5DF)))),
             child: Row(children: [
-              _profileTabButton('Anuncios', 0),
-              _profileTabButton('Vendidos', 1),
-              _profileTabButton('Sobre nosotros', 2),
-              _profileTabButton('Valoraciones', 3),
+              for (var i = 0; i < profileTabs.length; i++) _profileTabButton(profileTabs[i], i),
             ]),
           ),
           IndexedStack(
             index: selectedProfileTab,
-            children: [
-              Column(children: [
-                Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [
-                  const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Vehículos disponibles', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))),
-                  Text('${listings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                ])),
-                const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Anuncios publicados y reservados actualmente', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                profileVehicleGrid(listings, sold: false),
-              ]),
-              Column(children: [
-                Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [
-                  const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24),
-                  const SizedBox(width: 8),
-                  const Expanded(child: Text('Vehículos vendidos', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: Colors.white))),
-                  Text('${soldListings.length}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                ])),
-                const Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text('Historial de vehículos vendidos por este vendedor', style: TextStyle(color: Colors.white60, fontSize: 12)))),
-                profileVehicleGrid(soldListings, sold: true),
-              ]),
-              ListView(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.all(20), children: [
-                const Text('Sobre nosotros', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-                const SizedBox(height: 12),
-                Text('$displayType', style: const TextStyle(color: Colors.white70, fontSize: 16)),
-                if (finalCity(profile) != const SizedBox.shrink()) finalCity(profile),
-                if (isVerifiedBusiness) const ListTile(leading: Icon(Icons.verified_user, color: Color(0xFF25D366)), title: Text('Profesional verificado')),
-                const ListTile(leading: Icon(Icons.directions_car, color: gold), title: Text('Vehículos disponibles y vendidos en AUTOMOTORS')),
-              ]),
-              const Center(child: Padding(padding: EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.star_border_rounded, color: gold, size: 42),
-                SizedBox(height: 10),
-                Text('Valoraciones', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-                SizedBox(height: 6),
-                Text('Las valoraciones aparecerán aquí cuando estén disponibles.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
-              ]))),
-            ],
+            children: profileTabChildren,
           ),
           ]),
           ),
@@ -4492,8 +5065,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 3),
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selectedProfileTab == index ? const Color(0xFF168BFF) : Colors.transparent, width: 3))),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w900 : FontWeight.w500, color: selectedProfileTab == index ? Colors.white : Colors.white60)),
+        child: Text(uiText(context, label), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketInk : marketMuted)),
       ),
     ),
   );
@@ -4502,7 +5075,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     final city = profile?['city']?.toString() ?? '';
     final province = profile?['province']?.toString() ?? '';
     final location = [city, province].where((v) => v.trim().isNotEmpty).join(', ');
-    return location.isEmpty ? const SizedBox.shrink() : Text(location, style: const TextStyle(color: Colors.white70));
+    return location.isEmpty ? const SizedBox.shrink() : Text(location, style: const TextStyle(color: marketMuted));
   }
 }
 
@@ -4586,10 +5159,11 @@ class PersonalAreaPage extends StatelessWidget {
   const PersonalAreaPage({super.key});
 
   Future<void> _signOut(BuildContext context) async {
+    await automotorsPush.unregister();
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Has cerrado sesión.')),
+         SnackBar(content: Text(uiText(context, "Has cerrado sesión."))),
       );
       Navigator.pop(context);
     }
@@ -4603,7 +5177,7 @@ class PersonalAreaPage extends StatelessWidget {
         title: Row(children: [
           const AutomotorsBrandMark(size: 30),
           const SizedBox(width: 10),
-          const Text('Mi espacio'),
+           Text(uiText(context, "Mi espacio")),
         ]),
       ),
       body: ListView(
@@ -4616,16 +5190,16 @@ class PersonalAreaPage extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF34302A), Color(0xFF17181B), Color(0xFF111214)],
+                colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
               ),
-              border: Border.all(color: gold.withValues(alpha: .48)),
+              border: Border.all(color: marketAccent.withValues(alpha: .48)),
               boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 18, offset: Offset(0, 8))],
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
-                Icon(Icons.workspace_premium, color: gold),
+               Row(children: [
+                Icon(Icons.workspace_premium, color: marketAccent),
                 SizedBox(width: 8),
-                Text('TU ESPACIO AUTOMOTORS', style: TextStyle(color: gold, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w900)),
+                Text(uiText(context, "TU ESPACIO AUTOMOTORS"), style: TextStyle(color: marketAccent, fontSize: 11, letterSpacing: 1.4, fontWeight: FontWeight.w700)),
               ]),
               const SizedBox(height: 14),
               FutureBuilder<Map<String, dynamic>?>(
@@ -4637,36 +5211,49 @@ class PersonalAreaPage extends StatelessWidget {
                   final fullName = profile['full_name']?.toString().trim() ?? '';
                   final displayName = business.isNotEmpty ? business : (fullName.isNotEmpty ? fullName : 'Conductor');
                   return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Bienvenido', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                     Text(uiText(context, "Bienvenido"), style: TextStyle(color: marketMuted, fontSize: 14)),
                     const SizedBox(height: 3),
                     Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: -.4)),
+                      style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w700, letterSpacing: -.4)),
                   ]);
                 },
               ),
               const SizedBox(height: 8),
-              const Text('Tu garaje, tus conversaciones y tus oportunidades, en un solo lugar.', style: TextStyle(color: Colors.white70, height: 1.4)),
+               Text(uiText(context, "Tu garaje, tus conversaciones y tus oportunidades, en un solo lugar."), style: TextStyle(color: marketMuted, height: 1.4)),
               const SizedBox(height: 20),
               Row(children: [
-                Expanded(child: _PersonalQuickStat(icon: Icons.directions_car_filled_rounded, label: 'MI GARAJE', value: 'Gestiona tus coches', onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const GaragePage())))),
+                Expanded(child: _PersonalQuickStat(icon: Icons.directions_car_filled_rounded, label: uiText(context, "MI GARAJE"), value: 'Gestiona tus coches', onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const GaragePage())))),
                 const SizedBox(width: 12),
-                Expanded(child: _PersonalQuickStat(icon: Icons.manage_accounts_rounded, label: 'TU CUENTA', value: 'Tu perfil a medida', onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())))),
+                Expanded(child: _PersonalQuickStat(icon: Icons.manage_accounts_rounded, label: uiText(context, "TU CUENTA"), value: 'Tu perfil a medida', onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())))),
               ]),
             ]),
           ),
           const SizedBox(height: 16),
           Card(color: panel, child: ListTile(
-            leading: const Icon(Icons.chat_bubble_outline, color: gold),
-            title: const Text('Mis mensajes'),
-            subtitle: const Text('Consulta tus conversaciones con compradores y vendedores'),
+            leading: const Icon(Icons.chat_bubble_outline, color: marketAccent),
+            title:  Text(uiText(context, "Mis mensajes")),
+            subtitle:  Text(uiText(context, "Consulta tus conversaciones con compradores y vendedores")),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const InboxPage())),
           )),
+          const ModerationEntry(),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.help_outline, color: marketAccent),
+            title: Text(uiText(context, 'Ayuda y privacidad')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => openAutomotorsSupport(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+            title: Text(uiText(context, 'Eliminar mi cuenta')),
+            onTap: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const DeleteAccountPage())),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             onPressed: () => _signOut(context),
             icon: const Icon(Icons.logout),
-            label: const Text('Cerrar sesión'),
+            label:  Text(uiText(context, "Cerrar sesión")),
           ),
         ],
       ),
@@ -4705,7 +5292,13 @@ class _GaragePageState extends State<GaragePage> {
     final rows = await supabase.from('vehicle_listings').select(
       'id,status,year,km,price,fuel,phone,description,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
     ).eq('owner_id', user.id).order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+    final listings=List<Map<String,dynamic>>.from(rows);
+    try {
+      final states=await supabase.rpc('my_listing_content_checks') as List;
+      final byId={for(final state in states) state['listing_id']:state};
+      for(final listing in listings) {listing['content_check_state']=byId[listing['id']]?['state'];}
+    } catch(_) {/* Listing management remains available if the status lookup fails. */}
+    return listings;
   }
 
   void refreshListings() => setState(() => listingsFuture = loadMyListings());
@@ -4716,25 +5309,11 @@ class _GaragePageState extends State<GaragePage> {
     return '${b is Map ? b['name'] ?? 'Marca' : 'Marca'} ${m is Map ? m['name'] ?? 'Modelo' : 'Modelo'}';
   }
 
-  List<String> listingSuggestions(Map<String, dynamic> listing) {
-    final suggestions = <String>[];
-    final photos = listing['vehicle_photos'];
-    if (photos is! List || photos.isEmpty) suggestions.add('Añade fotos');
-    final description = listing['description']?.toString().trim() ?? '';
-    if (description.length < 50) suggestions.add('Amplía la descripción');
-    if (listing['cv'] == null) suggestions.add('Añade los CV');
-    final label = listing['etiqueta_medioambiental']?.toString().trim() ?? '';
-    if (label.isEmpty) suggestions.add('Indica la etiqueta ambiental');
-    final phone = listing['phone']?.toString().trim() ?? '';
-    if (phone.isEmpty) suggestions.add('Añade un teléfono de contacto');
-    return suggestions;
-  }
-
   Future<void> setListingStatus(Map<String, dynamic> listing, String status) async {
     final user = supabase.auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Inicia sesión para gestionar tus anuncios.')),
+         SnackBar(content: Text(uiText(context, "Inicia sesión para gestionar tus anuncios."))),
       );
       return;
     }
@@ -4743,13 +5322,26 @@ class _GaragePageState extends State<GaragePage> {
     final normalizedStatus = status == 'paused' ? 'draft' : status;
     if (!['draft', 'published', 'reserved', 'sold'].contains(normalizedStatus)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Estado de anuncio no válido.')),
+         SnackBar(content: Text(uiText(context, "Estado de anuncio no válido."))),
       );
       return;
     }
 
     setState(() => busy = true);
     try {
+      if (normalizedStatus == 'sold') {
+        setState(() => busy = false);
+        final sold = await showDialog<bool>(context: context, builder: (_) => MarkVehicleSoldDialog(listingId: listing['id'].toString()));
+        if (sold != true || !mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Anuncio marcado como vendido."))));
+        refreshListings();
+        return;
+      }
+      if (normalizedStatus=='published'||normalizedStatus=='reserved') {
+        final result=await ContentPublicationService().publish(listing['id'].toString(),targetStatus:normalizedStatus);
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,result.message))));refreshListings();}
+        return;
+      }
       final updated = await supabase
           .from('vehicle_listings')
           .update({'status': normalizedStatus})
@@ -4770,13 +5362,13 @@ class _GaragePageState extends State<GaragePage> {
                 : normalizedStatus == 'draft'
                     ? 'Anuncio pausado.'
                     : 'Anuncio activado.';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, message))));
         refreshListings();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo actualizar el anuncio: $e')),
+          SnackBar(content: Text(uiText(context, "No se pudo actualizar el anuncio: {0}", [e]))),
         );
       }
     } finally {
@@ -4786,20 +5378,20 @@ class _GaragePageState extends State<GaragePage> {
 
   Future<void> deleteListing(Map<String, dynamic> listing) async {
     final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Eliminar anuncio'),
-      content: const Text('¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.'),
+      title:  Text(uiText(context, "Eliminar anuncio")),
+      content:  Text(uiText(context, "¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer.")),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child:  Text(uiText(context, "Cancelar"))),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child:  Text(uiText(context, "Eliminar"))),
       ],
     ));
     if (confirm != true) return;
     setState(() => busy = true);
     try {
       await supabase.from('vehicle_listings').delete().eq('id', listing['id'].toString()).eq('owner_id', supabase.auth.currentUser!.id);
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio eliminado.'))); refreshListings(); }
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Anuncio eliminado.")))); refreshListings(); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo eliminar el anuncio: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo eliminar el anuncio: {0}", [e]))));
     } finally { if (mounted) setState(() => busy = false); }
   }
 
@@ -4821,33 +5413,15 @@ class _GaragePageState extends State<GaragePage> {
         }),
       );
       final photos = downloadedPhotos.whereType<Uint8List>().toList();
-      final brand = listing['vehicle_brands'];
-      final model = listing['vehicle_models'];
-      final car = Car(
-        brand: brand is Map ? (brand['name']?.toString() ?? 'Marca') : 'Marca',
-        model: model is Map ? (model['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (listing['year'] as num?)?.toInt() ?? 0,
-        km: (listing['km'] as num?)?.toInt() ?? 0,
-        price: (listing['price'] as num?)?.toDouble() ?? 0,
-        fuel: listing['fuel']?.toString() ?? '',
-        description: listing['description']?.toString() ?? '',
-        phone: listing['phone']?.toString() ?? '',
-        cv: (listing['cv'] as num?)?.toInt(),
-        cilindradaCc: (listing['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: listing['etiqueta_medioambiental']?.toString(),
-        vin: listing['vin']?.toString(),
-        photos: photos,
-        listingId: listing['id']?.toString(),
-        ownerId: listing['owner_id']?.toString(),
-      );
+      final car = Car.fromListing(listing, photos: photos);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => CarDetailsPage(
         car: car,
         priceText: euros(car.price),
-        onContact: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Este es tu anuncio; no puedes contactar contigo mismo.'))),
+        onContact: () => ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Este es tu anuncio; no puedes contactar contigo mismo.")))),
       )));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo abrir la ficha del vehículo: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo abrir la ficha del vehículo: {0}", [e]))));
     }
   }
 
@@ -4866,7 +5440,7 @@ class _GaragePageState extends State<GaragePage> {
       if (!mounted) return;
       if (current == null || current['status']?.toString() == 'sold') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Un vehículo vendido no se puede editar.')),
+           SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))),
         );
         refreshListings();
         return;
@@ -4880,7 +5454,7 @@ class _GaragePageState extends State<GaragePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo comprobar el estado del anuncio: $e')),
+          SnackBar(content: Text(uiText(context, "No se pudo comprobar el estado del anuncio: {0}", [e]))),
         );
       }
     }
@@ -4889,16 +5463,16 @@ class _GaragePageState extends State<GaragePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Gestiona tu garaje'),
-      actions: [IconButton(onPressed: refreshListings, tooltip: 'Actualizar anuncios', icon: const Icon(Icons.refresh_rounded, color: gold))],
+      title:  Text(uiText(context, "Gestiona tu garaje")),
+      actions: [IconButton(onPressed: refreshListings, tooltip: uiText(context, "Actualizar anuncios"), icon: const Icon(Icons.refresh_rounded, color: marketAccent))],
     ),
     body: FutureBuilder<List<Map<String, dynamic>>>(
       future: listingsFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: gold));
-        if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('No se pudieron cargar tus anuncios: ${snapshot.error}')));
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: marketAccent));
+        if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(uiText(context, "No se pudieron cargar tus anuncios: {0}", [snapshot.error]))));
         final rows = snapshot.data ?? [];
-        if (rows.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí.')));
+        if (rows.isEmpty) return  Center(child: Padding(padding: EdgeInsets.all(24), child: Text(uiText(context, "Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí."))));
         final counts = <String, int>{
           'Todos': rows.length,
           'Publicados': rows.where((r) => r['status']?.toString() == 'published').length,
@@ -4919,15 +5493,15 @@ class _GaragePageState extends State<GaragePage> {
         }).toList();
         return Stack(children: [
           ListView(padding: const EdgeInsets.all(16), children: [
-            const Text('Tus vehículos', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+             Text(uiText(context, "Tus vehículos"), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            const Text('Filtra por estado o busca por marca, modelo, año y combustible.'),
+             Text(uiText(context, "Filtra por estado o busca por marca, modelo, año y combustible.")),
             const SizedBox(height: 14),
             TextField(
               decoration: InputDecoration(
-                hintText: 'Buscar en mis anuncios…',
-                prefixIcon: const Icon(Icons.search, color: gold),
-                suffixIcon: searchQuery.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), tooltip: 'Borrar búsqueda', onPressed: () => setState(() => searchQuery = '')),
+                hintText: uiText(context, "Buscar en mis anuncios…"),
+                prefixIcon: const Icon(Icons.search, color: marketAccent),
+                suffixIcon: searchQuery.isEmpty ? null : IconButton(icon: const Icon(Icons.clear), tooltip: uiText(context, "Borrar búsqueda"), onPressed: () => setState(() => searchQuery = '')),
                 filled: true,
                 fillColor: panel,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -4942,17 +5516,17 @@ class _GaragePageState extends State<GaragePage> {
                 child: ChoiceChip(
                   label: Text('${entry.key} (${entry.value})'),
                   selected: statusFilter == entry.key,
-                  selectedColor: gold,
-                  labelStyle: TextStyle(color: statusFilter == entry.key ? Colors.black : Colors.white, fontWeight: FontWeight.w700),
+                  selectedColor: marketInk,
+                  labelStyle: TextStyle(color: statusFilter == entry.key ? marketSurface : marketInk, fontWeight: FontWeight.w700),
                   onSelected: (_) => setState(() => statusFilter = entry.key),
                 ),
               )).toList()),
             ),
             const SizedBox(height: 12),
-            Text('${visibleRows.length} de ${rows.length} anuncios', style: const TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w700)),
+            Text(uiText(context, "{0} de {1} anuncios", [visibleRows.length, rows.length]), style: const TextStyle(color: marketMuted, fontSize: 12, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             if (visibleRows.isEmpty)
-              const Padding(padding: EdgeInsets.symmetric(vertical: 36), child: Column(children: [Icon(Icons.search_off_rounded, size: 42, color: Colors.white38), SizedBox(height: 10), Text('No hay anuncios que coincidan con estos filtros.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70))]))
+               Padding(padding: EdgeInsets.symmetric(vertical: 36), child: Column(children: [Icon(Icons.search_off_rounded, size: 42, color: marketMuted), SizedBox(height: 10), Text(uiText(context, "No hay anuncios que coincidan con estos filtros."), textAlign: TextAlign.center, style: TextStyle(color: marketMuted))]))
             else ...visibleRows.map((listing) {
               final status = listing['status']?.toString() ?? 'published';
               final isReserved = status == 'reserved';
@@ -4977,7 +5551,7 @@ class _GaragePageState extends State<GaragePage> {
                       border: Border(
                         top: BorderSide(color: isReserved ? const Color(0xFF83D8FF) : const Color(0xFFFFA4A8), width: 1),
                         bottom: BorderSide(color: isReserved ? const Color(0xFF041D52) : const Color(0xFF5D0610), width: 1),
-                        left: BorderSide(color: Colors.white.withValues(alpha: .7), width: 1),
+                        left: BorderSide(color: marketInk.withValues(alpha: .7), width: 1),
                       ),
                       borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
                       boxShadow: [
@@ -4985,10 +5559,10 @@ class _GaragePageState extends State<GaragePage> {
                       ],
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isReserved ? Icons.lock_rounded : Icons.verified_rounded, size: 15, color: Colors.white),
+                      Icon(isReserved ? Icons.lock_rounded : Icons.verified_rounded, size: 15, color: marketInk),
                       const SizedBox(width: 7),
-                      Text(isReserved ? 'RESERVADO' : 'VENDIDO', style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.1,
+                      Text(isReserved ? uiText(context, "RESERVADO") : uiText(context, "VENDIDO"), style: const TextStyle(
+                        color: marketInk, fontWeight: FontWeight.w700, letterSpacing: 1.1,
                         shadows: [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 1))],
                       )),
                     ]),
@@ -4996,72 +5570,35 @@ class _GaragePageState extends State<GaragePage> {
                 ])),
                 Padding(padding: const EdgeInsets.fromLTRB(16, 13, 8, 0), child: Row(children: [
                   Expanded(child: InkWell(onTap: () => openDetails(listing), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(listingName(listing), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    Text(listingName(listing), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 5),
-                    Text('${listing['year'] ?? ''} · ${((listing['km'] as num?)?.toInt() ?? 0)} km · ${euros(price)}', style: const TextStyle(color: Colors.white70)),
+                    Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: marketMuted)),
                     const SizedBox(height: 5),
-                    Text('Estado: ${isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status}', style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : Colors.white60)),
+                    Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : marketMuted)),
+                    if(listingContentStateMessage(listing['content_check_state']?.toString()).isNotEmpty)
+                      Text(uiText(context,listingContentStateMessage(listing['content_check_state']?.toString())),style:const TextStyle(color:Colors.orangeAccent)),
                     const SizedBox(height: 8),
-                    Builder(builder: (context) {
-                      final suggestions = listingSuggestions(listing);
-                      final completed = 5 - suggestions.length;
-                      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          const Icon(Icons.auto_awesome_outlined, size: 14, color: gold),
-                          const SizedBox(width: 5),
-                          Text('Calidad de la ficha: $completed/5', style: const TextStyle(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w700)),
-                        ]),
-                        const SizedBox(height: 5),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: completed / 5,
-                            minHeight: 4,
-                            backgroundColor: Colors.white12,
-                            color: completed == 5 ? Colors.greenAccent : gold,
-                          ),
-                        ),
-                        if (suggestions.isNotEmpty) ...[
-                          const SizedBox(height: 5),
-                          Text(suggestions.join(' · '), style: const TextStyle(fontSize: 11, color: Colors.white54)),
-                          if (!isSold)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: busy ? null : () => editListing(listing),
-                                icon: const Icon(Icons.edit_note_rounded, size: 17),
-                                label: const Text('Completar ficha'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: gold,
-                                  padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ]);
-                    }),
                   ]))),
-                  PopupMenuButton<String>(enabled: !busy, tooltip: 'Opciones del anuncio', onSelected: (value) {
+                  PopupMenuButton<String>(enabled: !busy, tooltip: uiText(context, "Opciones del anuncio"), onSelected: (value) {
                     if (value == 'edit') editListing(listing);
                     if (value == 'pause' && status != 'reserved' && status != 'sold') setListingStatus(listing, status == 'published' ? 'paused' : 'published');
                     if (value == 'delete') deleteListing(listing);
                     if (value == 'publish') setListingStatus(listing, 'published');
                   }, itemBuilder: (_) => [
-                    PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? 'No editable: vendido' : 'Editar'))),
-                    PopupMenuItem(value: 'pause', enabled: status != 'reserved' && status != 'sold', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? 'Pausar' : 'Activar'))),
-                    const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar'))),
-                  ], icon: const Icon(Icons.more_vert, color: gold)),
+                    PopupMenuItem(value: 'edit', enabled: !isSold, child: ListTile(leading: Icon(Icons.edit_outlined), title: Text(isSold ? uiText(context, "No editable: vendido") : uiText(context, "Editar")))),
+                    PopupMenuItem(value: 'pause', enabled: status != 'reserved' && status != 'sold', child: ListTile(leading: Icon(status == 'published' ? Icons.pause : Icons.play_arrow), title: Text(status == 'published' ? uiText(context, "Pausar") : uiText(context, "Activar")))),
+                     PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text(uiText(context, "Eliminar")))),
+                  ], icon: const Icon(Icons.more_vert, color: marketAccent)),
                 ])),
                 Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 14), child: Row(children: [
-                  Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline), label: const Text('Vendido'))),
+                  Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline), label:  Text(uiText(context, "Vendido")))),
                   const SizedBox(width: 8),
-                  Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border), label: Text(isReserved ? 'Quitar reserva' : 'Reservar'))),
+                  Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border), label: Text(isReserved ? uiText(context, "Quitar reserva") : uiText(context, "Reservar")))),
                 ])),
               ]));
             }),
           ]),
-          if (busy) const Align(alignment: Alignment.topCenter, child: LinearProgressIndicator(color: gold)),
+          if (busy) const Align(alignment: Alignment.topCenter, child: LinearProgressIndicator(color: marketAccent)),
         ]);
       },
     ),
@@ -5091,10 +5628,10 @@ class _GarageListingPhotoState extends State<GarageListingPhoto> {
   }
   @override
   Widget build(BuildContext context) => Container(
-    color: const Color(0xFF15171B), width: double.infinity,
+    color: marketSurface, width: double.infinity,
     child: bytes == null
-      ? const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 64))
-      : Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car_filled, color: gold, size: 64))),
+      ? const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 64))
+      : Image.memory(bytes!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 64))),
   );
 }
 
@@ -5112,10 +5649,10 @@ class _PersonalQuickStat extends StatelessWidget {
       onTap: onTap, borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.black.withValues(alpha: .22), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white12)),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: .22), borderRadius: BorderRadius.circular(14), border: Border.all(color: marketLine)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: gold, size: 20), const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: gold, fontSize: 9, letterSpacing: .7, fontWeight: FontWeight.w900)),
+          Icon(icon, color: marketAccent, size: 20), const SizedBox(height: 8),
+          Text(uiText(context, label), style: const TextStyle(color: marketAccent, fontSize: 9, letterSpacing: .7, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4), Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
         ]),
       ),
@@ -5140,11 +5677,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final province = TextEditingController();
   final address = TextEditingController();
   final businessName = TextEditingController();
+  final aboutUs = TextEditingController();
   String accountType = 'particular';
-  String? verificationStatus;
-  String? documentName;
-  XFile? pickedDocument;
-  Uint8List? pickedDocumentBytes;
   XFile? pickedProfilePhoto;
   XFile? pickedCoverPhoto;
   Uint8List? pickedProfilePhotoBytes;
@@ -5156,7 +5690,6 @@ class _ProfilePageState extends State<ProfilePage> {
   bool editing = false;
 
   bool get isProfessional => accountType == 'autonomo' || accountType == 'empresa';
-  bool get isVerifiedProfessional => isProfessional && (verificationStatus ?? '').toLowerCase() == 'aprobada';
 
   @override
   void initState() {
@@ -5173,6 +5706,7 @@ class _ProfilePageState extends State<ProfilePage> {
     province.dispose();
     address.dispose();
     businessName.dispose();
+    aboutUs.dispose();
     super.dispose();
   }
 
@@ -5180,12 +5714,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Quieres cerrar tu sesión de AUTOMOTORS?'),
+        title:  Text(uiText(context, "Cerrar sesión")),
+        content:  Text(uiText(context, "¿Quieres cerrar tu sesión de AUTOMOTORS?")),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
+            child:  Text(uiText(context, "Cancelar")),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -5193,23 +5727,24 @@ class _ProfilePageState extends State<ProfilePage> {
               backgroundColor: gold,
               foregroundColor: Colors.black,
             ),
-            child: const Text('Cerrar sesión'),
+            child:  Text(uiText(context, "Cerrar sesión")),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
     try {
+      await automotorsPush.unregister();
       await supabase.auth.signOut();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Has cerrado sesión.')),
+         SnackBar(content: Text(uiText(context, "Has cerrado sesión."))),
       );
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo cerrar sesión. Inténtalo de nuevo.')),
+         SnackBar(content: Text(uiText(context, "No se pudo cerrar sesión. Inténtalo de nuevo."))),
       );
     }
   }
@@ -5232,15 +5767,17 @@ class _ProfilePageState extends State<ProfilePage> {
         businessName.text = row['business_name']?.toString() ?? '';
         final type = (row['account_type']?.toString() ?? 'particular').toLowerCase();
         accountType = ['particular', 'autonomo', 'empresa'].contains(type) ? type : 'particular';
-        verificationStatus = row['estado_verificacion']?.toString() ?? 'No solicitada';
-        documentName = row['verification_document_path']?.toString();
         profilePhotoPath = row['profile_photo_path']?.toString();
         coverPhotoPath = row['cover_photo_path']?.toString();
+        try {
+          final about = await supabase.from('seller_about_profiles').select('about_us').eq('user_id', user.id).maybeSingle();
+          aboutUs.text = about?['about_us']?.toString() ?? '';
+        } catch (_) {}
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo cargar el perfil. Comprueba que has aplicado el SQL de configuración. ($e)')),
+          SnackBar(content: Text(uiText(context, "No se pudo cargar el perfil. Comprueba que has aplicado el SQL de configuración. ({0})", [e]))),
         );
       }
     } finally {
@@ -5259,7 +5796,7 @@ class _ProfilePageState extends State<ProfilePage> {
         else { pickedProfilePhoto = file; pickedProfilePhotoBytes = bytes; }
       });
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo seleccionar la imagen: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo seleccionar la imagen: {0}", [e]))));
     }
   }
 
@@ -5271,63 +5808,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return path;
   }
 
-  Future<void> chooseDocument() async {
-  try {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-    );
-
-    if (result.isEmpty) return;
-
-    final file = result.first;
-    final bytes = await file.xFile.readAsBytes();
-
-    if (bytes.isEmpty) {
-      throw Exception('No se pudieron leer los datos del archivo.');
-    }
-
-    if (bytes.length > 10 * 1024 * 1024) {
-      throw Exception('El documento no puede superar 10 MB.');
-    }
-
-    setState(() {
-      pickedDocument = XFile(file.name, bytes: bytes);
-    });
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al seleccionar documento: $e')),
-    );
-  }
-}
-
   Future<void> saveProfile() async {
     if (saving || !formKey.currentState!.validate()) return;
     final user = supabase.auth.currentUser;
     if (user == null) return;
     setState(() => saving = true);
     try {
-      String? documentPath;
-      if (pickedDocument != null && pickedDocumentBytes != null) {
-        final file = pickedDocument!;
-        final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-        documentPath = '${user.id}/${DateTime.now().millisecondsSinceEpoch}_$safeName';
-        await supabase.storage.from('verification-documents').uploadBinary(
-          documentPath,
-          pickedDocumentBytes!,
-          fileOptions: FileOptions(
-            contentType: file.name.toLowerCase().endsWith('.pdf')
-                ? 'application/pdf'
-                : file.name.toLowerCase().endsWith('.png')
-                    ? 'image/png'
-                    : 'image/jpeg',
-            upsert: false,
-          ),
-        );
-      }
-
       if (pickedProfilePhoto != null && pickedProfilePhotoBytes != null) {
         profilePhotoPath = await uploadProfileImage(pickedProfilePhoto!, pickedProfilePhotoBytes!, 'profile', user.id);
       }
@@ -5346,30 +5832,24 @@ class _ProfilePageState extends State<ProfilePage> {
         'phone': phone.text.trim(),
         'city': city.text.trim(),
         'province': province.text.trim(),
-        'business_name': isProfessional && accountType == 'empresa'
+        'business_name': isProfessional
             ? businessName.text.trim()
             : null,
         'address': isProfessional ? address.text.trim() : null,
         'profile_photo_path': profilePhotoPath,
-        'cover_photo_path': isVerifiedProfessional ? coverPhotoPath : null,
+        'cover_photo_path': isProfessional ? coverPhotoPath : null,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
-      if (documentPath != null) {
-        data['verification_document_path'] = documentPath;
-        data['estado_verificacion'] = 'Pendiente';
-      } else if (isProfessional && verificationStatus == null) {
-        data['estado_verificacion'] = 'No solicitada';
-      }
-      if (!isProfessional) {
-        data['verification_document_path'] = null;
-        data['estado_verificacion'] = 'No aplicable';
-      }
       await supabase.from('user_profiles').upsert(data, onConflict: 'id');
+      if (isProfessional) {
+        await supabase.from('seller_about_profiles').upsert({
+          'user_id': user.id,
+          'about_us': aboutUs.text.trim(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'user_id');
+      }
       if (!mounted) return;
       setState(() {
-        verificationStatus = data['estado_verificacion']?.toString() ?? verificationStatus;
-        pickedDocument = null;
-        pickedDocumentBytes = null;
         pickedProfilePhoto = null;
         pickedCoverPhoto = null;
         pickedProfilePhotoBytes = null;
@@ -5377,12 +5857,12 @@ class _ProfilePageState extends State<ProfilePage> {
         editing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil guardado correctamente.')),
+         SnackBar(content: Text(uiText(context, "Perfil guardado correctamente."))),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo guardar el perfil: $e')),
+          SnackBar(content: Text(uiText(context, "No se pudo guardar el perfil: {0}", [e]))),
         );
       }
     } finally {
@@ -5396,16 +5876,16 @@ class _ProfilePageState extends State<ProfilePage> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
-        decoration: InputDecoration(labelText: label),
+        decoration: InputDecoration(labelText: uiText(context, label)),
         validator: (value) {
           final text = value?.trim() ?? '';
           if (requiredField && text.isEmpty) {
-            return 'Completa este campo';
+            return uiText(context, 'Completa este campo');
           }
           if (text.isEmpty) return null;
 
           if (label.startsWith('Teléfono') && validWhatsAppDigits(text) == null) {
-            return 'Introduce un teléfono válido, incluido el prefijo internacional si procede';
+            return uiText(context, 'Introduce un teléfono válido, incluido el prefijo internacional si procede');
           }
           return null;
         },
@@ -5415,7 +5895,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _readOnlyRow(String label, String value) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
-    return ListTile(contentPadding: EdgeInsets.zero, title: Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13)), subtitle: Text(value, style: const TextStyle(fontSize: 16)));
+    return ListTile(contentPadding: EdgeInsets.zero, title: Text(uiText(context, label), style: const TextStyle(color: marketMuted, fontSize: 13)), subtitle: Text(value, style: const TextStyle(fontSize: 16)));
   }
 
   @override
@@ -5425,78 +5905,94 @@ class _ProfilePageState extends State<ProfilePage> {
     final coverUrl = coverPhotoPath == null ? null : supabase.storage.from('profile-photos').getPublicUrl(coverPhotoPath!);
     return Scaffold(
       appBar: AppBar(
-        title: Row(children: [const AutomotorsBrandMark(size: 30), const SizedBox(width: 10), const Text('Mi perfil')]),
-        actions: [if (!loading) IconButton(tooltip: editing ? 'Cancelar edición' : 'Editar perfil', icon: Icon(editing ? Icons.close : Icons.edit_outlined, color: gold), onPressed: () => setState(() => editing = !editing))],
+        title: Row(children: [const AutomotorsBrandMark(size: 30), const SizedBox(width: 10),  Text(uiText(context, "Mi perfil"))]),
+        actions: [if (!loading) IconButton(tooltip: editing ? uiText(context, "Cancelar edición") : uiText(context, "Editar perfil"), icon: Icon(editing ? Icons.close : Icons.edit_outlined, color: marketAccent), onPressed: () => setState(() => editing = !editing))],
       ),
-      body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : editing
+      body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : editing
         ? Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
-            if (isVerifiedProfessional) ...[
-              GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: true), child: Container(height: 140, decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(12), image: pickedCoverPhotoBytes != null ? DecorationImage(image: MemoryImage(pickedCoverPhotoBytes!), fit: BoxFit.cover) : (coverUrl != null ? DecorationImage(image: NetworkImage(coverUrl), fit: BoxFit.cover) : null)), child: const Center(child: Text('Cambiar foto de portada', style: TextStyle(backgroundColor: Colors.black54))))),
+            if (isProfessional) ...[
+              GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: true), child: Container(height: 140, decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(12), image: pickedCoverPhotoBytes != null ? DecorationImage(image: MemoryImage(pickedCoverPhotoBytes!), fit: BoxFit.cover) : (coverUrl != null ? DecorationImage(image: NetworkImage(coverUrl), fit: BoxFit.cover) : null)), child:  Center(child: Text(uiText(context, "Cambiar foto de portada"), style: TextStyle(color: Colors.white, backgroundColor: Colors.black54))))),
               const SizedBox(height: 12),
             ],
             Center(child: GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: false), child: CircleAvatar(radius: 48, backgroundColor: gold, backgroundImage: pickedProfilePhotoBytes != null ? MemoryImage(pickedProfilePhotoBytes!) : (profileUrl != null ? NetworkImage(profileUrl) : null) as ImageProvider?, child: (pickedProfilePhotoBytes == null && profileUrl == null) ? const Icon(Icons.add_a_photo, color: Colors.black, size: 28) : null))),
-            const SizedBox(height: 8), const Center(child: Text('Pulsa la foto para cambiarla')),
+            const SizedBox(height: 8),  Center(child: Text(uiText(context, "Pulsa la foto para cambiarla"))),
             const SizedBox(height: 16),
-            const Text('DATOS DE LA CUENTA', style: TextStyle(color: gold, fontWeight: FontWeight.bold)),
-            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.email_outlined, color: gold), title: const Text('Correo electrónico'), subtitle: Text(email)),
-            DropdownButtonFormField<String>(value: accountType, decoration: const InputDecoration(labelText: 'Tipo de cuenta'), items: const [DropdownMenuItem(value: 'particular', child: Text('Particular')), DropdownMenuItem(value: 'autonomo', child: Text('Autónomo')), DropdownMenuItem(value: 'empresa', child: Text('Empresa'))], onChanged: saving ? null : (value) { if (value != null) setState(() => accountType = value); }),
-            const SizedBox(height: 16), const Text('DATOS PERSONALES', style: TextStyle(color: gold, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
+             Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)),
+            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.email_outlined, color: marketAccent), title:  Text(uiText(context, "Correo electrónico")), subtitle: Text(email)),
+            DropdownButtonFormField<String>(isExpanded: true, value: accountType, decoration:  InputDecoration(labelText: uiText(context, "Tipo de cuenta")), items:  [DropdownMenuItem(value: 'particular', child: Text(uiText(context, "Particular"))), DropdownMenuItem(value: 'autonomo', child: Text(uiText(context, "Autónomo"))), DropdownMenuItem(value: 'empresa', child: Text(uiText(context, "Empresa")))], onChanged: saving ? null : (value) { if (value != null) setState(() => accountType = value); }),
+            const SizedBox(height: 16),  Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
             field(accountType == 'empresa' ? 'Nombre y apellidos de la persona de contacto' : 'Nombre y apellidos', name, requiredField: true),
-            if (accountType == 'empresa') field('Razón social de la empresa', businessName, requiredField: true),
+            if (isProfessional) field('Razón social', businessName, requiredField: true),
             if (isProfessional) field('CIF/NIF o identificación fiscal', fiscalId, requiredField: true) else field('DNI/NIE (opcional)', fiscalId),
             field('Teléfono', phone, requiredField: true, keyboard: TextInputType.phone), field('Ciudad', city, requiredField: true), field('Provincia', province, requiredField: true),
             if (isProfessional) ...[
               field(accountType == 'empresa' ? 'Dirección fiscal de la empresa' : 'Dirección fiscal o profesional', address, requiredField: true),
-              const SizedBox(height: 8), const Text('VERIFICACIÓN DE CUENTA', style: TextStyle(color: gold, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8), const Text('Adjunta documentación para solicitar la verificación. La portada solo se habilita cuando la cuenta profesional está aprobada.'),
-              OutlinedButton.icon(onPressed: saving ? null : chooseDocument, icon: const Icon(Icons.upload_file), label: Text(documentName == null ? 'Adjuntar documentación' : 'Documento: $documentName')),
-              if (verificationStatus != null) Text('Estado de verificación: $verificationStatus'),
+              Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: aboutUs, maxLines: 5, maxLength: 2000, decoration:  InputDecoration(labelText: uiText(context, "Sobre nosotros"), hintText: uiText(context, "Presenta tu negocio, experiencia y servicios.")))),
             ],
-            const SizedBox(height: 24), FilledButton.icon(onPressed: saving ? null : saveProfile, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: Text(saving ? 'Guardando...' : 'Guardar perfil')),
+            const SizedBox(height: 24), FilledButton.icon(onPressed: saving ? null : saveProfile, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar perfil"))),
           ]))
         : ListView(padding: const EdgeInsets.all(16), children: [
+            if (isProfessional)
+              MarketProfessionalHeader(name: businessName.text.trim().isNotEmpty ? businessName.text.trim() : name.text, accountLabel: uiText(context, accountType == 'autonomo' ? 'Autónomo' : 'Empresa'), coverUrl: coverUrl, avatarUrl: profileUrl, location: [city.text, province.text].where((v) => v.trim().isNotEmpty).join(', '))
+            else
             Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: gold.withValues(alpha: .35))),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: marketAccent.withValues(alpha: .35))),
               clipBehavior: Clip.antiAlias,
               child: Column(children: [
-                if (coverUrl != null) SizedBox(height: 145, width: double.infinity, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF292929), alignment: Alignment.center, child: const Icon(Icons.landscape_outlined, color: gold, size: 34)))),
+                if (coverUrl != null) SizedBox(height: 145, width: double.infinity, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: marketSurface, alignment: Alignment.center, child: const Icon(Icons.landscape_outlined, color: marketAccent, size: 34)))),
                 Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 20), child: Column(children: [
                   CircleAvatar(radius: 48, backgroundColor: gold, backgroundImage: profileUrl == null ? null : NetworkImage(profileUrl), child: profileUrl == null ? const Icon(Icons.person, color: Colors.black, size: 42) : null),
                   const SizedBox(height: 12),
-                  Text(name.text.isEmpty ? email : name.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
+                  Text(name.text.isEmpty ? email : name.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 5),
-                  Text(accountType == 'autonomo' ? 'AUTÓNOMO' : accountType == 'empresa' ? 'EMPRESA' : 'PARTICULAR', style: const TextStyle(color: gold, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w900)),
-                  if (isVerifiedProfessional) const Padding(padding: EdgeInsets.only(top: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.verified, color: Color(0xFF2EAD67), size: 17), SizedBox(width: 5), Text('Cuenta profesional verificada', style: TextStyle(color: Color(0xFF2EAD67), fontSize: 12))])),
+                  Text(accountType == 'autonomo' ? uiText(context, "AUTÓNOMO") : accountType == 'empresa' ? uiText(context, "EMPRESA") : uiText(context, "PARTICULAR"), style: const TextStyle(color: marketAccent, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
-                  const Text('Tu identidad en AUTOMOTORS', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                   Text(uiText(context, "Tu identidad en AUTOMOTORS"), style: TextStyle(color: marketMuted, fontSize: 12)),
                 ])),
               ]),
             ),
             const SizedBox(height: 18),
-            const Text('TU INFORMACIÓN', style: TextStyle(color: gold, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w900)),
+             Text(uiText(context, "TU INFORMACIÓN"), style: TextStyle(color: marketAccent, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            if (isVerifiedProfessional) Center(child: Text('Verificación: ${verificationStatus ?? 'No solicitada'}', style: const TextStyle(color: gold))),
-            const Divider(height: 28), const Text('DATOS DE LA CUENTA', style: TextStyle(color: gold, fontWeight: FontWeight.bold)), _readOnlyRow('Correo electrónico', email),
-            const Text('DATOS PERSONALES', style: TextStyle(color: gold, fontWeight: FontWeight.bold)), _readOnlyRow('Nombre y apellidos', name.text), _readOnlyRow('Teléfono', phone.text), _readOnlyRow('Ciudad', city.text), _readOnlyRow('Provincia', province.text),
-            if (accountType == 'empresa') _readOnlyRow('Razón social', businessName.text),
-            if (isProfessional) ...[_readOnlyRow('Identificación fiscal', fiscalId.text), _readOnlyRow('Dirección fiscal', address.text)],
+            const Divider(height: 28),  Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Correo electrónico"), email),
+             Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Nombre y apellidos"), name.text), _readOnlyRow(uiText(context, "Teléfono"), phone.text), _readOnlyRow(uiText(context, "Ciudad"), city.text), _readOnlyRow(uiText(context, "Provincia"), province.text),
+            if (isProfessional) _readOnlyRow(uiText(context, "Razón social"), businessName.text),
+            if (isProfessional) ...[_readOnlyRow(uiText(context, "Identificación fiscal"), fiscalId.text), _readOnlyRow(uiText(context, "Dirección fiscal"), address.text)],
             const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GaragePage()),
+                ),
+                icon: const Icon(Icons.directions_car_outlined),
+                label:  Text(uiText(context, "Mis anuncios")),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: marketAccent,
+                  side: BorderSide(color: marketAccent.withValues(alpha: .65)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () => setState(() => editing = true),
                 icon: const Icon(Icons.edit),
-                label: const Text('Editar perfil'),
+                label:  Text(uiText(context, "Editar perfil")),
                 style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
               ),
             ),
+            const ModerationEntry(),
+            const AccountDeletionEntry(),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: signOutFromProfile,
                 icon: const Icon(Icons.logout_rounded),
-                label: const Text('Cerrar sesión'),
+                label:  Text(uiText(context, "Cerrar sesión")),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.redAccent,
                   side: const BorderSide(color: Colors.redAccent),
@@ -5553,7 +6049,7 @@ class _EditListingPageState extends State<EditListingPage> {
     try {
       final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))));
         if (mounted) Navigator.pop(context, false);
         return;
       }
@@ -5566,26 +6062,33 @@ class _EditListingPageState extends State<EditListingPage> {
       showMatriculaPublicly = row['show_matricula_publicly'] == true;
       showVinPublicly = row['show_vin_publicly'] == true;
       fuel = row['fuel']?.toString() ?? 'Diésel'; label = row['etiqueta_medioambiental']?.toString();
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudieron cargar los datos del anuncio: $e'))); }
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudieron cargar los datos del anuncio: {0}", [e])))); }
     finally { if (mounted) setState(() => loading = false); }
   }
 
   Future<void> save() async {
     final current = await supabase.from('vehicle_listings').select('status').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).maybeSingle();
     if (current == null || current['status']?.toString() == 'sold') {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un vehículo vendido no se puede editar.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))));
       if (mounted) Navigator.pop(context, false);
       return;
     }
     if (!formKey.currentState!.validate()) return;
     final y = int.tryParse(year.text.trim()), k = int.tryParse(km.text.trim());
     final p = double.tryParse(price.text.trim().replaceAll('.', '').replaceAll(',', '.'));
-    if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Revisa año, kilómetros y precio.'))); return; }
+    if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Revisa año, kilómetros y precio.")))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anuncio actualizado.'))); Navigator.pop(context, true); }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo guardar el anuncio: $e'))); }
+      await supabase.from('vehicle_listings').update({'status':'draft','year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      var saveMessage='Anuncio actualizado.';
+      final previousStatus=current['status']?.toString();
+      if(previousStatus=='published'||previousStatus=='reserved') {
+        final result=await ContentPublicationService().publish(widget.listingId,targetStatus:previousStatus!);
+        saveMessage=result.published?'Anuncio actualizado.':result.message;
+      }
+      if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,saveMessage))));Navigator.pop(context,true);}
+
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, "No se pudo guardar el anuncio: {0}", [e])))); }
     finally { if (mounted) setState(() => saving = false); }
   }
 
@@ -5599,27 +6102,29 @@ class _EditListingPageState extends State<EditListingPage> {
       textInputAction: multiline ? TextInputAction.newline : TextInputAction.next,
       textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: uiText(context, label),
         alignLabelWithHint: multiline,
         hintText: multiline
-            ? 'Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.'
+            ? uiText(context, "Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.")
             : null,
       ),
-      validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Completa este campo' : null,
+      validator: (v) => required && (v == null || v.trim().isEmpty) ? uiText(context, 'Completa este campo') : null,
     ),
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Editar anuncio')), body: loading ? const Center(child: CircularProgressIndicator(color: gold)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
     textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
-    DropdownButtonFormField<String>(value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration: const InputDecoration(labelText: 'Combustible'), items: const [DropdownMenuItem(value:'Diésel',child:Text('Diésel')),DropdownMenuItem(value:'Gasolina',child:Text('Gasolina')),DropdownMenuItem(value:'Híbrido',child:Text('Híbrido')),DropdownMenuItem(value:'Eléctrico',child:Text('Eléctrico'))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
+    DropdownButtonFormField<String>(isExpanded: true, value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration:  InputDecoration(labelText: uiText(context, "Combustible")), items:  [DropdownMenuItem(value:'Diésel',child:Text(uiText(context, "Diésel"))),DropdownMenuItem(value:'Gasolina',child:Text(uiText(context, "Gasolina"))),DropdownMenuItem(value:'Híbrido',child:Text(uiText(context, "Híbrido"))),DropdownMenuItem(value:'Eléctrico',child:Text(uiText(context, "Eléctrico")))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
     textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Norma de emisiones', emissionsStandard), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
-    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar matrícula en el anuncio público'), subtitle: const Text('Si lo desactivas, solo se conservará para la gestión del anuncio.'), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
-    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar VIN / bastidor en el anuncio público'), subtitle: const Text('Es opcional; por privacidad se mantiene oculto si no lo activas.'), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
-    const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('Equipamiento', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-    ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(item), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
-    DropdownButtonFormField<String>(value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => label = v)),
-    textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? 'Guardando...' : 'Guardar cambios')),
+    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar matrícula en el anuncio público")), subtitle:  Text(uiText(context, "Si lo desactivas, solo se conservará para la gestión del anuncio.")), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
+    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar VIN / bastidor en el anuncio público")), subtitle:  Text(uiText(context, "Es opcional; por privacidad se mantiene oculto si no lo activas.")), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
+     Padding(padding: EdgeInsets.only(bottom: 8), child: Text(uiText(context, "Equipamiento"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+    ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(uiText(context, item)), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
+    DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
+    Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
+    const SupportLinks(),
+    textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
 
@@ -5735,10 +6240,10 @@ class _InboxPageState extends State<InboxPage> {
     final userId = supabase.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis mensajes', style: TextStyle(fontWeight: FontWeight.w800)),
+        title:  Text(uiText(context, "Mis mensajes"), style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            tooltip: 'Actualizar mensajes',
+            tooltip: uiText(context, "Actualizar mensajes"),
             onPressed: () => setState(() => future = loadConversations()),
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -5748,14 +6253,14 @@ class _InboxPageState extends State<InboxPage> {
         future: future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: gold));
+            return const Center(child: CircularProgressIndicator(color: marketAccent));
           }
           if (snapshot.hasError) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'No se pudieron cargar los mensajes. Comprueba que has iniciado sesión y aplicado la migración de chat.\n\n${snapshot.error}',
+                  uiText(context, "No se pudieron cargar los mensajes. Comprueba que has iniciado sesión y aplicado la migración de chat.\n\n{0}", [snapshot.error]),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -5768,15 +6273,15 @@ class _InboxPageState extends State<InboxPage> {
                 padding: const EdgeInsets.all(28),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.forum_outlined, size: 54, color: gold),
+                  children:  [
+                    Icon(Icons.forum_outlined, size: 54, color: marketAccent),
                     SizedBox(height: 14),
-                    Text('Todavía no tienes conversaciones',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                    Text(uiText(context, "Todavía no tienes conversaciones"),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     SizedBox(height: 6),
-                    Text('Cuando contactes con un vendedor, tus mensajes aparecerán aquí.',
+                    Text(uiText(context, "Cuando contactes con un vendedor, tus mensajes aparecerán aquí."),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60)),
+                      style: TextStyle(color: marketMuted)),
                   ],
                 ),
               ),
@@ -5794,12 +6299,12 @@ class _InboxPageState extends State<InboxPage> {
               final photo = row['vehicle_photo'];
               final unreadCount = (row['unread_count'] as num?)?.toInt() ?? 0;
               return Card(
-                color: const Color(0xFF1B1E24),
+                color: marketSurface,
                 margin: EdgeInsets.zero,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(17),
-                  side: BorderSide(color: Colors.white.withValues(alpha: .08)),
+                  side: BorderSide(color: marketInk.withValues(alpha: .08)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -5826,12 +6331,12 @@ class _InboxPageState extends State<InboxPage> {
                           child: Container(
                             width: 76,
                             height: 76,
-                            color: const Color(0xFF29292D),
+                            color: marketSurface,
                             child: photo is Uint8List
                                 ? Image.memory(photo, fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.directions_car_filled, color: gold, size: 34))
-                                : const Icon(Icons.directions_car_filled, color: gold, size: 34),
+                                      Icons.directions_car_filled, color: marketAccent, size: 34))
+                                : const Icon(Icons.directions_car_filled, color: marketAccent, size: 34),
                           ),
                         ),
                         const SizedBox(width: 13),
@@ -5842,15 +6347,15 @@ class _InboxPageState extends State<InboxPage> {
                               Text(title,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                               const SizedBox(height: 6),
                               Text(sellerName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: gold, fontSize: 13, fontWeight: FontWeight.w600)),
+                                style: const TextStyle(color: marketAccent, fontSize: 13, fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
-                              Text(isBuyer ? 'Vendedor' : 'Comprador',
-                                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                              Text(isBuyer ? uiText(context, "Vendedor") : uiText(context, "Comprador"),
+                                style: const TextStyle(color: marketMuted, fontSize: 11)),
                             ],
                           ),
                         ),
@@ -5859,12 +6364,12 @@ class _InboxPageState extends State<InboxPage> {
                           Container(
                             constraints: const BoxConstraints(minWidth: 23),
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                            decoration: const BoxDecoration(color: gold, shape: BoxShape.circle),
+                            decoration: const BoxDecoration(color: marketAccent, shape: BoxShape.circle),
                             child: Text('$unreadCount', textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900)),
+                              style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w700)),
                           ),
                         const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right_rounded, color: gold),
+                        const Icon(Icons.chevron_right_rounded, color: marketAccent),
                       ],
                     ),
                   ),
@@ -5895,9 +6400,16 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
+  late final ChatSafetyController chatSafety;
+  void _safetyChanged() { if (mounted) setState(() {}); }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) chatSafety.load();
+  }
   final controller = TextEditingController();
   bool sending = false;
+  bool openingParticipant = false;
   bool markingRead = false;
   late final Stream<List<Map<String, dynamic>>> messagesStream;
   final supabase = Supabase.instance.client;
@@ -5905,6 +6417,10 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    chatSafety = ChatSafetyController(conversationId: widget.conversationId);
+    chatSafety.addListener(_safetyChanged);
+    chatSafety.load();
     messagesStream = supabase
         .from('chat_messages')
         .stream(primaryKey: ['id'])
@@ -5912,30 +6428,46 @@ class _ChatPageState extends State<ChatPage> {
         .order('created_at');
   }
 
+  Future<void> openParticipantProfile() async {
+    if (openingParticipant) return;
+    setState(() => openingParticipant = true);
+    try {
+      final participantId = await loadChatParticipantId(supabase, widget.conversationId);
+      if (!mounted) return;
+      await Navigator.push<void>(context, MaterialPageRoute(
+        builder: (_) => PublicSellerProfilePage(ownerId: participantId),
+      ));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(uiText(context, 'No se pudo abrir el perfil de esta persona. Inténtalo de nuevo.')),
+      ));
+    } finally {
+      if (mounted) setState(() => openingParticipant = false);
+    }
+  }
+
   Future<void> openVehicleListing() async {
     final listingId = widget.listingId;
     if (listingId == null || listingId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se ha podido identificar el anuncio de este chat.')),
+         SnackBar(content: Text(uiText(context, "No se ha podido identificar el anuncio de este chat."))),
       );
       return;
     }
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('id, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .maybeSingle();
       if (raw == null || !['published', 'reserved'].contains(raw['status']?.toString())) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Este anuncio ya no está disponible.')),
+             SnackBar(content: Text(uiText(context, "Este anuncio ya no está disponible."))),
           );
         }
         return;
       }
-      final brandData = raw['vehicle_brands'];
-      final modelData = raw['vehicle_models'];
       final photoData = raw['vehicle_photos'];
       final photoRows = photoData is List
           ? List<Map<String, dynamic>>.from(photoData)
@@ -5956,23 +6488,7 @@ class _ChatPageState extends State<ChatPage> {
         }),
       );
       final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car(
-        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
-        year: (raw['year'] as num?)?.toInt() ?? 0,
-        km: (raw['km'] as num?)?.toInt() ?? 0,
-        price: (raw['price'] as num?)?.toDouble() ?? 0,
-        fuel: raw['fuel']?.toString() ?? '',
-        description: raw['description']?.toString() ?? '',
-        phone: raw['phone']?.toString() ?? '',
-        matricula: raw['matricula']?.toString(),
-        cv: (raw['cv'] as num?)?.toInt(),
-        cilindradaCc: (raw['cilindrada_cc'] as num?)?.toInt(),
-        etiquetaMedioambiental: raw['etiqueta_medioambiental']?.toString(),
-        photos: photoBytes,
-        listingId: raw['id']?.toString(),
-        ownerId: raw['owner_id']?.toString(),
-      );
+      final car = Car.fromListing(raw, photos: photoBytes);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -5984,7 +6500,7 @@ class _ChatPageState extends State<ChatPage> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo abrir el anuncio: $error')),
+          SnackBar(content: Text(uiText(context, "No se pudo abrir el anuncio: {0}", [error]))),
         );
       }
     }
@@ -6002,8 +6518,8 @@ class _ChatPageState extends State<ChatPage> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(date.year, date.month, date.day);
-    if (day == today) return 'HOY';
-    if (day == today.subtract(const Duration(days: 1))) return 'AYER';
+    if (day == today) return uiText(context, 'HOY');
+    if (day == today.subtract(const Duration(days: 1))) return uiText(context, 'AYER');
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
@@ -6032,7 +6548,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> sendMessage() async {
     final text = controller.text.trim();
     final user = supabase.auth.currentUser;
-    if (text.isEmpty || user == null || sending) return;
+    if (text.isEmpty || user == null || sending || !chatSafety.canMessage) return;
     setState(() => sending = true);
     try {
       await supabase.from('chat_messages').insert({
@@ -6042,9 +6558,10 @@ class _ChatPageState extends State<ChatPage> {
       });
       controller.clear();
     } catch (error) {
+      chatSafety.load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo enviar el mensaje: $error')),
+          SnackBar(content: Text(uiText(context, "No se pudo enviar el mensaje. Comprueba el acceso al chat y vuelve a intentarlo."))),
         );
       }
     } finally {
@@ -6054,6 +6571,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    chatSafety.removeListener(_safetyChanged);
+    chatSafety.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -6063,11 +6583,22 @@ class _ChatPageState extends State<ChatPage> {
     final currentUserId = supabase.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(
+            key: const Key('chat-participant-profile'),
+            tooltip: uiText(context, 'Ver perfil de la otra persona'),
+            onPressed: openingParticipant ? null : openParticipantProfile,
+            icon: openingParticipant
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.person_outline),
+          ),
+          ChatSafetyControls(controller: chatSafety),
+        ],
         titleSpacing: 0,
         title: Row(
           children: [
             Tooltip(
-              message: 'Ver anuncio del vehículo',
+              message: uiText(context, 'Ver anuncio del vehículo'),
               child: InkWell(
                 onTap: openVehicleListing,
                 borderRadius: BorderRadius.circular(9),
@@ -6076,12 +6607,12 @@ class _ChatPageState extends State<ChatPage> {
                   child: Container(
                     width: 42,
                     height: 42,
-                    color: const Color(0xFF29292D),
+                    color: marketSurface,
                     child: widget.vehiclePhoto != null
                         ? Image.memory(widget.vehiclePhoto!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
-                              Icons.directions_car_filled, color: gold, size: 24))
-                        : const Icon(Icons.directions_car_filled, color: gold, size: 24),
+                              Icons.directions_car_filled, color: marketAccent, size: 24))
+                        : const Icon(Icons.directions_car_filled, color: marketAccent, size: 24),
                   ),
                 ),
               ),
@@ -6092,7 +6623,7 @@ class _ChatPageState extends State<ChatPage> {
                 widget.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -6104,27 +6635,28 @@ class _ChatPageState extends State<ChatPage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
-              color: Color(0xFF17191E),
-              border: Border(bottom: BorderSide(color: Colors.white10)),
+              color: Color(0xFFFFFFFF),
+              border: Border(bottom: BorderSide(color: marketLine)),
             ),
             child: Row(
-              children: const [
-                Icon(Icons.directions_car_outlined, color: gold, size: 16),
+              children:  [
+                Icon(Icons.directions_car_outlined, color: marketAccent, size: 16),
                 SizedBox(width: 7),
-                Text('Conversación sobre este vehículo',
-                  style: TextStyle(color: Colors.white60, fontSize: 12)),
+                Expanded(child: Text(uiText(context, "Conversación sobre este vehículo"),
+                  style: TextStyle(color: marketMuted, fontSize: 12))),
               ],
             ),
           ),
+          ChatSafetyBanner(controller: chatSafety),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const Center(child: Text('No se pueden cargar los mensajes.'));
+                  return  Center(child: Text(uiText(context, "No se pueden cargar los mensajes.")));
                 }
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator(color: gold));
+                  return const Center(child: CircularProgressIndicator(color: marketAccent));
                 }
                 final messages = List<Map<String, dynamic>>.from(snapshot.data!);
                 messages.sort((a, b) {
@@ -6135,9 +6667,9 @@ class _ChatPageState extends State<ChatPage> {
                 // Solo se actualiza read_at de mensajes entrantes no leídos.
                 markReceivedMessagesAsRead();
                 if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('Empieza la conversación sobre este vehículo.',
-                      style: TextStyle(color: Colors.white60)),
+                  return  Center(
+                    child: Text(uiText(context, "Empieza la conversación sobre este vehículo."),
+                      style: TextStyle(color: marketMuted)),
                   );
                 }
                 return ListView.builder(
@@ -6155,8 +6687,8 @@ class _ChatPageState extends State<ChatPage> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Center(child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(20)),
-                            child: Text(_dayLabel(sentAt), style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .7)),
+                            decoration: BoxDecoration(color: marketLine, borderRadius: BorderRadius.circular(20)),
+                            child: Text(_dayLabel(sentAt), style: const TextStyle(color: marketMuted, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .7)),
                           )),
                         ),
                         Align(
@@ -6180,11 +6712,11 @@ class _ChatPageState extends State<ChatPage> {
                               children: [
                                 Align(alignment: Alignment.centerLeft, child: Text(
                                   message['body']?.toString() ?? '',
-                                  style: TextStyle(color: mine ? Colors.black : Colors.white, height: 1.35),
+                                  style: TextStyle(color: mine ? Colors.black : marketInk, height: 1.35),
                                 )),
                                 const SizedBox(height: 4),
                                 Row(mainAxisSize: MainAxisSize.min, children: [
-                                  Text(_timeLabel(sentAt), style: TextStyle(color: mine ? Colors.black54 : Colors.white54, fontSize: 10)),
+                                  Text(_timeLabel(sentAt), style: TextStyle(color: mine ? Colors.black54 : marketMuted, fontSize: 10)),
                                   if (mine) ...[
                                     const SizedBox(width: 4),
                                     Icon(Icons.done_all, size: 14, color: message['read_at'] != null ? const Color(0xFF1565C0) : Colors.black54),
@@ -6205,8 +6737,8 @@ class _ChatPageState extends State<ChatPage> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               decoration: const BoxDecoration(
-                color: Color(0xFF17191E),
-                border: Border(top: BorderSide(color: Colors.white10)),
+                color: Color(0xFFFFFFFF),
+                border: Border(top: BorderSide(color: marketLine)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -6214,11 +6746,13 @@ class _ChatPageState extends State<ChatPage> {
                   Expanded(
                     child: TextField(
                       controller: controller,
+                      enabled: chatSafety.canMessage && !sending,
+                      maxLength: 5000,
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
-                        hintText: 'Escribe un mensaje...',
+                        hintText: uiText(context, "Escribe un mensaje..."),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(22),
@@ -6237,7 +6771,7 @@ class _ChatPageState extends State<ChatPage> {
                         backgroundColor: gold,
                         foregroundColor: Colors.black,
                       ),
-                      onPressed: sending ? null : sendMessage,
+                      onPressed: sending || !chatSafety.canMessage ? null : sendMessage,
                       icon: sending
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2))
@@ -6261,56 +6795,159 @@ class PublishOptionsPage extends StatefulWidget {
   State<PublishOptionsPage> createState() => _PublishOptionsPageState();
 }
 
-class _PublishOptionsPageState extends State<PublishOptionsPage> {
+class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBindingObserver {
   late final StorePurchaseService _purchaseService;
   StreamSubscription<String>? _purchaseMessages;
+  StreamSubscription<void>? _purchaseChanges;
+  VerifiedStorePlans _verifiedPlans = VerifiedStorePlans.empty;
+  Timer? _planExpiryTimer;
+  String? _planAccessError;
+  bool _openingPublication = false;
+  int _planRead = 0;
+
+  Future<void> _loadVerifiedPlans() async {
+    final read = ++_planRead;
+    final db = Supabase.instance.client;
+    final user = db.auth.currentUser;
+    try {
+      final rows = user == null ? <Map<String, dynamic>>[] : await db
+        .from('user_subscriptions')
+        .select('product_id, status, started_at, created_at, expires_at')
+        .eq('user_id', user.id);
+      if (!mounted || read != _planRead) return;
+      final plans = VerifiedStorePlans.fromRows(List<Map<String, dynamic>>.from(rows));
+      _planExpiryTimer?.cancel();
+      setState(() { _verifiedPlans = plans; _planAccessError = null; });
+      final expiry = plans.nextExpiry;
+      if (expiry != null) {
+        final remaining = expiry.difference(DateTime.now().toUtc());
+        _planExpiryTimer = Timer(remaining.isNegative ? Duration.zero : remaining, _loadVerifiedPlans);
+      }
+    } catch (_) {
+      if (!mounted || read != _planRead) return;
+      _planExpiryTimer?.cancel();
+      setState(() {
+        _verifiedPlans = VerifiedStorePlans.empty;
+        _planAccessError = appText('No se pudo consultar tu plan. Reintenta para comprobar el acceso.',
+          'Could not load your plan. Retry to check access.');
+      });
+    }
+  }
+
+  Future<void> _openPublication([String? productId]) async {
+    if (_openingPublication) return;
+    setState(() => _openingPublication = true);
+    try {
+      if (Supabase.instance.client.auth.currentUser == null) {
+        final loggedIn = await requireAutomotorsLogin(context);
+        if (!loggedIn || !mounted) return;
+      }
+      if (productId != null) {
+        await _loadVerifiedPlans();
+        if (!mounted) return;
+        if (!_verifiedPlans.isActive(productId)) {
+          throw Exception(appText('El pago aún no está verificado o el plan ha caducado.',
+            'Payment is not verified yet or the plan has expired.'));
+        }
+      }
+      final allowed = await Supabase.instance.client.rpc('can_publish_vehicle_listing');
+      if (!mounted) return;
+      if (allowed != true) {
+        throw Exception(appText('Has alcanzado el límite de anuncios activos de tu cuenta.',
+          'You have reached your active listing limit.'));
+      }
+      final car = await Navigator.push<Car>(context, MaterialPageRoute(builder: (_) => const AddCarPage()));
+      if (car != null && mounted) Navigator.pop(context, car);
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _openingPublication = false);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadVerifiedPlans();
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _purchaseService = StorePurchaseService();
     _purchaseMessages = _purchaseService.messages.listen((message) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(content: Text(uiText(context, message))),
       );
     });
+    _purchaseChanges = _purchaseService.changes.listen((_) {
+      if (mounted) setState(() {});
+      _loadVerifiedPlans();
+    });
     _purchaseService.initialize();
+    _loadVerifiedPlans();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _planExpiryTimer?.cancel();
     _purchaseMessages?.cancel();
+    _purchaseChanges?.cancel();
     _purchaseService.dispose();
     super.dispose();
   }
 
-  static const Color _gold = Color(0xFFFFC447);
-  static const Color _bg = Color(0xFF050505);
-  static const Color _panel = Color(0xFF111111);
+  static const Color _gold = marketAccent;
+  static const Color _bg = marketPaper;
+  static const Color _panel = Color(0xFFFFFFFF);
+
+  bool get _usesSpanishAppStoreCatalog => kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
+
+  String _storePrice(String productId) {
+    for (final product in _purchaseService.products) {
+      if (product.id != productId) continue;
+      final price = _usesSpanishAppStoreCatalog
+          ? spanishStoreDisplayPrice(product)
+          : storeDisplayPrice(product);
+      if (price == null) return uiText(context, 'Precio no disponible');
+      final period = storeSubscriptionPeriod(product);
+      final message = storePeriodMessage(product);
+      if (period != null && message != null) {
+        return '$price / ${uiText(context, message, [period.count])}';
+      }
+      return price;
+    }
+    // Public Spanish catalog while StoreKit loads; checkout still requires a
+    // real store product, billing metadata, authentication and verification.
+    final configured = _usesSpanishAppStoreCatalog ? configuredSpanishSubscriptionPrice(productId) : null;
+    if (configured != null) return '$configured / ${uiText(context, "mes")}';
+    return uiText(context, 'Precio no disponible');
+  }
 
   @override
   Widget build(BuildContext context) {
     final packs = <_PublishPackData>[
       _PublishPackData(
-        title: 'PACK 10', price: '59 €/mes', icon: Icons.diamond_outlined,
-        subtitle: 'Todo lo necesario para empezar', cars: '10 anuncios · 3 destacados',
+        title: uiText(context, "PACK 10"), price: _storePrice('automotors_pack_10'), icon: Icons.diamond_outlined,
+        subtitle: appText('Todo lo necesario para empezar', 'Everything you need to get started'), cars: appText('10 anuncios · 3 destacados', '10 listings · 3 featured'),
         benefits: const ['Publica hasta 10 vehículos', 'Hasta 3 anuncios destacados', 'Visible en búsquedas', 'Gestión desde tu perfil'],
       ),
       _PublishPackData(
-        title: 'PACK 15', price: '75 €/mes', icon: Icons.diamond_outlined,
-        subtitle: 'Más visibilidad para tu negocio', cars: '15 anuncios · 5 destacados', popular: true,
+        title: uiText(context, "PACK 15"), price: _storePrice('automotors_pack_15'), icon: Icons.diamond_outlined,
+        subtitle: appText('Más visibilidad para tu negocio', 'More visibility for your business'), cars: appText('15 anuncios · 5 destacados', '15 listings · 5 featured'), popular: true,
         benefits: const ['Publica hasta 15 vehículos', 'Hasta 5 anuncios destacados', 'Etiquetas destacadas', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
-        title: 'PACK 20', price: '99 €/mes', icon: Icons.diamond_outlined,
-        subtitle: 'Para concesionarios con más stock', cars: '20 anuncios · 8 destacados',
+        title: uiText(context, "PACK 20"), price: _storePrice('automotors_pack_20'), icon: Icons.diamond_outlined,
+        subtitle: appText('Para concesionarios con más stock', 'For dealers with larger inventories'), cars: appText('20 anuncios · 8 destacados', '20 listings · 8 featured'),
         benefits: const ['Publica hasta 20 vehículos', 'Hasta 8 anuncios destacados', 'Mayor visibilidad', 'Prioridad en búsquedas', 'Estadísticas de visitas'],
       ),
       _PublishPackData(
-        title: 'AUTOMOTORS PRO', price: '199 €/mes', icon: Icons.workspace_premium_rounded,
-        subtitle: 'Para una venta profesional sin límites', cars: 'Anuncios ilimitados',
-        benefits: const ['Anuncios ilimitados mientras esté activa', 'Máxima visibilidad', 'Prioridad en búsquedas', 'Estadísticas avanzadas', 'Soporte prioritario'],
+        title: uiText(context, "AUTOMOTORS PRO"), price: _storePrice('automotors_pro_monthly_199'), icon: Icons.workspace_premium_rounded,
+        subtitle: appText('Para una venta profesional sin límites', 'Professional selling without listing limits'), cars: appText('Anuncios ilimitados · hasta 15 destacados', 'Unlimited listings · up to 15 featured'),
+        benefits: const ['Anuncios ilimitados mientras esté activa', 'Hasta 15 vehículos destacados', 'Máxima visibilidad', 'Prioridad en búsquedas', 'Estadísticas avanzadas', 'Soporte prioritario'],
       ),
     ];
     return Scaffold(
@@ -6318,18 +6955,18 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
       appBar: AppBar(
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
-        title: const Text('Publicar mi vehículo', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(appText('Publicar mi vehículo', 'List my vehicle'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFF5A4720)))),
+          decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFFE4E5DF)))),
           child: OutlinedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.sell_outlined), label: const Text('PUBLICAR GRATIS  →'),
-            style: OutlinedButton.styleFrom(foregroundColor: _gold, side: const BorderSide(color: _gold, width: 1.6), padding: const EdgeInsets.symmetric(vertical: 15), textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+            onPressed: _openingPublication ? null : () => _openPublication(),
+            icon: const Icon(Icons.sell_outlined), label: Text(appText('PUBLICAR GRATIS  →', 'LIST FOR FREE  →')),
+            style: OutlinedButton.styleFrom(foregroundColor: _gold, side: const BorderSide(color: _gold, width: 1.6), padding: const EdgeInsets.symmetric(vertical: 15), textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
           ),
         ),
       ),
@@ -6337,23 +6974,39 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
         children: [
           Container(
-            height: 165, padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: _gold.withValues(alpha: .5)),
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF33230B), Color(0xFF15120D), Color(0xFF080808)]),
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF), Color(0xFFFFFFFF)]),
             ),
-            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('LLEGA A MÁS COMPRADORES', style: TextStyle(color: _gold, fontSize: 20, fontWeight: FontWeight.w900)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(appText('LLEGA A MÁS COMPRADORES', 'REACH MORE BUYERS'), style: const TextStyle(color: _gold, fontSize: 20, fontWeight: FontWeight.w700)),
               SizedBox(height: 8),
-              Text('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', style: TextStyle(color: Colors.white, height: 1.4)),
+              Text(appText('Elige la opción que mejor se adapte a ti.\nAumenta la visibilidad de tus anuncios con nuestros packs.', 'Choose the plan that suits you best.\nIncrease your listing visibility with our plans.'), style: TextStyle(color: marketInk, height: 1.4)),
             ]),
           ),
           const SizedBox(height: 16),
           for (final pack in packs) ...[
             _PublishPackCard(
               data: pack,
-              onSelect: () {
+              onPublish: _verifiedPlans.isActive(switch (pack.title) {
+                'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
+                'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
+              }) && !_openingPublication
+                ? () => _openPublication(switch (pack.title) {
+                    'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
+                    'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
+                  }) : null,
+              onSelect: StorePurchaseService.checkoutEnabled &&
+                      _purchaseService.products.any((product) => storePeriodMessage(product) != null && (!_usesSpanishAppStoreCatalog || spanishStoreDisplayPrice(product) != null) && product.id == switch (pack.title) {
+                        'PACK 10' => 'automotors_pack_10',
+                        'PACK 15' => 'automotors_pack_15',
+                        'PACK 20' => 'automotors_pack_20',
+                        'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
+                        _ => '',
+                      })
+                  ? () {
                 final productId = switch (pack.title) {
                   'PACK 10' => 'automotors_pack_10',
                   'PACK 15' => 'automotors_pack_15',
@@ -6364,11 +7017,24 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> {
                 if (productId.isNotEmpty) {
                   _purchaseService.purchaseSubscription(productId);
                 }
-              },
+              }
+                  : null,
             ),
             const SizedBox(height: 14),
           ],
-          const Text('Las compras de packs y la suscripción todavía no están activadas en la aplicación.', style: TextStyle(color: Colors.white38, fontSize: 12), textAlign: TextAlign.center),
+          const SubscriptionDisclosure(),
+          TextButton.icon(
+            onPressed: _purchaseService.restorePurchases,
+            icon: const Icon(Icons.restore_rounded),
+            label: Text(appText('Restaurar compras', 'Restore purchases')),
+          ),
+          if (_planAccessError != null) ...[
+            Text(uiText(context, _planAccessError!), style: const TextStyle(color: Colors.orangeAccent)),
+            TextButton(onPressed: _loadVerifiedPlans, child: Text(appText('Reintentar', 'Retry'))),
+          ],
+          Text(appText('El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.',
+            'Access is enabled after payment verification. You can restore purchases with the same account.'),
+            style: const TextStyle(color: marketMuted, fontSize: 12), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -6385,30 +7051,41 @@ class _PublishPackData {
 
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
-  final VoidCallback onSelect;
-  const _PublishPackCard({required this.data, required this.onSelect});
+  final VoidCallback? onSelect;
+  final VoidCallback? onPublish;
+  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish});
   static const Color gold = Color(0xFFFFC447);
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D0D0F), borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: data.popular ? gold : const Color(0xFF67532C), width: data.popular ? 2 : 1),
-        boxShadow: data.popular ? [BoxShadow(color: gold.withValues(alpha: .14), blurRadius: 16)] : null,
+        color: marketPaper, borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: data.popular ? gold : const Color(0xFFE4E5DF), width: data.popular ? 2 : 1),
+        boxShadow: data.popular ? [BoxShadow(color: marketAccent.withValues(alpha: .14), blurRadius: 16)] : null,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (data.popular) Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), decoration: BoxDecoration(color: gold, borderRadius: BorderRadius.circular(20)), child: const Text('MÁS POPULAR', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900))),
+        if (data.popular) Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), decoration: BoxDecoration(color: marketAccent, borderRadius: BorderRadius.circular(20)), child:  Text(uiText(context, "MÁS POPULAR"), style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(data.icon, color: gold, size: 32), const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? gold : Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12))]),),
-          const SizedBox(width: 8), Text(data.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          Icon(data.icon, color: marketAccent, size: 32), const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? marketAccent : marketInk, fontSize: 17, fontWeight: FontWeight.w700)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: marketMuted, fontSize: 12))]),),
         ]),
-        const SizedBox(height: 8), Padding(padding: const EdgeInsets.only(left: 44), child: Text(data.cars, style: const TextStyle(color: gold, fontWeight: FontWeight.w700))),
         const SizedBox(height: 10),
-        for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: gold, size: 18), const SizedBox(width: 7), Expanded(child: Text(benefit, style: const TextStyle(color: Colors.white70, fontSize: 13)))])),
+        Text(data.price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8), Padding(padding: const EdgeInsets.only(left: 44), child: Text(data.cars, style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700))),
+        const SizedBox(height: 10),
+        for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: marketAccent, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: marketMuted, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text('Elegir ${data.title}', style: const TextStyle(fontWeight: FontWeight.w900)))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
+        if (onPublish != null) ...[
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: onPublish,
+            icon: const Icon(Icons.add_circle_outline),
+            label: Text(appText('Publicar vehículo', 'List vehicle')),
+            style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent)),
+          )),
+        ],
       ]),
     );
   }
@@ -6455,8 +7132,6 @@ class _AddCarPageState extends State<AddCarPage> {
   bool loadingBrands = true;
   bool loadingModels = false;
   bool publishing = false;
-  int publishedCount = 0;
-  bool loadingPublishedCount = true;
   bool vehicleLookupBusy = false;
   bool loadingVehicleLookupAccess = true;
   bool canLookupVehicle = false;
@@ -6465,35 +7140,7 @@ class _AddCarPageState extends State<AddCarPage> {
   void initState() {
     super.initState();
     loadBrands();
-    loadPublishedCount();
     loadVehicleLookupAccess();
-  }
-
-  Future<void> loadPublishedCount() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => loadingPublishedCount = false);
-      return;
-    }
-    try {
-      final rows = await supabase
-          .from('vehicle_listings')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('status', 'published');
-      if (!mounted) return;
-      setState(() {
-        publishedCount = (rows as List).length;
-        loadingPublishedCount = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => loadingPublishedCount = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo comprobar el límite de anuncios: $error')),
-      );
-    }
   }
 
   Future<void> loadVehicleLookupAccess() async {
@@ -6533,29 +7180,29 @@ class _AddCarPageState extends State<AddCarPage> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Planes AUTOMOTORS'),
-        content: const SingleChildScrollView(
+        title:  Text(uiText(context, "Planes AUTOMOTORS")),
+        content:  SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tus primeros 5 anuncios son gratuitos.'),
+              Text(uiText(context, "5 publicaciones de bienvenida no recuperables al vender o eliminar. Después dispones de 3 plazas gratuitas reutilizables.")),
               SizedBox(height: 12),
-              Text('PACK 10 · 59 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('10 publicaciones adicionales y hasta 3 coches destacados.'),
+              Text(uiText(context, "PACK 10 · 59 €"), style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(uiText(context, "Hasta 10 anuncios activos y 3 vehículos destacados.")),
               SizedBox(height: 8),
-              Text('PACK 15 · 75 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('15 publicaciones adicionales y hasta 5 coches destacados.'),
+              Text(uiText(context, "PACK 15 · 75 €"), style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(uiText(context, "Hasta 15 anuncios activos y 5 vehículos destacados.")),
               SizedBox(height: 8),
-              Text('PACK 20 · 99 €', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('20 publicaciones adicionales y hasta 8 coches destacados.'),
+              Text(uiText(context, "PACK 20 · 99 €"), style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(uiText(context, "Hasta 20 anuncios activos y 8 vehículos destacados.")),
               SizedBox(height: 16),
               Divider(),
-              Text('AUTOMOTORS PRO · 199 €/mes', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Publicaciones ilimitadas y prioridad para todos tus anuncios mientras la suscripción esté activa.'),
+              Text(uiText(context, "AUTOMOTORS PRO · 199 €/mes"), style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(uiText(context, "Publicaciones ilimitadas y hasta 15 vehículos destacados mientras la suscripción esté activa.")),
               SizedBox(height: 12),
               Text(
-                'Los pagos todavía no están activados. Las compras se habilitarán cuando estén configurados Google Play Billing, Apple In-App Purchase y la validación segura en Supabase. No se realizará ningún cobro desde esta pantalla.',
+                uiText(context, "Consulta los planes y gestiona tus compras o restauraciones desde las opciones de publicación de la aplicación móvil."),
               ),
             ],
           ),
@@ -6563,7 +7210,7 @@ class _AddCarPageState extends State<AddCarPage> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Entendido'),
+            child:  Text(uiText(context, "Entendido")),
           ),
         ],
       ),
@@ -6575,14 +7222,14 @@ class _AddCarPageState extends State<AddCarPage> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('AUTOMOTORS PRO'),
-        content: const Text(
-          '199 €/mes. Publicaciones ilimitadas y prioridad para todos tus anuncios mientras la suscripción esté activa. La compra y renovación se gestionarán mediante la tienda del dispositivo. Las suscripciones aún no están activadas y no se realizará ningún cobro.',
+        title:  Text(uiText(context, "AUTOMOTORS PRO")),
+        content:  Text(
+          uiText(context, "199 €/mes. Publicaciones ilimitadas y prioridad para todos tus anuncios mientras la suscripción esté activa. La compra y renovación se gestionarán mediante la tienda del dispositivo. Las suscripciones aún no están activadas y no se realizará ningún cobro."),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cerrar'),
+            child:  Text(uiText(context, "Cerrar")),
           ),
         ],
       ),
@@ -6606,7 +7253,7 @@ class _AddCarPageState extends State<AddCarPage> {
       if (!mounted) return;
       setState(() => loadingBrands = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron cargar las marcas: $error')),
+        SnackBar(content: Text(uiText(context, "No se pudieron cargar las marcas: {0}", [error]))),
       );
     }
   }
@@ -6632,7 +7279,7 @@ class _AddCarPageState extends State<AddCarPage> {
       if (!mounted) return;
       setState(() => loadingModels = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron cargar los modelos: $error')),
+        SnackBar(content: Text(uiText(context, "No se pudieron cargar los modelos: {0}", [error]))),
       );
     }
   }
@@ -6651,7 +7298,7 @@ class _AddCarPageState extends State<AddCarPage> {
     if (vehicleLookupBusy) return;
     if (!canLookupVehicle) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Esta función requiere PACK 20 o una suscripción AUTOMOTORS PRO activa.')),
+         SnackBar(content: Text(uiText(context, "Esta función requiere PACK 20 o una suscripción AUTOMOTORS PRO activa."))),
       );
       return;
     }
@@ -6659,13 +7306,13 @@ class _AddCarPageState extends State<AddCarPage> {
     final chassis = vin.text.trim().toUpperCase();
     if (plate.isEmpty == chassis.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Introduce una matrícula o un VIN, pero no ambos para la misma búsqueda.')),
+         SnackBar(content: Text(uiText(context, "Introduce una matrícula o un VIN, pero no ambos para la misma búsqueda."))),
       );
       return;
     }
     if (chassis.isNotEmpty && chassis.length != 17) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El VIN debe tener 17 caracteres.')),
+         SnackBar(content: Text(uiText(context, "El VIN debe tener 17 caracteres."))),
       );
       return;
     }
@@ -6777,8 +7424,8 @@ class _AddCarPageState extends State<AddCarPage> {
       if (brandName.isNotEmpty && !brandMatched) missing.add('selecciona la marca');
       if (modelName.isNotEmpty && !modelMatched) missing.add('selecciona el modelo del catálogo');
       final note = missing.isEmpty
-          ? 'Datos técnicos encontrados. Revisa la ficha antes de publicar.'
-          : 'Datos encontrados. Además, ' + missing.join(' y ') + ' para vincularlo al catálogo de AUTOMOTORS.';
+          ? uiText(context, 'Datos técnicos encontrados. Revisa la ficha antes de publicar.')
+          : uiText(context, 'Datos encontrados. Además, revisa la marca y el modelo del catálogo antes de publicar.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(note), duration: const Duration(seconds: 6)),
       );
@@ -6796,21 +7443,23 @@ class _AddCarPageState extends State<AddCarPage> {
     final remaining = 15 - photos.length;
     if (remaining <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Máximo 15 fotografías por vehículo.')),
+         SnackBar(content: Text(uiText(context, "Máximo 15 fotografías por vehículo."))),
       );
       return;
     }
     try {
       final selected = await imagePicker.pickMultiImage(
         limit: remaining,
-        imageQuality: 90,
+        imageQuality: 75,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
       if (!mounted || selected.isEmpty) return;
       setState(() => photos.addAll(selected.take(15 - photos.length)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron seleccionar las fotos: $error')),
+        SnackBar(content: Text(uiText(context, "No se pudieron seleccionar las fotos: {0}", [error]))),
       );
     }
   }
@@ -6832,10 +7481,10 @@ class _AddCarPageState extends State<AddCarPage> {
         textInputAction: multiline ? TextInputAction.newline : TextInputAction.next,
         textAlignVertical: multiline ? TextAlignVertical.top : TextAlignVertical.center,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: uiText(context, label),
           alignLabelWithHint: multiline,
           hintText: multiline
-              ? 'Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.'
+              ? uiText(context, "Puedes separar la información en líneas. Incluye estado, mantenimiento y extras.")
               : null,
         ),
         onChanged: (_) {
@@ -6844,7 +7493,7 @@ class _AddCarPageState extends State<AddCarPage> {
         validator: (value) {
           final text = value?.trim() ?? '';
           if (requiredField && text.isEmpty) {
-            return 'Completa este campo';
+            return uiText(context, 'Completa este campo');
           }
           if (text.isEmpty) return null;
 
@@ -6853,19 +7502,19 @@ class _AddCarPageState extends State<AddCarPage> {
               final parsedPrice = double.tryParse(
                 text.replaceAll('.', '').replaceAll(',', '.'),
               );
-              if (parsedPrice == null) return 'Introduce un precio válido';
-              if (parsedPrice <= 0) return 'El precio debe ser mayor que cero';
+              if (parsedPrice == null) return uiText(context, 'Introduce un precio válido');
+              if (parsedPrice <= 0) return uiText(context, 'El precio debe ser mayor que cero');
             } else {
               final parsedNumber = int.tryParse(text);
-              if (parsedNumber == null) return 'Introduce un número entero válido';
-              if (parsedNumber < 0) return 'El valor no puede ser negativo';
+              if (parsedNumber == null) return uiText(context, 'Introduce un número entero válido');
+              if (parsedNumber < 0) return uiText(context, 'El valor no puede ser negativo');
             }
           }
 
           if (label.startsWith('Teléfono')) {
             final digits = text.replaceAll(RegExp(r'[^0-9]'), '');
             if (digits.length < 9 || digits.length > 15) {
-              return 'Introduce un teléfono válido (9–15 cifras)';
+              return uiText(context, 'Introduce un teléfono válido (9–15 cifras)');
             }
           }
           return null;
@@ -6900,19 +7549,19 @@ class _AddCarPageState extends State<AddCarPage> {
       decoration: BoxDecoration(
         color: panel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gold.withValues(alpha: .45)),
+        border: Border.all(color: marketAccent.withValues(alpha: .45)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: gold),
+              const Icon(Icons.auto_awesome_rounded, color: marketAccent),
               const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Calidad de tu anuncio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+               Expanded(
+                child: Text(uiText(context, "Calidad de tu anuncio"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
-              Text('$completed/${checks.length}', style: const TextStyle(color: gold, fontWeight: FontWeight.w900)),
+              Text('$completed/${checks.length}', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 10),
@@ -6921,16 +7570,16 @@ class _AddCarPageState extends State<AddCarPage> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
-              backgroundColor: Colors.white12,
+              backgroundColor: marketLine,
               valueColor: const AlwaysStoppedAnimation<Color>(gold),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             completed == checks.length
-                ? '¡Excelente! Tu anuncio incluye la información clave para generar confianza.'
-                : 'Completa estas recomendaciones para que los compradores conozcan mejor el vehículo.',
-            style: const TextStyle(color: Colors.white70, height: 1.35, fontSize: 12),
+                ? uiText(context, "¡Excelente! Tu anuncio incluye la información clave para generar confianza.")
+                : uiText(context, "Completa estas recomendaciones para que los compradores conozcan mejor el vehículo."),
+            style: const TextStyle(color: marketMuted, height: 1.35, fontSize: 12),
           ),
           const SizedBox(height: 8),
           ...checks.map((item) => Padding(
@@ -6940,15 +7589,15 @@ class _AddCarPageState extends State<AddCarPage> {
                 Icon(
                   item.value ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                   size: 17,
-                  color: item.value ? gold : Colors.white38,
+                  color: item.value ? gold : marketMuted,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    item.key,
+                    uiText(context, item.key),
                     style: TextStyle(
                       fontSize: 12,
-                      color: item.value ? Colors.white : Colors.white70,
+                      color: item.value ? marketInk : marketMuted,
                     ),
                   ),
                 ),
@@ -6978,8 +7627,8 @@ class _AddCarPageState extends State<AddCarPage> {
         kmValue < 0 ||
         priceValue <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Revisa año, kilómetros y precio.'),
+         SnackBar(
+          content: Text(uiText(context, "Revisa año, kilómetros y precio.")),
         ),
       );
       return;
@@ -6989,13 +7638,13 @@ class _AddCarPageState extends State<AddCarPage> {
     final modelId = selectedModelId;
     if (brandId == null || modelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona una marca y un modelo.')),
+         SnackBar(content: Text(uiText(context, "Selecciona una marca y un modelo."))),
       );
       return;
     }
     if (photos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Añade al menos una fotografía.')),
+         SnackBar(content: Text(uiText(context, "Añade al menos una fotografía."))),
       );
       return;
     }
@@ -7004,30 +7653,8 @@ class _AddCarPageState extends State<AddCarPage> {
     final user = supabase.auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesión para publicar.')),
+         SnackBar(content: Text(uiText(context, "Debes iniciar sesión para publicar."))),
       );
-      return;
-    }
-
-    // Las primeras cinco publicaciones son gratuitas. Los pagos y créditos
-    // todavía no están activos: no se permite publicar más sin validación de tienda.
-    try {
-      final rows = await supabase
-          .from('vehicle_listings')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('status', 'published');
-      publishedCount = (rows as List).length;
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo verificar el límite gratuito: $error')),
-      );
-      return;
-    }
-
-    if (publishedCount >= 5) {
-      await showPackages();
       return;
     }
 
@@ -7040,6 +7667,8 @@ class _AddCarPageState extends State<AddCarPage> {
 
     setState(() => publishing = true);
     final uploadedPaths = <String>[];
+    final uploadedPhotoBytes=<Uint8List>[];
+    bool publishedOnServer=false;
     String? listingId;
 
     try {
@@ -7078,6 +7707,7 @@ class _AddCarPageState extends State<AddCarPage> {
       for (var i = 0; i < photos.length; i++) {
         final photo = photos[i];
         final bytes = await photo.readAsBytes();
+        uploadedPhotoBytes.add(bytes);
         final originalName = photo.name;
         final extension = originalName.contains('.')
             ? originalName.split('.').last.toLowerCase()
@@ -7098,20 +7728,18 @@ class _AddCarPageState extends State<AddCarPage> {
 
       await supabase.from('vehicle_photos').insert(photoRows);
 
-      await supabase
-          .from('vehicle_listings')
-          .update({'status': 'published'})
-          .eq('id', listingId)
-          .eq('owner_id', user.id);
-
-      final photoBytes = <Uint8List>[];
-      for (final photo in photos) {
-        photoBytes.add(await photo.readAsBytes());
+      final approval=await ContentPublicationService().publish(listingId);
+      if(!approval.published) {
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,approval.message)),duration:const Duration(seconds:8)));Navigator.pop(context);}
+        return; // Preserve the draft and photographs on rejection or provider failure.
       }
+
+      publishedOnServer=true;
+      final photoBytes=uploadedPhotoBytes;
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Anuncio publicado correctamente!')),
+         SnackBar(content: Text(uiText(context, "¡Anuncio publicado correctamente!"))),
       );
       Navigator.pop(
         context,
@@ -7128,13 +7756,19 @@ class _AddCarPageState extends State<AddCarPage> {
           cv: int.tryParse(cv.text.trim()),
           cilindradaCc: int.tryParse(cilindradaCc.text.trim()),
           etiquetaMedioambiental: etiquetaMedioambiental,
-          // No se expone el VIN en el objeto que se muestra a visitantes.
+          vin: showVinPublicly ? vin.text.trim().toUpperCase() : null,
+          showMatriculaPublicly: showMatriculaPublicly,
+          showVinPublicly: showVinPublicly,
           photos: photoBytes,
           listingId: listingId,
           ownerId: user.id,
         ),
       );
     } catch (error) {
+      if(publishedOnServer) {
+        if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Tu anuncio se ha publicado. Actualiza el catálogo para verlo.'))));Navigator.pop(context);}
+        return; // A local display failure must never delete an approved publication.
+      }
       if (uploadedPaths.isNotEmpty) {
         try {
           await supabase.storage.from('vehicle-photos').remove(uploadedPaths);
@@ -7154,9 +7788,16 @@ class _AddCarPageState extends State<AddCarPage> {
         }
       }
       if (!mounted) return;
+      if (error is PostgrestException && error.code == 'P0001') {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text(uiText(context, "Has alcanzado el límite de publicaciones de tu plan."))),
+        );
+        await showPackages();
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No se pudo publicar el anuncio: $error'),
+          content: Text(uiText(context, "No se pudo publicar el anuncio: {0}", [error])),
           duration: const Duration(seconds: 8),
         ),
       );
@@ -7188,31 +7829,24 @@ class _AddCarPageState extends State<AddCarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).publishVehicle, style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(AppLocalizations.of(context).publishVehicle, style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(tooltip: 'Planes y packs', onPressed: showPackages,
-            icon: const Icon(Icons.workspace_premium_rounded, color: gold)),
+          IconButton(tooltip: uiText(context, "Planes y packs"), onPressed: showPackages,
+            icon: const Icon(Icons.workspace_premium_rounded, color: marketAccent)),
         ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: const BoxDecoration(
-            color: Color(0xFF17191E),
-            border: Border(top: BorderSide(color: Colors.white12)),
+            color: Color(0xFFFFFFFF),
+            border: Border(top: BorderSide(color: marketLine)),
           ),
           child: Row(children: [
-            Expanded(child: OutlinedButton.icon(
-              onPressed: showPackages,
-              icon: const Icon(Icons.workspace_premium_rounded, color: gold),
-              label: const Text('Packs y suscripción'),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: gold)),
-            )),
-            const SizedBox(width: 10),
             Expanded(child: FilledButton.icon(
               onPressed: publishing ? null : publishCar,
               icon: const Icon(Icons.add_circle_outline_rounded),
-              label: Text(publishing ? 'Publicando…' : 'Publicar gratis'),
+              label: Text(publishing ? uiText(context, "Comprobando y publicando…") : uiText(context, "Publicar gratis")),
               style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
             )),
           ]),
@@ -7228,40 +7862,42 @@ class _AddCarPageState extends State<AddCarPage> {
               decoration: BoxDecoration(
                 color: panel,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: gold.withValues(alpha: .35)),
+                border: Border.all(color: marketAccent.withValues(alpha: .35)),
               ),
-              child: const Row(children: [
-                Icon(Icons.directions_car_filled, color: gold, size: 30),
+              child:  Row(children: [
+                Icon(Icons.directions_car_filled, color: marketAccent, size: 30),
                 SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Publica tu vehículo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  Text(uiText(context, "Publica tu vehículo"), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   SizedBox(height: 4),
-                  Text('Completa los datos y añade fotografías. Los planes y packs se consultan por separado.', style: TextStyle(color: Colors.white70, height: 1.35)),
+                  Text(uiText(context, "Completa los datos y añade fotografías. Los planes y packs se consultan por separado."), style: TextStyle(color: marketMuted, height: 1.35)),
                 ])),
               ]),
             ),
             const SizedBox(height: 14),
+            Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
+            const SupportLinks(),
             buildListingQualityCard(),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: showPackages,
-                icon: const Icon(Icons.workspace_premium, color: gold),
-                label: const Text('Ver planes y packs', style: TextStyle(color: gold, fontWeight: FontWeight.w800)),
+                icon: const Icon(Icons.workspace_premium, color: marketAccent),
+                label:  Text(uiText(context, "Ver planes y packs"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
               ),
             ),
-            const Divider(color: Color(0xFF5C4A22)),
+            const Divider(color: Color(0xFFE4E5DF)),
             const SizedBox(height: 12),
             if (loadingVehicleLookupAccess)
-              const Card(
+               Card(
                 color: panel,
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Row(children: [
                     SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                     SizedBox(width: 12),
-                    Expanded(child: Text('Comprobando acceso al autocompletado…', style: TextStyle(color: Colors.white70))),
+                    Expanded(child: Text(uiText(context, "Comprobando acceso al autocompletado…"), style: TextStyle(color: marketMuted))),
                   ]),
                 ),
               )
@@ -7271,22 +7907,22 @@ class _AddCarPageState extends State<AddCarPage> {
                 decoration: BoxDecoration(
                   color: panel,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: gold.withValues(alpha: .45)),
+                  border: Border.all(color: marketAccent.withValues(alpha: .45)),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Icon(Icons.manage_search_rounded, color: gold),
+                   Row(children: [
+                    Icon(Icons.manage_search_rounded, color: marketAccent),
                     SizedBox(width: 8),
-                    Expanded(child: Text('Rellenar ficha automáticamente', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                    Expanded(child: Text(uiText(context, "Rellenar ficha automáticamente"), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                   ]),
                   const SizedBox(height: 6),
-                  const Text('Función exclusiva de PACK 20 y AUTOMOTORS PRO. Introduce la matrícula o el VIN y revisa los datos técnicos antes de publicar.', style: TextStyle(color: Colors.white70, height: 1.35, fontSize: 12)),
+                   Text(uiText(context, "Función exclusiva de PACK 20 y AUTOMOTORS PRO. Introduce la matrícula o el VIN y revisa los datos técnicos antes de publicar."), style: TextStyle(color: marketMuted, height: 1.35, fontSize: 12)),
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(child: TextField(
                       controller: matricula,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(labelText: 'Matrícula', hintText: '1234 ABC'),
+                      decoration:  InputDecoration(labelText: uiText(context, "Matrícula"), hintText: uiText(context, "1234 ABC")),
                       onChanged: (_) => setState(() {}),
                     )),
                     const SizedBox(width: 10),
@@ -7294,7 +7930,7 @@ class _AddCarPageState extends State<AddCarPage> {
                       controller: vin,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 17,
-                      decoration: const InputDecoration(labelText: 'VIN / bastidor', hintText: '17 caracteres', counterText: ''),
+                      decoration:  InputDecoration(labelText: uiText(context, "VIN / bastidor"), hintText: uiText(context, "17 caracteres"), counterText: ''),
                       onChanged: (_) => setState(() {}),
                     )),
                   ]),
@@ -7304,7 +7940,7 @@ class _AddCarPageState extends State<AddCarPage> {
                     icon: vehicleLookupBusy
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                         : const Icon(Icons.auto_fix_high_rounded),
-                    label: Text(vehicleLookupBusy ? 'Buscando datos…' : 'Buscar y rellenar ficha'),
+                    label: Text(vehicleLookupBusy ? uiText(context, "Buscando datos…") : uiText(context, "Buscar y rellenar ficha")),
                     style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
                   )),
                 ]),
@@ -7315,30 +7951,30 @@ class _AddCarPageState extends State<AddCarPage> {
                 decoration: BoxDecoration(
                   color: panel,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: gold.withValues(alpha: .4)),
+                  border: Border.all(color: marketAccent.withValues(alpha: .4)),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Icon(Icons.lock_outline_rounded, color: gold),
+                   Row(children: [
+                    Icon(Icons.lock_outline_rounded, color: marketAccent),
                     SizedBox(width: 8),
-                    Expanded(child: Text('Autocompletado exclusivo', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                    Expanded(child: Text(uiText(context, "Autocompletado exclusivo"), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                   ]),
                   const SizedBox(height: 6),
-                  const Text('La búsqueda por matrícula o VIN solo está disponible para clientes con PACK 20 activo o suscripción AUTOMOTORS PRO vigente. Puedes completar la ficha manualmente.', style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 12)),
+                   Text(uiText(context, "La búsqueda por matrícula o VIN solo está disponible para clientes con PACK 20 activo o suscripción AUTOMOTORS PRO vigente. Puedes completar la ficha manualmente."), style: TextStyle(color: marketMuted, height: 1.4, fontSize: 12)),
                   const SizedBox(height: 10),
                   SizedBox(width: double.infinity, child: OutlinedButton.icon(
                     onPressed: showPackages,
-                    icon: const Icon(Icons.workspace_premium_rounded, color: gold),
-                    label: const Text('Ver packs y suscripción'),
-                    style: OutlinedButton.styleFrom(foregroundColor: gold, side: const BorderSide(color: gold)),
+                    icon: const Icon(Icons.workspace_premium_rounded, color: marketAccent),
+                    label:  Text(uiText(context, "Ver packs y suscripción")),
+                    style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent)),
                   )),
                 ]),
               ),
             const SizedBox(height: 14),
-            DropdownButtonFormField<int>(
+            DropdownButtonFormField<int>(isExpanded: true,
               initialValue: selectedBrandId,
-              decoration: const InputDecoration(labelText: 'Marca'),
-              hint: Text(loadingBrands ? 'Cargando marcas...' : 'Selecciona una marca'),
+              decoration:  InputDecoration(labelText: uiText(context, "Marca")),
+              hint: Text(loadingBrands ? uiText(context, "Cargando marcas...") : uiText(context, "Selecciona una marca")),
               items: brands.map((row) {
                 final id = (row['id'] as num).toInt();
                 return DropdownMenuItem<int>(
@@ -7346,7 +7982,7 @@ class _AddCarPageState extends State<AddCarPage> {
                   child: Text(row['name'].toString()),
                 );
               }).toList(),
-              validator: (value) => value == null ? 'Selecciona una marca' : null,
+              validator: (value) => value == null ? uiText(context, 'Selecciona una marca') : null,
               onChanged: loadingBrands ? null : (value) {
                 if (value == null) return;
                 setState(() => selectedBrandId = value);
@@ -7354,13 +7990,13 @@ class _AddCarPageState extends State<AddCarPage> {
               },
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
+            DropdownButtonFormField<int>(isExpanded: true,
               key: ValueKey('models-$selectedBrandId'),
               initialValue: selectedModelId,
-              decoration: const InputDecoration(labelText: 'Modelo'),
+              decoration:  InputDecoration(labelText: uiText(context, "Modelo")),
               hint: Text(selectedBrandId == null
-                  ? 'Primero selecciona una marca'
-                  : loadingModels ? 'Cargando modelos...' : 'Selecciona un modelo'),
+                  ? uiText(context, "Primero selecciona una marca")
+                  : loadingModels ? uiText(context, "Cargando modelos...") : uiText(context, "Selecciona un modelo")),
               items: models.map((row) {
                 final id = (row['id'] as num).toInt();
                 return DropdownMenuItem<int>(
@@ -7368,7 +8004,7 @@ class _AddCarPageState extends State<AddCarPage> {
                   child: Text(row['name'].toString()),
                 );
               }).toList(),
-              validator: (value) => value == null ? 'Selecciona un modelo' : null,
+              validator: (value) => value == null ? uiText(context, 'Selecciona un modelo') : null,
               onChanged: selectedBrandId == null || loadingModels
                   ? null
                   : (value) => setState(() => selectedModelId = value),
@@ -7377,65 +8013,71 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Año', year, numeric: true),
             buildTextField('Kilómetros', km, numeric: true),
             buildTextField('Precio en euros', price, numeric: true),
+            DropdownButtonFormField<String>(isExpanded: true,
+              initialValue: fuel,
+              decoration:  InputDecoration(labelText: uiText(context, "Combustible")),
+              items:  [
+                DropdownMenuItem(value: 'Diésel', child: Text(uiText(context, "Diésel"))),
+                DropdownMenuItem(value: 'Gasolina', child: Text(uiText(context, "Gasolina"))),
+                DropdownMenuItem(value: 'Híbrido', child: Text(uiText(context, "Híbrido"))),
+                DropdownMenuItem(value: 'Eléctrico', child: Text(uiText(context, "Eléctrico"))),
+              ],
+              onChanged: (value) { if (value != null) setState(() => fuel = value); },
+            ),
+            const SizedBox(height: 12),
             buildTextField('Matrícula (opcional)', matricula, requiredField: false),
             buildTextField('VIN / número de bastidor (opcional)', vin, requiredField: false),
-            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar matrícula en el anuncio público'), subtitle: const Text('Si no lo marcas, la matrícula quedará oculta a los visitantes.'), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
-            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: const Text('Mostrar VIN / bastidor en el anuncio público'), subtitle: const Text('Opcional. Por privacidad, estará oculto si no lo activas.'), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
+            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar matrícula en el anuncio público")), subtitle:  Text(uiText(context, "Si no lo marcas, la matrícula quedará oculta a los visitantes.")), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
+            CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar VIN / bastidor en el anuncio público")), subtitle:  Text(uiText(context, "Opcional. Por privacidad, estará oculto si no lo activas.")), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
             buildTextField('Potencia en CV (opcional)', cv, numeric: true, requiredField: false),
             buildTextField('Cilindrada en cc (opcional)', cilindradaCc, numeric: true, requiredField: false),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(isExpanded: true,
               initialValue: etiquetaMedioambiental,
-              decoration: const InputDecoration(labelText: 'Etiqueta medioambiental'),
+              decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")),
               items: environmentalLabels.map((label) => DropdownMenuItem<String>(
                 value: label,
                 child: Row(children: [
                   Icon(environmentalLabelIcon(label), color: environmentalLabelColor(label), size: 22),
                   const SizedBox(width: 10),
-                  Text(label),
+                  Text(uiText(context, label)),
                 ]),
               )).toList(),
               onChanged: (value) => setState(() => etiquetaMedioambiental = value),
             ),
             const SizedBox(height: 20),
-            const Text('Ficha técnica ampliada', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 10),
+            ExpansionTile(
+              key: const Key('optional-vehicle-specifications'),
+              maintainState: true,
+              tilePadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tune_rounded, color: marketAccent),
+              title: Text(uiText(context, "Ficha técnica ampliada")),
+              subtitle: Text(uiText(context, "Opcional")),
+              children: [
             buildTextField('Versión / acabado (opcional)', version, requiredField: false),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(isExpanded: true,
               initialValue: transmission,
-              decoration: const InputDecoration(labelText: 'Transmisión'),
-              items: const [
-                DropdownMenuItem(value: 'Manual', child: Text('Manual')),
-                DropdownMenuItem(value: 'Automático', child: Text('Automático')),
-                DropdownMenuItem(value: 'Automático (DSG)', child: Text('Automático (DSG)')),
+              decoration:  InputDecoration(labelText: uiText(context, "Transmisión")),
+              items:  [
+                DropdownMenuItem(value: 'Manual', child: Text(uiText(context, "Manual"))),
+                DropdownMenuItem(value: 'Automático', child: Text(uiText(context, "Automático"))),
+                DropdownMenuItem(value: 'Automático (DSG)', child: Text(uiText(context, "Automático (DSG)"))),
               ],
               onChanged: (value) { if (value != null) setState(() => transmission = value); },
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: fuel,
-              decoration: const InputDecoration(labelText: 'Combustible'),
-              items: const [
-                DropdownMenuItem(value: 'Diésel', child: Text('Diésel')),
-                DropdownMenuItem(value: 'Gasolina', child: Text('Gasolina')),
-                DropdownMenuItem(value: 'Híbrido', child: Text('Híbrido')),
-                DropdownMenuItem(value: 'Eléctrico', child: Text('Eléctrico')),
-              ],
-              onChanged: (value) { if (value != null) setState(() => fuel = value); },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(isExpanded: true,
               initialValue: bodyType,
-              decoration: const InputDecoration(labelText: 'Tipo de carrocería'),
-              items: const [
-                DropdownMenuItem(value: 'Berlina', child: Text('Berlina')),
-                DropdownMenuItem(value: 'Compacto', child: Text('Compacto')),
-                DropdownMenuItem(value: 'SUV', child: Text('SUV')),
-                DropdownMenuItem(value: 'Familiar', child: Text('Familiar')),
-                DropdownMenuItem(value: 'Coupé', child: Text('Coupé')),
-                DropdownMenuItem(value: 'Cabrio', child: Text('Cabrio')),
-                DropdownMenuItem(value: 'Monovolumen', child: Text('Monovolumen')),
-                DropdownMenuItem(value: 'Furgoneta', child: Text('Furgoneta')),
-                DropdownMenuItem(value: 'Pickup', child: Text('Pickup')),
+              decoration:  InputDecoration(labelText: uiText(context, "Tipo de carrocería")),
+              items:  [
+                DropdownMenuItem(value: 'Berlina', child: Text(uiText(context, "Berlina"))),
+                DropdownMenuItem(value: 'Compacto', child: Text(uiText(context, "Compacto"))),
+                DropdownMenuItem(value: 'SUV', child: Text(uiText(context, "SUV"))),
+                DropdownMenuItem(value: 'Familiar', child: Text(uiText(context, "Familiar"))),
+                DropdownMenuItem(value: 'Coupé', child: Text(uiText(context, "Coupé"))),
+                DropdownMenuItem(value: 'Cabrio', child: Text(uiText(context, "Cabrio"))),
+                DropdownMenuItem(value: 'Monovolumen', child: Text(uiText(context, "Monovolumen"))),
+                DropdownMenuItem(value: 'Furgoneta', child: Text(uiText(context, "Furgoneta"))),
+                DropdownMenuItem(value: 'Pickup', child: Text(uiText(context, "Pickup"))),
               ],
               onChanged: (value) { if (value != null) setState(() => bodyType = value); },
             ),
@@ -7445,7 +8087,7 @@ class _AddCarPageState extends State<AddCarPage> {
             buildTextField('Color exterior', color, requiredField: false),
             buildTextField('Normativa de emisiones (opcional)', emissionsStandard, requiredField: false),
             const SizedBox(height: 8),
-            const Text('Equipamiento confirmado', style: TextStyle(fontWeight: FontWeight.bold)),
+             Text(uiText(context, "Equipamiento confirmado"), style: TextStyle(fontWeight: FontWeight.bold)),
             ...[
               'Asientos deportivos', 'Asientos calefactables', 'Asientos ventilados',
               'Volante multifunción', 'Climatizador bizona', 'Navegador',
@@ -7457,7 +8099,7 @@ class _AddCarPageState extends State<AddCarPage> {
             ].map((item) => CheckboxListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              title: Text(item),
+              title: Text(uiText(context, item)),
               value: selectedEquipment.contains(item),
               activeColor: gold,
               onChanged: (checked) => setState(() {
@@ -7466,23 +8108,26 @@ class _AddCarPageState extends State<AddCarPage> {
               }),
             )),
             const SizedBox(height: 12),
+              ],
+            ),
+            const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(
-              'Fotografías del vehículo (${photos.length}/15)',
+              uiText(context, "Fotografías del vehículo ({0}/15)", [photos.length]),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: publishing ? null : pickPhotos,
               icon: const Icon(Icons.add_photo_alternate),
-              label: const Text('Seleccionar fotografías'),
+              label:  Text(uiText(context, "Seleccionar fotografías")),
             ),
             if (photos.isNotEmpty) ...[
               const SizedBox(height: 8),
-              const Text(
-                'La primera fotografía será la principal. Puedes cambiar el orden eliminando y seleccionando las fotos de nuevo.',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+               Text(
+                uiText(context, "La primera fotografía será la principal. Puedes elegir otra sin volver a subir las fotos."),
+                style: TextStyle(color: marketMuted, fontSize: 12),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -7510,16 +8155,26 @@ class _AddCarPageState extends State<AddCarPage> {
                           right: 0,
                           top: 0,
                           child: IconButton(
-                            tooltip: 'Eliminar fotografía',
+                            tooltip: uiText(context, "Eliminar fotografía"),
                             onPressed: publishing ? null : () => setState(() => photos.removeAt(index)),
                             icon: const Icon(Icons.cancel, color: Colors.red),
                           ),
                         ),
+                        if (index > 0)
+                          Positioned(left: 0, bottom: 0,
+                            child: FilledButton.tonalIcon(
+                              onPressed: publishing ? null : () => setState(() {
+                                final selected = photos.removeAt(index);
+                                photos.insert(0, selected);
+                              }),
+                              icon: const Icon(Icons.star_outline_rounded, size: 18),
+                              label: Text(uiText(context, "Usar como principal")),
+                            )),
                         if (index == 0)
-                          const Positioned(
+                           Positioned(
                             left: 0,
                             bottom: 0,
-                            child: Chip(label: Text('Principal')),
+                            child: Chip(label: Text(uiText(context, "Principal"))),
                           ),
                       ],
                     ),
@@ -7543,9 +8198,9 @@ class _ProBenefit extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, color: gold, size: 25),
+      Icon(icon, color: marketAccent, size: 25),
       const SizedBox(width: 10),
-      Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+      Expanded(child: Text(text, style: const TextStyle(color: marketInk, fontSize: 13, fontWeight: FontWeight.w500))),
     ],
   );
 }
@@ -7567,7 +8222,7 @@ class _PublicationPackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xFF171717),
+    color: marketSurface,
     borderRadius: BorderRadius.circular(17),
     child: InkWell(
       onTap: onTap,
@@ -7576,39 +8231,39 @@ class _PublicationPackCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(17),
-          border: Border.all(color: const Color(0xFF47423A)),
+          border: Border.all(color: const Color(0xFFE4E5DF)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.layers, color: gold, size: 25),
+            const Icon(Icons.layers, color: marketAccent, size: 25),
             const SizedBox(width: 10),
             Expanded(
               flex: 4,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(packName, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                  Text(packName, style: const TextStyle(color: marketInk, fontSize: 14, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 3),
-                  Text(listingCount, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(listingCount, style: const TextStyle(color: marketMuted, fontSize: 11)),
                 ],
               ),
             ),
             const SizedBox(width: 6),
-            Text(price, style: const TextStyle(color: gold, fontSize: 20, fontWeight: FontWeight.w900)),
+            Text(price, style: const TextStyle(color: marketAccent, fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
-            Container(width: 1, height: 38, color: const Color(0xFF5B4A26)),
+            Container(width: 1, height: 38, color: const Color(0xFFE4E5DF)),
             const SizedBox(width: 8),
             Expanded(
               flex: 5,
               child: Row(
                 children: [
-                  const Icon(Icons.star, color: gold, size: 16),
+                  const Icon(Icons.star, color: marketAccent, size: 16),
                   const SizedBox(width: 5),
-                  Expanded(child: Text(featuredCount, style: const TextStyle(color: Colors.white, fontSize: 11, height: 1.25))),
+                  Expanded(child: Text(featuredCount, style: const TextStyle(color: marketInk, fontSize: 11, height: 1.25))),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: gold, size: 22),
+            const Icon(Icons.chevron_right, color: marketAccent, size: 22),
           ],
         ),
       ),

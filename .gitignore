@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+supabase/.temp/
 
 # Symbolication related
 app.*.symbols
@@ -46,3 +47,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Generated Flutter localization output (rebuilt by flutter pub get)
+/lib/l10n/app_localizations*.dart

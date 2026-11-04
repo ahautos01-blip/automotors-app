@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE_PATH).href);
+const db=new PGlite();
+await db.exec(await readFile(new URL('./fixtures/community_schema.sql',import.meta.url),'utf8'));
+await db.exec(`
+create table vehicle_brands(id int primary key,name text);
+create table vehicle_models(id int primary key,brand_id int,name text);
+alter table vehicle_listings add column brand_id int,add column model_id int,add column fuel text,add column transmission text,add column body_type text,add column km int default 0,add column cv int,add column equipment jsonb;
+create function private.listing_not_held(uuid) returns boolean language sql as $$select true$$;
+create function private.content_moderation_enabled() returns boolean language sql as $$select false$$;
+create function private.listing_content_approved(uuid) returns boolean language sql as $$select false$$;
+create table saved_vehicles(user_id uuid references auth.users,listing_id uuid references vehicle_listings,created_at timestamptz default now(),primary key(user_id,listing_id));
+create table saved_vehicle_searches(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users,name text,criteria jsonb default '{}',notify_new_listings boolean default true,notify_price_drops boolean default true);
+create table vehicle_search_alerts(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users,search_id uuid references saved_vehicle_searches,listing_id uuid references vehicle_listings,alert_type text,title text,message text,created_at timestamptz default now(),read_at timestamptz,constraint vehicle_search_alerts_unique unique(search_id,listing_id,alert_type),constraint vehicle_search_alerts_search_required check(alert_type='review_requested' or search_id is not null));
+alter table saved_vehicles enable row level security;alter table saved_vehicle_searches enable row level security;alter table vehicle_search_alerts enable row level security;
+create policy favorite_owner on saved_vehicles to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy search_owner on saved_vehicle_searches to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy alerts_owner on vehicle_search_alerts for select to authenticated using(user_id=auth.uid());
+create policy alerts_read on vehicle_search_alerts for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+grant select,insert,delete on saved_vehicles to authenticated;grant all on saved_vehicle_searches,vehicle_search_alerts to authenticated;
+create function public.create_vehicle_search_alerts() returns trigger language plpgsql as $$begin return new; end;$$;
+create trigger vehicle_listing_search_alerts_insert after insert on vehicle_listings for each row execute function create_vehicle_search_alerts();
+create trigger vehicle_listing_search_alerts_price after update of price on vehicle_listings for each row execute function create_vehicle_search_alerts();
+insert into vehicle_brands values(1,'Volkswagen');insert into vehicle_models values(1,1,'Touran');
+insert into auth.users values('11111111-1111-4111-8111-111111111111'),('22222222-2222-4222-8222-222222222222'),('33333333-3333-4333-8333-333333333333');
+insert into vehicle_listings(id,owner_id,status,price,brand_id,model_id,transmission,fuel,km) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','published',20000,1,1,'Automático (DSG)','Diésel',40000);
+`);
+const migration=(await import('node:fs/promises')).readdir;
+const file=(await migration(new URL('../supabase/migrations/',import.meta.url))).find(f=>f.endsWith('_buyer_watchlists_and_price_alerts.sql'));
+await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+const buyer='22222222-2222-4222-8222-222222222222',other='33333333-3333-4333-8333-333333333333',listing='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const asUser=async(id)=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+await asUser(buyer);
+await db.query('insert into saved_vehicles(user_id,listing_id) values($1,$2)',[buyer,listing]);
+let row=(await db.query('select * from saved_vehicles')).rows[0];assert.equal(Number(row.reference_price),20000);assert.equal(row.notify_price_drops,false);
+await assert.rejects(db.query('update saved_vehicles set reference_price=1'),e=>e.code==='42501');
+await db.query('update saved_vehicles set notify_price_drops=true where listing_id=$1',[listing]);
+await assert.rejects(db.query("insert into vehicle_search_alerts(user_id,listing_id,alert_type) values($1,$2,'price_drop')",[buyer,listing]),e=>e.code==='42501');
+await db.query("insert into saved_vehicle_searches(user_id,name,criteria) values($1,'DSG', $2)",[buyer,JSON.stringify({query:'VW automatico',max_price:20000,transmission:'Automático'})]);
+await db.exec('reset role');
+await db.query('update vehicle_listings set price=19000 where id=$1',[listing]);
+assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,2);
+await asUser(buyer);row=(await db.query('select * from vehicle_search_alerts')).rows[0];assert.equal(Number(row.previous_price),20000);assert.equal(Number(row.current_price),19000);
+await db.query('update vehicle_search_alerts set read_at=now()');
+await assert.rejects(db.query("update vehicle_search_alerts set title='forged'"),e=>e.code==='42501');
+await asUser(other);assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,0);assert.equal((await db.query('select * from saved_vehicles')).rows.length,0);
+assert.equal((await db.query('update saved_vehicles set notify_price_drops=false returning *')).rows.length,0);
+await db.exec('reset role');await db.query('update vehicle_listings set price=18000 where id=$1',[listing]);
+row=(await db.query('select * from vehicle_search_alerts where search_id is null')).rows[0];assert.equal(Number(row.previous_price),19000);assert.equal(row.read_at,null);assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,2);
+await db.query('update vehicle_listings set price=21000 where id=$1',[listing]);assert.equal(Number((await db.query('select * from vehicle_search_alerts where search_id is null')).rows[0].current_price),18000);
+await asUser(buyer);await db.query('update saved_vehicles set notify_price_drops=false');await db.query('update saved_vehicle_searches set notify_price_drops=false');await db.exec('reset role');await db.query('update vehicle_listings set price=17000 where id=$1',[listing]);assert.equal(Number((await db.query('select * from vehicle_search_alerts where search_id is null')).rows[0].current_price),18000);
+// Draft-to-published transitions create matching alerts, not draft inserts.
+await db.query("insert into vehicle_listings(id,owner_id,status,price,brand_id,model_id,transmission) values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','11111111-1111-4111-8111-111111111111','draft',15000,1,1,'Automático (DSG)')");
+assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,2);
+await db.exec("update vehicle_listings set status='published' where id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'");assert.equal((await db.query("select * from vehicle_search_alerts where alert_type='new_listing'")).rows.length,1);
+// Invalid criteria do not break seller publication; missing fields never satisfy bounds.
+for(const criteria of [{max_year:2020},{min_km:100},{min_cv:1},{max_price:'garbage'},{equipment:['Navegador']}]){
+ assert.equal((await db.query("select private.buyer_search_matches($1,'{\"year\":2021,\"km\":0}'::jsonb,'Volkswagen','Touran') ok",[JSON.stringify(criteria)])).rows[0].ok,false);
+}
+await db.exec("create or replace function private.listing_not_held(uuid) returns boolean language sql as $$select false$$");
+await db.query('update vehicle_listings set price=16000 where id=$1',[listing]);assert.equal((await db.query('select * from vehicle_search_alerts')).rows.length,3);
+
+// Existing purchase-review notifications must survive the buyer-alert migration.
+await db.exec(`alter table vehicle_listings add column sold_to_buyer_id uuid,add column sold_externally boolean default false;
+create table vehicle_reviews(listing_id uuid,buyer_id uuid);
+create unique index vehicle_review_invitation_once on vehicle_search_alerts(user_id,listing_id) where alert_type='review_requested';
+create table public.push_devices(id uuid primary key default gen_random_uuid(),user_id uuid,active boolean default true,updated_at timestamptz default now());
+create table private.push_deliveries(device_id uuid,user_id uuid,event_key text,kind text,listing_id uuid,unique(device_id,event_key));
+`);
+const reviewSource=await readFile(new URL('../supabase/fixes/restore_buyer_review_invitations.sql',import.meta.url),'utf8');
+await db.exec(reviewSource.slice(reviewSource.indexOf('create or replace function private.invite_verified_buyer_review()'),reviewSource.indexOf('-- Recover pending invitations')));
+const pushSource=await readFile(new URL('../supabase/fixes/enable_ios_push.sql',import.meta.url),'utf8');
+await db.exec(pushSource.slice(pushSource.indexOf('create function private.queue_review_push()'),pushSource.indexOf('-- These worker RPCs')));
+await db.query('insert into push_devices(user_id) values($1),($2)',[buyer,other]);
+await db.query("select set_config('request.jwt.claim.sub',$1,false)",['11111111-1111-4111-8111-111111111111']);
+await db.query("update vehicle_listings set status='sold',sold_to_buyer_id=$1 where id=$2",[buyer,listing]);
+let reviews=(await db.query("select * from vehicle_search_alerts where alert_type='review_requested'")).rows;
+assert.equal(reviews.length,1);assert.equal(reviews[0].user_id,buyer);
+let deliveries=(await db.query('select * from private.push_deliveries')).rows;
+assert.equal(deliveries.length,1);assert.equal(deliveries[0].user_id,buyer);assert.equal(deliveries[0].kind,'review_requested');
+await db.query("update vehicle_listings set status='sold' where id=$1",[listing]);assert.equal((await db.query('select * from private.push_deliveries')).rows.length,1);
+await db.exec("update vehicle_listings set status='sold',sold_externally=true where id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'");
+assert.equal((await db.query("select * from vehicle_search_alerts where alert_type='review_requested'")).rows.length,1);
+console.log('PASS: verified sale creates one buyer inbox invitation and one buyer-only push job; repeat updates/external sales do not duplicate it.');
+await db.close();console.log('PASS: server reference, opt-in, RLS isolation, field grants, matching, repeated drops, pause, status publication, missing/malformed fields and held listings.');
