@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (28)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (29)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -387,3 +387,9 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Chat: acceso al perfil público de la otra persona, obtenida desde buyer_id/seller_id de la conversación bajo RLS y comprobación de pertenencia. No abre datos privados ni modifica permisos.
 - Ficha: fotos, título/precio, vendedor y datos principales, en ese orden; contacto fijo conservado.
 - Validación: 34 pruebas de perfiles, chat y traducciones aprobadas; 7 pruebas de diseño aprobadas con orden y contacto en publicado/reservado/vendido. Análisis previo sin errores, con avisos heredados. Distribución 29 pendiente.
+## Build 29 distribuida
+
+- Apple confirma 1.0.1 (29) «En pruebas» en el grupo interno AUTOMOTORS Sandbox, 2 testers y 90 días. Respuesta de cifrado «Ninguno de los algoritmos mencionados anteriormente» guardada con autorización específica para 29. Sin envío a revisión pública.
+- Binario: b64eebab54235d8f3a3183522fa3090bebf84982; Codemagic 6aeaf237a87b4d255fde7093; Apple f88b4469-59dc-407a-bacf-1926fad0c7a1. Codemagic compiló y subió; procesamiento y grupo comprobados por separado en Apple.
+- Suite final completa: 171 pruebas aprobadas. Incluye perfiles profesionales sin documentos, resolución del otro participante y orden precio/vendedor/datos con contacto fijo. No se enviaron mensajes reales ni se crearon cuentas de producción para verificarlo.
+- Pendiente revisión física del usuario en iPhone de los tres cambios nuevos. Registro documental posterior, sin nuevo binario.
