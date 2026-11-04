@@ -163,7 +163,7 @@ class AutomotorsSupportPage extends StatelessWidget {
             _section(
               context,
               'Conservación y derechos',
-              "Los datos de tu cuenta se conservan mientras la utilizas. Puedes iniciar su eliminación en Mi espacio → Eliminar mi cuenta. La eliminación borra los datos activos asociados; las copias de seguridad se retiran conforme al ciclo del proveedor. Las obligaciones legales pueden exigir conservar determinados justificantes durante el plazo aplicable.",
+              "Los datos de tu cuenta se conservan mientras la utilizas. Puedes iniciar su eliminación en Perfil → Configuración de cuenta → Eliminar mi cuenta. La eliminación borra los datos activos asociados; las copias de seguridad se retiran conforme al ciclo del proveedor. Las obligaciones legales pueden exigir conservar determinados justificantes durante el plazo aplicable.",
             ),
             _section(
               context,
