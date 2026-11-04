@@ -1,3 +1,4 @@
+import 'design/market_professional_header.dart';
 import 'services/chat_participant_service.dart';
 import 'package:app_links/app_links.dart';
 import 'services/email_confirmation_service.dart';
@@ -4635,7 +4636,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   String displayName(Map<String, dynamic>? profile) {
     if (profile == null) return uiText(context, 'Vendedor AUTOMOTORS');
     final type = (profile['account_type'] ?? 'particular').toString().toLowerCase();
-    if (type == 'empresa' && (profile['business_name']?.toString().trim().isNotEmpty ?? false)) {
+    if ((type == 'empresa' || type == 'autonomo') && (profile['business_name']?.toString().trim().isNotEmpty ?? false)) {
       return profile['business_name'].toString();
     }
     return (profile['full_name']?.toString().trim().isNotEmpty ?? false)
@@ -4931,36 +4932,17 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             physics: const ClampingScrollPhysics(),
             child: Column(children: [
           if (isProfessional)
-            SizedBox(
-              height: 178,
-              width: double.infinity,
-              child: Stack(fit: StackFit.expand, children: [
-                if (cover != null)
-                  Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: panel))
-                else
-                  Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFFFFFFF), Color(0xFFFAF9F6)]),
-                    ),
-                    child: const Center(child: Icon(Icons.directions_car_filled, color: marketAccent, size: 72)),
-                  ),
-                Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: .12), Colors.black.withValues(alpha: .82)]))),
-                Positioned(left: 18, right: 18, bottom: 18, child: Row(children: [
-                  const Icon(Icons.directions_car_filled, color: Colors.white, size: 30),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(name.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1.1))),
-                ])),
-              ]),
-            ),
+            MarketProfessionalHeader(name: name, accountLabel: uiText(context, displayType), coverUrl: cover, avatarUrl: avatar,
+              location: [profile?['city'], profile?['province']].where((v) => v != null && v.toString().trim().isNotEmpty).join(', ')),
           Padding(
             // Extra clearance prevents clipping under the iOS standalone
             // app's status/navigation area for personal seller profiles.
-            padding: EdgeInsets.fromLTRB(18, isProfessional ? 0 : 36, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, isProfessional ? 16 : 36, 18, 14),
             child: Transform.translate(
               // Only business profiles overlap their cover image.
-              offset: Offset(0, isProfessional ? -26 : 0),
+              offset: Offset.zero,
               child: Column(children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                if (!isProfessional) Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(shape: BoxShape.circle, color: marketAccent, boxShadow: [BoxShadow(color: marketAccent.withValues(alpha: .22), blurRadius: 14)]),
@@ -5850,7 +5832,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'phone': phone.text.trim(),
         'city': city.text.trim(),
         'province': province.text.trim(),
-        'business_name': isProfessional && accountType == 'empresa'
+        'business_name': isProfessional
             ? businessName.text.trim()
             : null,
         'address': isProfessional ? address.text.trim() : null,
@@ -5940,7 +5922,7 @@ class _ProfilePageState extends State<ProfilePage> {
             DropdownButtonFormField<String>(isExpanded: true, value: accountType, decoration:  InputDecoration(labelText: uiText(context, "Tipo de cuenta")), items:  [DropdownMenuItem(value: 'particular', child: Text(uiText(context, "Particular"))), DropdownMenuItem(value: 'autonomo', child: Text(uiText(context, "Autónomo"))), DropdownMenuItem(value: 'empresa', child: Text(uiText(context, "Empresa")))], onChanged: saving ? null : (value) { if (value != null) setState(() => accountType = value); }),
             const SizedBox(height: 16),  Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
             field(accountType == 'empresa' ? 'Nombre y apellidos de la persona de contacto' : 'Nombre y apellidos', name, requiredField: true),
-            if (accountType == 'empresa') field('Razón social de la empresa', businessName, requiredField: true),
+            if (isProfessional) field('Razón social', businessName, requiredField: true),
             if (isProfessional) field('CIF/NIF o identificación fiscal', fiscalId, requiredField: true) else field('DNI/NIE (opcional)', fiscalId),
             field('Teléfono', phone, requiredField: true, keyboard: TextInputType.phone), field('Ciudad', city, requiredField: true), field('Provincia', province, requiredField: true),
             if (isProfessional) ...[
@@ -5950,6 +5932,9 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 24), FilledButton.icon(onPressed: saving ? null : saveProfile, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar perfil"))),
           ]))
         : ListView(padding: const EdgeInsets.all(16), children: [
+            if (isProfessional)
+              MarketProfessionalHeader(name: businessName.text.trim().isNotEmpty ? businessName.text.trim() : name.text, accountLabel: uiText(context, accountType == 'autonomo' ? 'Autónomo' : 'Empresa'), coverUrl: coverUrl, avatarUrl: profileUrl, location: [city.text, province.text].where((v) => v.trim().isNotEmpty).join(', '))
+            else
             Container(
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: marketAccent.withValues(alpha: .35))),
               clipBehavior: Clip.antiAlias,
@@ -5971,7 +5956,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 8),
             const Divider(height: 28),  Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Correo electrónico"), email),
              Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Nombre y apellidos"), name.text), _readOnlyRow(uiText(context, "Teléfono"), phone.text), _readOnlyRow(uiText(context, "Ciudad"), city.text), _readOnlyRow(uiText(context, "Provincia"), province.text),
-            if (accountType == 'empresa') _readOnlyRow(uiText(context, "Razón social"), businessName.text),
+            if (isProfessional) _readOnlyRow(uiText(context, "Razón social"), businessName.text),
             if (isProfessional) ...[_readOnlyRow(uiText(context, "Identificación fiscal"), fiscalId.text), _readOnlyRow(uiText(context, "Dirección fiscal"), address.text)],
             const SizedBox(height: 18),
             SizedBox(

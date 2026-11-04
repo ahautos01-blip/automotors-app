@@ -1,3 +1,4 @@
+import 'package:automotors_base/design/market_professional_header.dart';
 import 'package:automotors_base/services/chat_participant_service.dart';
 
 import 'dart:convert';
@@ -103,6 +104,45 @@ void main() {
       );
     },
   );
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'professional avatar is centered across the cover edge at text scale $scale',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: const Scaffold(
+                body: SingleChildScrollView(
+                  child: MarketProfessionalHeader(
+                    name: 'Business legal name with several words',
+                    accountLabel: 'Autónomo',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final cover = tester.getRect(
+          find.byKey(const Key('professional-cover')),
+        );
+        final avatar = tester.getRect(
+          find.byKey(const Key('professional-avatar')),
+        );
+        expect(avatar.center.dx, cover.center.dx);
+        expect(avatar.center.dy, cover.bottom);
+        expect(
+          tester
+              .getTopLeft(find.byKey(const Key('professional-display-name')))
+              .dy,
+          greaterThanOrEqualTo(avatar.bottom),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   for (final account in ['empresa', 'autonomo', 'particular']) {
     testWidgets('$account cover eligibility and document-free profile save', (
       tester,
@@ -139,6 +179,10 @@ void main() {
       await tester.tap(save);
       await tester.pumpAndSettle();
       expect(saved, hasLength(1));
+      expect(
+        saved.single['business_name'],
+        account == 'particular' ? isNull : 'Business',
+      );
       expect(saved.single.containsKey('estado_verificacion'), isFalse);
       expect(saved.single.containsKey('verification_document_path'), isFalse);
       expect(saved.single['cover_photo_path'], isNull);
