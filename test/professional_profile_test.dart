@@ -1,0 +1,117 @@
+import 'dart:convert';
+
+import 'package:automotors_base/main.dart';
+import 'package:automotors_base/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+void main() {
+  const uid = '11111111-1111-4111-8111-111111111111';
+  var type = 'empresa';
+  final saved = <Map<String, dynamic>>[];
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    final token =
+        '${base64Url.encode(utf8.encode('{"alg":"HS256"}'))}.${base64Url.encode(utf8.encode(jsonEncode({'sub': uid, 'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600})))}.fixture';
+    await Supabase.initialize(
+      url: 'https://example.supabase.co',
+      publishableKey: 'fixture',
+      debug: false,
+      authOptions: const FlutterAuthClientOptions(autoRefreshToken: false),
+      httpClient: MockClient((r) async {
+        dynamic body = [];
+        if (r.url.path == '/auth/v1/token')
+          body = {
+            'access_token': token,
+            'refresh_token': 'fixture',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'user': {
+              'id': uid,
+              'aud': 'authenticated',
+              'role': 'authenticated',
+              'email': 'professional@example.test',
+              'created_at': '2026-01-01T00:00:00Z',
+              'app_metadata': {},
+              'user_metadata': {},
+            },
+          };
+        if (r.url.path == '/rest/v1/user_profiles') {
+          if (r.method == 'POST') {
+            saved.add(Map<String, dynamic>.from(jsonDecode(r.body)));
+          } else {
+            body = [
+              {
+                'id': uid,
+                'full_name': 'Seller',
+                'account_type': type,
+                'estado_verificacion': 'No solicitada',
+                'fiscal_id': 'B12345678',
+                'phone': '+34612345678',
+                'city': 'Mataro',
+                'province': 'Barcelona',
+                'business_name': 'Business',
+                'address': 'Example 1',
+                'cover_photo_path': null,
+              },
+            ];
+          }
+        }
+        return http.Response(
+          jsonEncode(body),
+          200,
+          headers: {'content-type': 'application/json'},
+          request: r,
+        );
+      }),
+    );
+    await Supabase.instance.client.auth.setSession('fixture');
+  });
+  tearDownAll(() async => Supabase.instance.dispose());
+  for (final account in ['empresa', 'autonomo', 'particular']) {
+    testWidgets('$account cover eligibility and document-free profile save', (
+      tester,
+    ) async {
+      type = account;
+      saved.clear();
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('es'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: ProfilePage(key: ValueKey(account)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Editar perfil'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Cambiar foto de portada'),
+        account == 'particular' ? findsNothing : findsOneWidget,
+      );
+      expect(find.text('Adjuntar documentación'), findsNothing);
+      expect(find.text('VERIFICACIÓN DE CUENTA'), findsNothing);
+      final save = find.text('Guardar perfil');
+      await tester.scrollUntilVisible(
+        save,
+        450,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(saved, hasLength(1));
+      expect(saved.single.containsKey('estado_verificacion'), isFalse);
+      expect(saved.single.containsKey('verification_document_path'), isFalse);
+      expect(saved.single['cover_photo_path'], isNull);
+      expect(tester.takeException(), isNull);
+    });
+  }
+}

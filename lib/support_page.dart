@@ -133,7 +133,7 @@ class AutomotorsSupportPage extends StatelessWidget {
             _section(
               context,
               "Datos que utilizamos",
-              "Correo y credenciales de acceso; datos de perfil y contacto; anuncios, fotografías y datos del vehículo; mensajes, reseñas y denuncias; búsquedas y favoritos; identificadores y estado de compras; y el token del dispositivo si activas las notificaciones. Si solicitas verificación profesional, también tratamos los datos fiscales y el documento que aportes.",
+              "Correo y credenciales de acceso; datos de perfil y contacto; anuncios, fotografías y datos del vehículo; mensajes, reseñas y denuncias; búsquedas y favoritos; identificadores y estado de compras; y el token del dispositivo si activas las notificaciones. En cuentas profesionales también tratamos los datos fiscales que indiques. No exigimos documentos para activar las funciones profesionales.",
             ),
             _section(
               context,

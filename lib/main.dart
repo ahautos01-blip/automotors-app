@@ -27,7 +27,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cross_file/cross_file.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
@@ -4892,8 +4891,6 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final aboutUs = result['aboutUs']?.toString() ?? '';
         final name = displayName(profile);
         final type = (profile?['account_type'] ?? 'particular').toString().toLowerCase();
-        final verified = (profile?['estado_verificacion'] ?? '').toString().toLowerCase() == 'aprobada';
-        final isVerifiedBusiness = verified && (type == 'empresa' || type == 'autonomo');
         final isProfessional = type == 'empresa' || type == 'autonomo';
         final displayType = type == 'empresa' ? 'Empresa' : type == 'autonomo' ? 'Autónomo' : 'Particular';
         final profileTabs = <String>['Anuncios', 'Vendidos', if (isProfessional) 'Sobre nosotros', 'Valoraciones'];
@@ -4912,7 +4909,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
              Text(uiText(context, "Sobre nosotros"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: marketInk)),
             const SizedBox(height: 12),
             if (aboutUs.trim().isNotEmpty) Text(aboutUs, style: const TextStyle(color: marketMuted, fontSize: 15, height: 1.5)),
-            if (aboutUs.trim().isEmpty) Text('$displayType · ${isVerifiedBusiness ? 'Profesional verificado' : 'Vendedor profesional'}', style: const TextStyle(color: marketMuted, fontSize: 16)),
+            if (aboutUs.trim().isEmpty) Text('$displayType · ${uiText(context, "Vendedor profesional")}', style: const TextStyle(color: marketMuted, fontSize: 16)),
             finalCity(profile),
             if (isOwnProfile) Padding(padding: const EdgeInsets.only(top: 12), child: OutlinedButton.icon(onPressed: () async { await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const ProfilePage())); if (mounted) await refreshSeller(); }, icon: const Icon(Icons.edit), label:  Text(uiText(context, "Editar Sobre nosotros")))),
           ]),
@@ -4931,7 +4928,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             primary: true,
             physics: const ClampingScrollPhysics(),
             child: Column(children: [
-          if (isVerifiedBusiness)
+          if (isProfessional)
             SizedBox(
               height: 178,
               width: double.infinity,
@@ -4956,10 +4953,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
           Padding(
             // Extra clearance prevents clipping under the iOS standalone
             // app's status/navigation area for personal seller profiles.
-            padding: EdgeInsets.fromLTRB(18, isVerifiedBusiness ? 0 : 36, 18, 14),
+            padding: EdgeInsets.fromLTRB(18, isProfessional ? 0 : 36, 18, 14),
             child: Transform.translate(
               // Only business profiles overlap their cover image.
-              offset: Offset(0, isVerifiedBusiness ? -26 : 0),
+              offset: Offset(0, isProfessional ? -26 : 0),
               child: Column(children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Container(
@@ -4977,7 +4974,6 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: marketInk))),
-                      if (isVerifiedBusiness) const Padding(padding: EdgeInsets.only(left: 5), child: Icon(Icons.verified, color: Color(0xFF168BFF), size: 20)),
                     ]),
                     const SizedBox(height: 3),
                     Text(displayType, style: const TextStyle(color: marketMuted, fontSize: 14)),
@@ -5699,10 +5695,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final businessName = TextEditingController();
   final aboutUs = TextEditingController();
   String accountType = 'particular';
-  String? verificationStatus;
-  String? documentName;
-  XFile? pickedDocument;
-  Uint8List? pickedDocumentBytes;
   XFile? pickedProfilePhoto;
   XFile? pickedCoverPhoto;
   Uint8List? pickedProfilePhotoBytes;
@@ -5714,7 +5706,6 @@ class _ProfilePageState extends State<ProfilePage> {
   bool editing = false;
 
   bool get isProfessional => accountType == 'autonomo' || accountType == 'empresa';
-  bool get isVerifiedProfessional => isProfessional && (verificationStatus ?? '').toLowerCase() == 'aprobada';
 
   @override
   void initState() {
@@ -5792,8 +5783,6 @@ class _ProfilePageState extends State<ProfilePage> {
         businessName.text = row['business_name']?.toString() ?? '';
         final type = (row['account_type']?.toString() ?? 'particular').toLowerCase();
         accountType = ['particular', 'autonomo', 'empresa'].contains(type) ? type : 'particular';
-        verificationStatus = row['estado_verificacion']?.toString() ?? 'No solicitada';
-        documentName = row['verification_document_path']?.toString();
         profilePhotoPath = row['profile_photo_path']?.toString();
         coverPhotoPath = row['cover_photo_path']?.toString();
         try {
@@ -5835,63 +5824,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return path;
   }
 
-  Future<void> chooseDocument() async {
-  try {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-    );
-
-    if (result.isEmpty) return;
-
-    final file = result.first;
-    final bytes = await file.xFile.readAsBytes();
-
-    if (bytes.isEmpty) {
-      throw Exception('No se pudieron leer los datos del archivo.');
-    }
-
-    if (bytes.length > 10 * 1024 * 1024) {
-      throw Exception('El documento no puede superar 10 MB.');
-    }
-
-    setState(() {
-      pickedDocument = XFile(file.name, bytes: bytes);
-    });
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(uiText(context, "Error al seleccionar documento: {0}", [e]))),
-    );
-  }
-}
-
   Future<void> saveProfile() async {
     if (saving || !formKey.currentState!.validate()) return;
     final user = supabase.auth.currentUser;
     if (user == null) return;
     setState(() => saving = true);
     try {
-      String? documentPath;
-      if (pickedDocument != null && pickedDocumentBytes != null) {
-        final file = pickedDocument!;
-        final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-        documentPath = '${user.id}/${DateTime.now().millisecondsSinceEpoch}_$safeName';
-        await supabase.storage.from('verification-documents').uploadBinary(
-          documentPath,
-          pickedDocumentBytes!,
-          fileOptions: FileOptions(
-            contentType: file.name.toLowerCase().endsWith('.pdf')
-                ? 'application/pdf'
-                : file.name.toLowerCase().endsWith('.png')
-                    ? 'image/png'
-                    : 'image/jpeg',
-            upsert: false,
-          ),
-        );
-      }
-
       if (pickedProfilePhoto != null && pickedProfilePhotoBytes != null) {
         profilePhotoPath = await uploadProfileImage(pickedProfilePhoto!, pickedProfilePhotoBytes!, 'profile', user.id);
       }
@@ -5915,19 +5853,9 @@ class _ProfilePageState extends State<ProfilePage> {
             : null,
         'address': isProfessional ? address.text.trim() : null,
         'profile_photo_path': profilePhotoPath,
-        'cover_photo_path': isVerifiedProfessional ? coverPhotoPath : null,
+        'cover_photo_path': isProfessional ? coverPhotoPath : null,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
-      if (documentPath != null) {
-        data['verification_document_path'] = documentPath;
-        data['estado_verificacion'] = 'Pendiente';
-      } else if (isProfessional && verificationStatus == null) {
-        data['estado_verificacion'] = 'No solicitada';
-      }
-      if (!isProfessional) {
-        data['verification_document_path'] = null;
-        data['estado_verificacion'] = 'No aplicable';
-      }
       await supabase.from('user_profiles').upsert(data, onConflict: 'id');
       if (isProfessional) {
         await supabase.from('seller_about_profiles').upsert({
@@ -5938,9 +5866,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       if (!mounted) return;
       setState(() {
-        verificationStatus = data['estado_verificacion']?.toString() ?? verificationStatus;
-        pickedDocument = null;
-        pickedDocumentBytes = null;
         pickedProfilePhoto = null;
         pickedCoverPhoto = null;
         pickedProfilePhotoBytes = null;
@@ -6001,7 +5926,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : editing
         ? Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
-            if (isVerifiedProfessional) ...[
+            if (isProfessional) ...[
               GestureDetector(onTap: saving ? null : () => chooseProfileImage(cover: true), child: Container(height: 140, decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(12), image: pickedCoverPhotoBytes != null ? DecorationImage(image: MemoryImage(pickedCoverPhotoBytes!), fit: BoxFit.cover) : (coverUrl != null ? DecorationImage(image: NetworkImage(coverUrl), fit: BoxFit.cover) : null)), child:  Center(child: Text(uiText(context, "Cambiar foto de portada"), style: TextStyle(color: Colors.white, backgroundColor: Colors.black54))))),
               const SizedBox(height: 12),
             ],
@@ -6019,10 +5944,6 @@ class _ProfilePageState extends State<ProfilePage> {
             if (isProfessional) ...[
               field(accountType == 'empresa' ? 'Dirección fiscal de la empresa' : 'Dirección fiscal o profesional', address, requiredField: true),
               Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: aboutUs, maxLines: 5, maxLength: 2000, decoration:  InputDecoration(labelText: uiText(context, "Sobre nosotros"), hintText: uiText(context, "Presenta tu negocio, experiencia y servicios.")))),
-              const SizedBox(height: 8),  Text(uiText(context, "VERIFICACIÓN DE CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),  Text(uiText(context, "Adjunta documentación para solicitar la verificación. La portada solo se habilita cuando la cuenta profesional está aprobada.")),
-              OutlinedButton.icon(onPressed: saving ? null : chooseDocument, icon: const Icon(Icons.upload_file), label: Text(documentName == null ? uiText(context, "Adjuntar documentación") : uiText(context, "Documento: {0}", [documentName]))),
-              if (verificationStatus != null) Text(uiText(context, "Estado de verificación: {0}", [verificationStatus])),
             ],
             const SizedBox(height: 24), FilledButton.icon(onPressed: saving ? null : saveProfile, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar perfil"))),
           ]))
@@ -6038,7 +5959,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   Text(name.text.isEmpty ? email : name.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 5),
                   Text(accountType == 'autonomo' ? uiText(context, "AUTÓNOMO") : accountType == 'empresa' ? uiText(context, "EMPRESA") : uiText(context, "PARTICULAR"), style: const TextStyle(color: marketAccent, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w700)),
-                  if (isVerifiedProfessional)  Padding(padding: EdgeInsets.only(top: 8), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.verified, color: Color(0xFF2EAD67), size: 17), SizedBox(width: 5), Text(uiText(context, "Cuenta profesional verificada"), style: TextStyle(color: Color(0xFF2EAD67), fontSize: 12))])),
                   const SizedBox(height: 10),
                    Text(uiText(context, "Tu identidad en AUTOMOTORS"), style: TextStyle(color: marketMuted, fontSize: 12)),
                 ])),
@@ -6047,7 +5967,6 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 18),
              Text(uiText(context, "TU INFORMACIÓN"), style: TextStyle(color: marketAccent, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            if (isVerifiedProfessional) Center(child: Text(uiText(context, "Verificación: {0}", [uiText(context, verificationStatus ?? 'No solicitada')]), style: const TextStyle(color: marketAccent))),
             const Divider(height: 28),  Text(uiText(context, "DATOS DE LA CUENTA"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Correo electrónico"), email),
              Text(uiText(context, "DATOS PERSONALES"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.bold)), _readOnlyRow(uiText(context, "Nombre y apellidos"), name.text), _readOnlyRow(uiText(context, "Teléfono"), phone.text), _readOnlyRow(uiText(context, "Ciudad"), city.text), _readOnlyRow(uiText(context, "Provincia"), province.text),
             if (accountType == 'empresa') _readOnlyRow(uiText(context, "Razón social"), businessName.text),
