@@ -54,3 +54,9 @@ El titular introdujo la contraseña directamente en Apple y confirmó guardado. 
 - Capturas procesadas y validadas; no quedan bloqueos de imagen en este envio. Apple mostro confirmacion de envio y su pagina de revision. No equivale a aprobacion ni publicacion.
 - Prueba local: appstore-build31-pending-review.png. Credenciales de revision no leidas ni capturadas.
 - Sigue pendiente antes de disponibilidad publica resolver la exigencia global de moderacion y el contenido legado; el envio a Apple no activa esa configuracion.
+
+## Price clarification requested by Apple, 4 November 2026
+- Apple automated message at 16:59 marked the app Rejected under 3.0.0 Business: Preamble, requesting confirmation of monthly price levels (PRO USD179, PACK20 USD89, PACK15 USD69, PACK10 USD49). Apple stated it would continue review after a reply. No code defect was identified in that message.
+- With the user's authorization, replied in App Store Connect at 19:53 confirming the intentional monthly paid tiers and explaining Spain-only launch, with intended Spanish prices PRO EUR199, PACK20 EUR99, PACK15 EUR75, PACK10 EUR59. Clarified listing/visibility benefits rather than vehicle purchase payments. No prices, territories or binary were changed.
+- Verified message count increased from 1 to 2 and the full response appeared under Abdeel TG. App status still Rejected / Unresolved issues immediately after reply; do not claim resumed review or approval until Apple updates it. Per Apple's request, replied to the existing submission rather than creating another submission.
+- Submission ID remains 8e3bf9cf-9f53-4268-b188-3ba8637d5dcb. Local proof: apple-price-confirmation-sent.png.
