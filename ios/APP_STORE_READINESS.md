@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (27)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (28)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -378,3 +378,12 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - El usuario guardó privadamente la contraseña de aplicación de Gmail. Comprobación posterior en una página nueva: SMTP activado, host smtp.gmail.com y puerto 587 persistidos. No se leyó la contraseña ni se enviaron correos de prueba.
 - Gmail es provisional. Pendiente comprobar físicamente recepción de correo y retorno a Login en el mismo iPhone con la build 27 instalada; no se considera validado el envío por haber guardado la configuración.
 - Este registro cambia únicamente documentación y no requiere otro binario.
+## Build 28 activa y build 29 preparada
+
+- 1.0.1 (28) confirmada «En pruebas» en AUTOMOTORS Sandbox, 2 testers. Cifrado guardado con autorización específica del titular. Apple cd046e5d-50de-4b5b-9896-6bc65a8d36e4; Codemagic 6aeaeda7a87b4d255fde6f1e; binario a1b99e8955447ab7c170f50f6f1401c66a6fe144.
+- Se retiran los accesos duplicados de datos/edición y eliminación del cuerpo del perfil; se conserva el menú superior y recarga tras editar.
+- El usuario confirma en el iPhone la recepción del correo y retorno a la app con cuenta verificada.
+- Build 29: portada y funciones profesionales para autónomos/empresas sin documentos ni aprobación. Se elimina el formulario y la insignia documental, sin autoconceder estado aprobado ni modificar roles, límites o compras. Políticas remotas revisadas: ya permiten escritura propia de portada y presentación profesional, sin depender de verificación. No requiere migración ni elimina documentos históricos.
+- Chat: acceso al perfil público de la otra persona, obtenida desde buyer_id/seller_id de la conversación bajo RLS y comprobación de pertenencia. No abre datos privados ni modifica permisos.
+- Ficha: fotos, título/precio, vendedor y datos principales, en ese orden; contacto fijo conservado.
+- Validación: 34 pruebas de perfiles, chat y traducciones aprobadas; 7 pruebas de diseño aprobadas con orden y contacto en publicado/reservado/vendido. Análisis previo sin errores, con avisos heredados. Distribución 29 pendiente.

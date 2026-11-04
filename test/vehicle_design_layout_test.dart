@@ -1,3 +1,4 @@
+import 'package:automotors_base/design/market_details.dart';
 import 'package:automotors_base/design/market_theme.dart';
 import 'package:automotors_base/main.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
@@ -49,6 +50,7 @@ void main() {
               description: 'Vehicle description',
               phone: '34600123456',
               status: status,
+              ownerId: '11111111-1111-4111-8111-111111111111',
             ),
             priceText: '20.000 EUR',
             onContact: () => contacts++,
@@ -63,6 +65,13 @@ void main() {
         tester.getTopLeft(gallery).dy,
         lessThan(tester.getTopLeft(heading).dy),
       );
+      await tester.drag(find.byType(ListView).first, const Offset(0, -450));
+      await tester.pumpAndSettle();
+      final seller = find.byType(MarketSellerSummary);
+      final specs = find.byKey(const Key('vehicle-main-specs'));
+      expect(seller, findsOneWidget);
+      expect(tester.getTopLeft(heading).dy, lessThan(tester.getTopLeft(seller).dy));
+      expect(tester.getTopLeft(seller).dy, lessThan(tester.getTopLeft(specs).dy));
       final bar = find.byKey(const Key('vehicle-contact-bar'));
       final action = find.descendant(
         of: bar,

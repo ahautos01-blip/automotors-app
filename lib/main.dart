@@ -4140,9 +4140,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if(showHeading) _editorialListingHeading(context),
+        if (car.ownerId != null) ...[
+          const SizedBox(height: 16),
+          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller, photoUrlForPath: (path) => Supabase.instance.client.storage.from('profile-photos').getPublicUrl(path)),
+        ],
         const SizedBox(height: 18),
          Text(
           uiText(context, "DATOS PRINCIPALES"),
+          key: const Key('vehicle-main-specs'),
           style: TextStyle(
             color: marketMuted,
             fontSize: 11,
@@ -4171,10 +4176,6 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               _quickSpec(Icons.settings_outlined, car.transmission!.trim()),
           ],
         ),
-        if (car.ownerId != null) ...[
-          const SizedBox(height: 16),
-          MarketSellerSummary(profile: sellerProfile, onOpen: _openSeller, photoUrlForPath: (path) => Supabase.instance.client.storage.from('profile-photos').getPublicUrl(path)),
-        ],
         const SizedBox(height: 16),
         Row(children: [
           Expanded(child: OutlinedButton.icon(
