@@ -26,3 +26,11 @@ Páginas exportadas desde el contenido de la app. El titular autorizó publicar 
 
 ## Privacidad de la cuenta de revisión
 El titular introdujo la contraseña directamente en Apple y confirmó guardado. Para campos públicos de la ficha, usar locators concretos. No leer input password ni snapshots completos de AX. body.innerText no incluye valores de inputs y permitió leer errores de validación sin acceder a credenciales.
+
+## Avance 4 de noviembre de 2026
+- Build 31 solo iPhone compilada, subida y confirmada En pruebas en AUTOMOTORS Sandbox (2 testers). Apple c1029814-102a-4ea8-8b98-caf11fc7b5d0; Codemagic 6aeb02c1d6634fc362f17854; código d9289ff. Cifrado específico autorizado y guardado.
+- Pendiente sustituir la selección provisional 30 por 31 en la ficha pública y repetir validación. No se ha enviado a revisión ni publicado en App Store.
+- Notas de revisión de PRO/PACK20/PACK15/PACK10 guardadas; faltan capturas de revisión para los productos y adjuntarlos al envío.
+- Política pública corregida y comprobada: HTTP200, títulos UTF-8, instrucciones actuales de eliminación. Commit main 73662db515b144b59dc93bc2fc978de4c8c622eb. No se ha integrado el resto de la rama en main.
+- El titular dispone de iPhone 17 Pro Max. No existe control remoto de ese dispositivo en esta sesión; debe aportar capturas reales de TestFlight. Apple admite 1320x2868 entre los tamaños del grupo Dynamic Island grande. Ver https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications . Verificar dimensiones y aceptación del grupo mediano al subir; no inventar capturas de ejecución nativa.
+- Auditoría de moderación: enabled=false, conexión de texto/imagen probada el 1 de noviembre; anuncios actuales 1 publicado y 1 vendido, ambos sin comprobación registrada. No activar a ciegas porque ocultaría el contenido legado. Resolver despliegue global antes de lanzamiento; cliente actual sí llama al filtro al publicar.

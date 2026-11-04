@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (30)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (31)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -401,3 +401,6 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Estado confirmado: 1.0.1 (30) «En pruebas», AUTOMOTORS Sandbox, 2 testers, 90 días. Cifrado guardado tras autorización específica del usuario; sin revisión pública.
 - Binario f37406ceb6c8ebf57cc00eee277baaf70069a139; Codemagic 6aeaf62ea87b4d255fde71cf; Apple ed49e61e-dcc5-4062-85a1-91ff9857019d. Compilación, subida, procesamiento y acceso interno comprobados.
 - Este registro solo cambia documentación. Pendiente revisión física de la cabecera en iPhone.
+
+## Build 31 solo iPhone
+Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8-8b98-caf11fc7b5d0; Codemagic 6aeb02c1d6634fc362f17854; binario d9289ff. Cifrado autorizado guardado. Preparación pública detallada en APP_STORE_SUBMISSION.md, todavía sin envío a revisión. Diez pruebas de ayuda y eliminación aprobadas; textos públicos UTF-8 y enlace de eliminación actualizados.
