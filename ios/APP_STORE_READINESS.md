@@ -2,7 +2,7 @@
 
 ## Base que se debe conservar
 
-La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (29)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
+La versión distribuida más reciente es **AUTOMOTORS 1.0.1 (30)** en el grupo interno AUTOMOTORS Sandbox. La build 26 queda sin asignar y sustituida por 27.
 
 - Repositorio: https://github.com/ahautos01-blip/automotors-app
 - Rama de preparación: `restore/ios-1.0.1-build10`.
@@ -393,3 +393,11 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 - Binario: b64eebab54235d8f3a3183522fa3090bebf84982; Codemagic 6aeaf237a87b4d255fde7093; Apple f88b4469-59dc-407a-bacf-1926fad0c7a1. Codemagic compiló y subió; procesamiento y grupo comprobados por separado en Apple.
 - Suite final completa: 171 pruebas aprobadas. Incluye perfiles profesionales sin documentos, resolución del otro participante y orden precio/vendedor/datos con contacto fijo. No se enviaron mensajes reales ni se crearon cuentas de producción para verificarlo.
 - Pendiente revisión física del usuario en iPhone de los tres cambios nuevos. Registro documental posterior, sin nuevo binario.
+## Build 30 distribuida: identidad profesional integrada en la portada
+
+- Empresas y autónomos: avatar centrado, con su centro sobre el borde inferior de la portada. Razón social única debajo, seguida del tipo y ubicación. Se retira el nombre superpuesto en portada. Cabecera compartida entre perfil público y vista propia de datos.
+- Razón social editable y guardada para ambos tipos profesionales; conserva nombre personal de contacto separado. Perfiles antiguos sin razón social conservan el nombre disponible hasta editarlo.
+- Seis pruebas focalizadas aprobadas: centrado y nombres largos con texto 100/200 %, guardado profesional/particular y participante de chat. La suite completa anterior de 29 fue de 171 pruebas aprobadas.
+- Estado confirmado: 1.0.1 (30) «En pruebas», AUTOMOTORS Sandbox, 2 testers, 90 días. Cifrado guardado tras autorización específica del usuario; sin revisión pública.
+- Binario f37406ceb6c8ebf57cc00eee277baaf70069a139; Codemagic 6aeaf62ea87b4d255fde71cf; Apple ed49e61e-dcc5-4062-85a1-91ff9857019d. Compilación, subida, procesamiento y acceso interno comprobados.
+- Este registro solo cambia documentación. Pendiente revisión física de la cabecera en iPhone.
