@@ -39,3 +39,10 @@ El titular introdujo la contraseña directamente en Apple y confirmó guardado. 
 - El titular proporcionó seis JPEG, todos 943x2048 (comprimidos). Se intentó usar la captura del PACK10 para revisión; Apple la rechazó por dimensiones incorrectas. No se subieron imágenes públicas inválidas. Pedir originales sin compresión del iPhone 17 Pro Max.
 - Cuenta de revisión: se detectó permiso de administrador preexistente. Con autorización expresa del titular se retiró únicamente ese permiso; consulta posterior confirmó is_admin=false y moderator=false. La cuenta administrativa principal conserva ambos permisos. No se accedió a contraseñas.
 - La app continúa En preparación para el envío. No está enviada ni publicada. Capturas originales, finalización/adjunto de suscripciones y auditoría de moderación siguen pendientes.
+## Originales recuperados y cargados, 4 de noviembre
+- ZIP original descargado por el titular; seis PNG verificados localmente, todos 1320x2868, sin modificar.
+- Galería pública: IMG_8694.PNG, IMG_8695.PNG e IMG_8696.PNG cargados en Dynamic Island grande. Apple muestra automáticamente los mismos componentes en el grupo mediano mediante «Uso de componentes existentes». No se incluyó la captura de administración.
+- Capturas de revisión cargadas: PACK10 IMG_8696; PACK15/PACK20 IMG_8697; PRO IMG_8698. PACK10 y PACK20 alcanzaron Listo para revisión. PACK15/PRO seguían mostrando En proceso tras recargar.
+- La validación de la versión 1.0.1 (31) ya no indica dimensiones faltantes; indica «Una o más capturas de pantalla deben terminar de procesarse». No volver a subir duplicados mientras Apple procesa.
+- Borrador existente iniciado el 27 de octubre: se añadieron productos mediante su menú Añadir a revisión. Revisar su lista con una carga fresca cuando terminen todas las imágenes; cada pestaña puede mostrar una lista anterior. El envío final continúa pendiente y no se ha publicado la app.
+- Auditoría de lanzamiento: la exigencia global de moderación continúa desactivada; requiere resolver el contenido legado antes de activarla. No se modificó durante la carga de capturas.
