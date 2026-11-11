@@ -58,6 +58,7 @@ class MarketVehicleCard extends StatelessWidget {
                     children: [
                       if (photo != null)
                         Image.memory(
+                          cacheWidth: 1080,
                           photo!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, error, stack) => const Center(
@@ -256,6 +257,7 @@ class MarketEditorialCarRow extends StatelessWidget {
                             ),
                           )
                         : Image.memory(
+                            cacheWidth: 1080,
                             photo!,
                             fit: BoxFit.cover,
                             errorBuilder: (_, e, s) =>

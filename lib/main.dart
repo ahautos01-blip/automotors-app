@@ -46,6 +46,17 @@ const panel = marketSurface;
 
 const buyerListingProjection = 'id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
 
+final _vehiclePhotoCache = ListingPhotoCache();
+
+Future<Uint8List> downloadVehiclePhoto(String path) {
+  final client = Supabase.instance.client;
+  return _vehiclePhotoCache.load(
+    path,
+    (photoPath) => client.storage.from('vehicle-photos').download(photoPath),
+    scope: client.auth.currentSession?.accessToken ?? 'guest',
+  );
+}
+
 final automotorsNavigatorKey = GlobalKey<NavigatorState>();
 late final IosPushService automotorsPush;
 
@@ -1356,8 +1367,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
         final photoPaths = photoRows.map((p) => p['storage_path']?.toString() ?? '')
             .where((p) => p.isNotEmpty).toList();
-        final photoBytes = await loadListingCover(photoPaths,
-            (path) => supabase.storage.from('vehicle-photos').download(path));
+        final photoBytes = await loadListingCover(photoPaths, downloadVehiclePhoto);
 
         loadedCars.add(Car.fromListing(raw, photos: photoBytes, photoPaths: photoPaths,
           isFeatured: featuredIds.contains(raw['id']?.toString())));
@@ -3135,8 +3145,7 @@ Future<Car> buyerCarFromListing(Map<String, dynamic> raw) async {
       .toList();
   final photos = await loadListingCover(
     paths,
-    (path) =>
-        Supabase.instance.client.storage.from('vehicle-photos').download(path),
+    downloadVehiclePhoto,
   );
   return Car.fromListing(raw, photos: photos, photoPaths: paths);
 }
@@ -3464,7 +3473,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   Future<void> _loadGallery() async {
     if (car.photoPaths.isEmpty) return;
     final loaded = await loadListingGallery(car.photoPaths, car.photos,
-      widget.downloadPhoto ?? (path) => Supabase.instance.client.storage.from('vehicle-photos').download(path));
+      widget.downloadPhoto ?? downloadVehiclePhoto);
     if (mounted) setState(() => detailPhotos = loaded);
   }
 
@@ -3967,7 +3976,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Image.memory(detailPhotos[index], fit: BoxFit.cover),
+                child: Image.memory(detailPhotos[index], fit: BoxFit.cover, cacheWidth: 276),
               ),
             ),
           );
@@ -4617,7 +4626,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       Uint8List? firstPhoto;
       if (path != null && path.isNotEmpty) {
         try {
-          firstPhoto = await supabase.storage.from('vehicle-photos').download(path);
+          firstPhoto = await downloadVehiclePhoto(path);
         } catch (_) {
           // Si no se puede descargar la imagen, se muestra el icono del vehículo.
         }
@@ -4667,27 +4676,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         );
         return;
       }
-      final photoData = raw['vehicle_photos'];
-      final photoRows = photoData is List
-          ? List<Map<String, dynamic>>.from(photoData)
-          : <Map<String, dynamic>>[];
-      photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
-          .compareTo((b['position'] as num?)?.toInt() ?? 0));
-      // Descargar fotos en paralelo y conservar el orden de posición.
-      final downloadedPhotos = await Future.wait<Uint8List?>(
-        photoRows.map((photo) async {
-          final path = photo['storage_path']?.toString();
-          if (path == null || path.isEmpty) return null;
-          try {
-            return await supabase.storage.from('vehicle-photos').download(path);
-          } catch (_) {
-            // El anuncio puede abrirse aunque una foto no esté disponible.
-            return null;
-          }
-        }),
-      );
-      final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car.fromListing(raw, photos: photoBytes);
+      final car = await buyerCarFromListing(raw);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
@@ -5397,23 +5386,7 @@ class _GaragePageState extends State<GaragePage> {
 
   Future<void> openDetails(Map<String, dynamic> listing) async {
     try {
-      final rawPhotos = listing['vehicle_photos'];
-      final photoRows = rawPhotos is List ? List<Map<String, dynamic>>.from(rawPhotos) : <Map<String, dynamic>>[];
-      photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0).compareTo((b['position'] as num?)?.toInt() ?? 0));
-      // Las fotos se descargan en paralelo; Future.wait mantiene el orden.
-      final downloadedPhotos = await Future.wait<Uint8List?>(
-        photoRows.map((photo) async {
-          final path = photo['storage_path']?.toString();
-          if (path == null || path.isEmpty) return null;
-          try {
-            return await supabase.storage.from('vehicle-photos').download(path);
-          } catch (_) {
-            return null;
-          }
-        }),
-      );
-      final photos = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car.fromListing(listing, photos: photos);
+      final car = await buyerCarFromListing(listing);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => CarDetailsPage(
         car: car,
@@ -5622,9 +5595,9 @@ class _GarageListingPhotoState extends State<GarageListingPhoto> {
     final path = widget.path;
     if (path == null || path.isEmpty) { if (mounted) setState(() => bytes = null); return; }
     try {
-      final result = await Supabase.instance.client.storage.from('vehicle-photos').download(path);
-      if (mounted) setState(() => bytes = result);
-    } catch (_) { if (mounted) setState(() => bytes = null); }
+      final result = await downloadVehiclePhoto(path);
+      if (mounted && widget.path == path) setState(() => bytes = result);
+    } catch (_) { if (mounted && widget.path == path) setState(() => bytes = null); }
   }
   @override
   Widget build(BuildContext context) => Container(
@@ -5787,7 +5760,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> chooseProfileImage({required bool cover}) async {
     try {
-      final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80,
+        maxWidth: cover ? 1600 : 640, maxHeight: cover ? 1600 : 640);
       if (file == null) return;
       final bytes = await file.readAsBytes();
       if (!mounted) return;
@@ -6184,9 +6158,7 @@ class _InboxPageState extends State<InboxPage> {
           final path = photos.isEmpty ? null : photos.first['storage_path']?.toString();
           if (path != null && path.isNotEmpty) {
             try {
-              row['vehicle_photo'] = await supabase.storage
-                  .from('vehicle-photos')
-                  .download(path);
+              row['vehicle_photo'] = await downloadVehiclePhoto(path);
             } catch (_) {
               // Si la foto no está disponible, se conserva el icono del vehículo.
             }
@@ -6468,27 +6440,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         }
         return;
       }
-      final photoData = raw['vehicle_photos'];
-      final photoRows = photoData is List
-          ? List<Map<String, dynamic>>.from(photoData)
-          : <Map<String, dynamic>>[];
-      photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
-          .compareTo((b['position'] as num?)?.toInt() ?? 0));
-      // Descargar las imágenes en paralelo sin perder su orden.
-      final downloadedPhotos = await Future.wait<Uint8List?>(
-        photoRows.map((photo) async {
-          final path = photo['storage_path']?.toString();
-          if (path == null || path.isEmpty) return null;
-          try {
-            return await supabase.storage.from('vehicle-photos').download(path);
-          } catch (_) {
-            // La ficha puede abrirse aunque alguna foto no esté disponible.
-            return null;
-          }
-        }),
-      );
-      final photoBytes = downloadedPhotos.whereType<Uint8List>().toList();
-      final car = Car.fromListing(raw, photos: photoBytes);
+      final car = await buyerCarFromListing(raw);
       if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute(
         builder: (_) => CarDetailsPage(
