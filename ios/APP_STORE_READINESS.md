@@ -413,3 +413,17 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Perfil publico, garaje y chat abren fichas con portada primero y completan la galeria despues. Tarjetas y miniaturas limitan su resolucion de decodificacion. Nuevas fotos de avatar y portada se seleccionan a tamanos adecuados.
 - Validacion local final de 35 pruebas y analisis estatico de los componentes modificados sin incidencias. Compilacion nativa y procesamiento de Apple completados. La comprobacion fisica en el iPhone queda para los testers.
 - Prueba local de distribucion: testflight-build32-en-pruebas.png.
+
+
+## Build 33: mejoras agrupadas de búsqueda, publicación, chat y seguimiento
+
+- Versión preparada 1.0.2 (33). La versión pública 1.0.1 (31) sigue su revisión por separado.
+- Catálogo: conserva texto, filtros combinados y orden en el dispositivo; añade orden por fecha real de publicación. Valida valores recuperados frente a los catálogos actuales.
+- Publicación: guardado automático y botón Guardar borrador, separados por cuenta. Recupera datos del formulario al volver. Las fotografías se conservan en memoria durante la sesión; tras cerrar la app se solicita volver a seleccionarlas. No se guardan rutas arbitrarias ni fotos en preferencias. Se elimina el borrador local al conservar o publicar el anuncio en el servidor.
+- Chat: respuestas rápidas y propuesta de visita con fecha y hora futuras. Preparan texto editable; el usuario decide enviarlo. Se respeta el bloqueo del chat y no se borra texto nuevo al finalizar un envío anterior.
+- Perfil: muestra mes/año de alta junto a las valoraciones existentes y aclara que la información la facilita el vendedor.
+- Favoritos: Solo bajadas de precio. Alertas: filtros Todas, Sin leer, Bajadas de precio, Anuncios nuevos y Valorar compra.
+- Copias de interfaz en español, inglés y catalán. Pruebas de recuperación real del formulario, aislamiento por cuenta, orden del guardado/borrado, datos locales inválidos, filtros persistentes, respuestas y cancelación de visita.
+- Validación: batería completa con 189 aprobadas y una prueba nueva de cancelación corregida; archivo focalizado posterior con sus 8 pruebas aprobado (190 casos cubiertos). SQL en PostgreSQL en memoria aprobado con roles anon/authenticated, vendedores ocultos/eliminados e inaccesibilidad del perfil privado. Consulta real: null seguro, cero formatos públicos inválidos.
+- Migración 20261112122709_seller_public_membership_month desplegada y comprobada. RPC de lectura mínima, search_path vacío, EXECUTE revocado de PUBLIC y concedido solo a anon/authenticated. Su SECURITY DEFINER es intencional para leer exclusivamente el mes de alta de un vendedor que ya aparece en public_seller_profiles; no amplía SELECT sobre user_profiles. Los avisos 0028/0029 del asesor corresponden a esta API pública deliberada y probada: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable y https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable . La advertencia de protección frente a contraseñas filtradas ya existía antes del cambio.
+- Compilación y disponibilidad de TestFlight pendientes de verificar antes de afirmar distribución.
