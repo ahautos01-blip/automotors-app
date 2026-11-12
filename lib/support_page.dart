@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'l10n/ui_text.dart';
 
-const automotorsSupportEmail = 'abdelmounimtg94@gmail.com';
+const automotorsSupportEmail = 'info@automotors.info';
 const automotorsLegalOwner = 'Abdelmounim Taghi';
 const automotorsLegalAddress = 'Carrer Pablo Iglesias 56, 08302 Mataró, España';
 const automotorsContactPhone = '937212845';

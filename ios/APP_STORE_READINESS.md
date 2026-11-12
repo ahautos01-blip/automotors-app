@@ -431,3 +431,14 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Captura de activación verificada: testflight-build33-en-pruebas.jpg. La versión pública 1.0.1 (31) no se ha sustituido con esta preparación.
 
 - Comprobación posterior de distribución: Apple sigue mostrando 1.0.1 (31) Pendiente de revisión. La pantalla exige retirar esa versión del proceso de revisión para enviar otra compilación. El titular elige expresamente conservar la revisión actual. Se mantiene 1.0.1 (31) sin retirar ni sustituir; 1.0.2 (33) queda disponible en TestFlight para preparar como actualización tras el primer lanzamiento.
+
+
+## Build 34: correo oficial de contacto
+
+- Titular solicita cambiar el correo público a info@automotors.info y confirma Google Workspace como proveedor; dominio activado el 12 de noviembre de 2026.
+- Fuente de contacto de la app y exportaciones ES/EN/CA de soporte, privacidad y condiciones actualizadas. Diez pruebas de soporte, compras y eliminación aprobadas; nueve enlaces mailto verificados.
+- Páginas web de main actualizadas de forma aislada mediante los commits 4d290de, c2f9e4e y 09a7483. Comprobar despliegue público antes de afirmar disponibilidad.
+- El titular indica que ha guardado privadamente la nueva contraseña de aplicación SMTP. Se observa visualmente info@automotors.info como remitente persistido al recargar Supabase; servidor smtp.gmail.com, puerto 587 y nombre AUTOMOTORS. No se leyó ni capturó la contraseña.
+- Comprobaciones DNS iniciales de Google y Cloudflare devolvieron NXDOMAIN sin MX. El titular confirma que acaba de activar exactamente automotors.info. Verificación de dominio y entrega de correo pendientes; no afirmar que el correo funciona hasta comprobarlo.
+- La cuenta existente abdelmounimtg94@gmail.com conserva su identidad y sus permisos de administración/moderación. Este cambio afecta al contacto público y al remitente, no migra cuentas.
+- Se prepara 1.0.2 (34) para TestFlight; la revisión pública 1.0.1 (31) se conserva por decisión del titular. Build 33 ya distribuida no se modifica.
