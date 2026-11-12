@@ -437,8 +437,10 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 
 - Titular solicita cambiar el correo público a info@automotors.info y confirma Google Workspace como proveedor; dominio activado el 12 de noviembre de 2026.
 - Fuente de contacto de la app y exportaciones ES/EN/CA de soporte, privacidad y condiciones actualizadas. Diez pruebas de soporte, compras y eliminación aprobadas; nueve enlaces mailto verificados.
-- Páginas web de main actualizadas de forma aislada mediante los commits 4d290de, c2f9e4e y 09a7483. Comprobar despliegue público antes de afirmar disponibilidad.
+- Páginas web de main actualizadas de forma aislada mediante los commits 4d290de, c2f9e4e y 09a7483. Despliegue de Pages completado y contacto oficial comprobado en soporte, privacidad y condiciones; los tres idiomas enlazan mailto:info@automotors.info.
 - El titular indica que ha guardado privadamente la nueva contraseña de aplicación SMTP. Se observa visualmente info@automotors.info como remitente persistido al recargar Supabase; servidor smtp.gmail.com, puerto 587 y nombre AUTOMOTORS. No se leyó ni capturó la contraseña.
-- Comprobaciones DNS iniciales de Google y Cloudflare devolvieron NXDOMAIN sin MX. El titular confirma que acaba de activar exactamente automotors.info. Verificación de dominio y entrega de correo pendientes; no afirmar que el correo funciona hasta comprobarlo.
+- Comprobaciones DNS iniciales de Google y Cloudflare devolvieron NXDOMAIN sin MX. El titular confirma que acaba de activar exactamente automotors.info. Una comprobación posterior de DNS de Google devuelve NOERROR y MX «1 smtp.google.com.». Se confirma también visualmente el usuario SMTP info@automotors.info persistido. La entrega real queda pendiente de la prueba solicitada al titular.
 - La cuenta existente abdelmounimtg94@gmail.com conserva su identidad y sus permisos de administración/moderación. Este cambio afecta al contacto público y al remitente, no migra cuentas.
 - Se prepara 1.0.2 (34) para TestFlight; la revisión pública 1.0.1 (31) se conserva por decisión del titular. Build 33 ya distribuida no se modifica.
+
+- Build 34 lanzada en Codemagic, trabajo 37 / 6af5eafe9679c85ac0af2935, commit 9a410f7. En cola al registrar este punto. GitHub Actions 43260123186 aprobado: dependencias, localizaciones, batería completa de tests y compilación web. Kit de lanzamiento y creatividad de captación actualizados con el contacto oficial.
