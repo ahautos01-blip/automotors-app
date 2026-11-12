@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { hasActiveLookupSubscription } from "./lookup_access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,11 +24,22 @@ async function hasVehicleLookupEntitlement(userId: string): Promise<boolean> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const now = new Date().toISOString();
+  const { data: subscriptions, error: subscriptionError } = await admin
+    .from("user_subscriptions")
+    .select("product_id, status, started_at, created_at, expires_at")
+    .eq("user_id", userId)
+    .in("product_id", ["automotors_pack_20", "automotors_pro_monthly_199"])
+    .in("status", ["active", "grace_period"])
+    .gt("expires_at", now);
+  if (subscriptionError) throw subscriptionError;
+  if (hasActiveLookupSubscription(subscriptions ?? [], Date.parse(now))) return true;
+
   const { data: entitlements, error: entitlementError } = await admin
     .from("user_promotion_entitlements")
     .select("purchase_id")
     .eq("user_id", userId)
     .eq("status", "active")
+    .lte("starts_at", now)
     .gt("ends_at", now);
 
   if (entitlementError) throw entitlementError;

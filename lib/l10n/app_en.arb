@@ -28,5 +28,47 @@
   "priceLowHigh": "Price: low to high",
   "priceHighLow": "Price: high to low",
   "newestFirst": "Year: newest first",
-  "lowestMileage": "Mileage: low to high"
+  "lowestMileage": "Mileage: low to high",
+  "clearComparison": "Clear comparison",
+  "resetFilters": "Reset filters",
+  "searchVehicleHint": "Search make, model, version...",
+  "noVehiclesFound": "No vehicles match these filters.",
+  "viewResults": "View results",
+  "compare": "Compare",
+  "add": "Add",
+  "brand": "Make",
+  "model": "Model",
+  "fuel": "Fuel",
+  "priceEuros": "Price (€)",
+  "minMileage": "Minimum mileage (km)",
+  "maxMileage": "Maximum mileage (km)",
+  "minPower": "Minimum power (CV)",
+  "maxPower": "Maximum power (CV)",
+  "minYear": "Minimum year",
+  "maxYear": "Maximum year",
+  "comparisonLimit": "You can compare up to 3 vehicles.",
+  "vehiclesFound": "{count, plural, =1{1 vehicle found} other{{count} vehicles found}}",
+  "compareVehicles": "Compare {count} vehicles",
+  "photoCount": "{count, plural, =1{1 photo} other{{count} photos}}",
+  "@vehiclesFound": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@compareVehicles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@photoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
