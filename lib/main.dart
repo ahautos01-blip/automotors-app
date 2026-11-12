@@ -1,3 +1,5 @@
+import 'password_recovery_page.dart';
+import 'services/password_recovery_service.dart';
 import 'services/local_market_state.dart';
 import 'design/market_chat_actions.dart';
 import 'design/market_professional_header.dart';
@@ -643,6 +645,32 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
+                  if (!creatingAccount)
+                    Align(alignment: Alignment.centerRight, child: TextButton(
+                      onPressed: loading ? null : () async {
+                        final recoveredEmail = await Navigator.push<String>(context, MaterialPageRoute(
+                          builder: (_) => PasswordRecoveryPage(
+                            initialEmail: emailController.text.trim(),
+                            createService: () => PasswordRecoveryService(GoTrueClient(
+                              url: '$automotorsSupabaseUrl/auth/v1',
+                              headers: {'apikey': automotorsSupabaseKey},
+                              autoRefreshToken: false,
+                              flowType: AuthFlowType.pkce,
+                              asyncStorage: RecoveryMemoryStorage(),
+                            )),
+                          ),
+                        ));
+                        if (!mounted || recoveredEmail == null) return;
+                        setState(() {
+                          emailController.text = recoveredEmail;
+                          passwordController.clear();
+                          message = 'Contraseña actualizada. Ya puedes iniciar sesión.';
+                          messageIsError = false;
+                          showVerificationResend = false;
+                        });
+                      },
+                      child: Text(uiText(context, 'He olvidado mi contraseña')),
+                    )),
                   if (message != null) ...[
                     const SizedBox(height: 14),
                     Semantics(

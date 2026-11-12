@@ -81,6 +81,7 @@ void main() {
         ),
         findsNothing,
       );
+      expect(find.text(translateUiMessage('He olvidado mi contraseña', language)), findsOneWidget);
       expect(t.takeException(), isNull);
       final proof = Platform.environment['AUTOMOTORS_VISUAL_PROOF'];
       if (language == 'es' && proof != null)

@@ -444,3 +444,19 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Se prepara 1.0.2 (34) para TestFlight; la revisión pública 1.0.1 (31) se conserva por decisión del titular. Build 33 ya distribuida no se modifica.
 
 - Build 34 lanzada en Codemagic, trabajo 37 / 6af5eafe9679c85ac0af2935, commit 9a410f7. En cola al registrar este punto. GitHub Actions 43260123186 aprobado: dependencias, localizaciones, batería completa de tests y compilación web. Kit de lanzamiento y creatividad de captación actualizados con el contacto oficial.
+
+- Diagnóstico de entrega: dos solicitudes controladas a /auth/v1/recover para el Gmail del titular devolvieron HTTP 500. Los registros de auth identifican SMTP 535 / 5.7.8 Username and Password not accepted. No se cambió la contraseña de ninguna cuenta de AUTOMOTORS ni se crearon usuarios de prueba.
+- La pestaña de Google controlada por el agente seguía con ah.autos01@gmail.com. El titular aclara que accede a info@automotors.info en otro navegador o en el móvil. Se le ha indicado generar allí una contraseña de aplicación de 16 caracteres de la cuenta oficial y guardarla privadamente en SMTP_PASSWORD, sin espacios. Pendiente confirmación «clave de aplicación guardada» y una nueva prueba tras esa corrección real. No repetir intentos con las mismas credenciales rechazadas.
+- Build 34 sigue en cola de Codemagic al dejar el paso privado al titular. Pestañas de SMTP y trabajo de compilación conservadas para continuar. El correo público y el kit de lanzamiento sí están actualizados; la entrega SMTP todavía no está verificada.
+
+
+## SMTP verificado y build 35: recuperación de contraseña
+
+- Se completó la verificación en dos pasos de Google Workspace y el titular generó y guardó privadamente una contraseña de aplicación de info@automotors.info. La nueva prueba /auth/v1/recover devuelve HTTP 200. El titular confirma recepción desde info@automotors.info; los errores SMTP 535 anteriores están resueltos.
+- Build 34 terminó compilación, subida y procesamiento (Apple 77bf6b4b-5ed5-4fa6-82d3-d9ae824e124f). Su postproceso de grupo falló por falta de declaración de cifrado. No se repite: queda sustituida por la preparación de 35, que agrupa también la recuperación solicitada.
+- Login añade He olvidado mi contraseña. Flujo: correo, código recovery de un solo uso y nueva contraseña confirmada (mínimo 8 caracteres). Sesión efímera aislada, validación de email, PKCE con almacenamiento en memoria, limpieza al salir y reintento de actualización sin consumir el código otra vez. No modifica el login principal ni la confirmación de registro.
+- Solo la plantilla Reset password de Supabase se cambia a código {{ .Token }}, con instrucciones ES/EN/CA y contacto oficial. Guardado confirmado en el editor. No se modifica la plantilla de alta.
+- Pruebas usan exclusivamente HTTP simulado y cuentas example.test. Ninguna contraseña real de usuarios se ha cambiado. Pendiente comprobación física del recorrido completo por el titular cuando 35 esté disponible.
+- La revisión pública de 1.0.1 (31) se conserva. Todavía no se guarda cifrado ni se distribuye 35.
+
+- Validación de 35: 198 pruebas Flutter aprobadas (batería completa), incluidos ocho casos nuevos de recuperación y los once casos de confirmación/login. Análisis estático de los dos componentes nuevos sin incidencias.
