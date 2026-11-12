@@ -500,3 +500,22 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Pendientes para el envío público: instalar 36, prueba física de aceptación/denuncia/bloqueo, grabación en iPhone requerida por Apple e incorporar el vídeo a las notas y a la respuesta de revisión. No se ha respondido ni reenviado a Apple durante esta preparación.
 
 - Validación final 36: 212 pruebas Flutter aprobadas, análisis de componentes nuevos sin incidencias y pruebas PostgreSQL de suspensión y moderación aprobadas. La solicitud de apply_migration caducó antes de ejecutarse; no se considera desplegada.
+
+- Build 36 lanzada en Codemagic: índice 39, trabajo 6af60dff9679c85ac0af36da, commit 5f57df9. En cola al registrar este punto. Se solicitan autorización concreta para despliegue+filtro y declaración de cifrado 36; todavía no se consideran concedidas. Guion físico local preparado en Apple-video-build36.md, sin grabación ni respuesta a Apple enviada.
+
+
+## Despliegue autorizado de 36 y filtro obligatorio
+
+- El titular autoriza explícitamente la suspensión reversible, la exigencia del filtro y la declaración de cifrado 36. El conector apply_migration volvió a caducar sin ejecutar cambios. Se usó el editor SQL del proyecto con la misma migración probada, dentro de una transacción, y se registró su versión 20261112183747 en el historial de migraciones.
+- El primer intento transaccional fue detenido por el control de antigüedad de la prueba del proveedor, sin cambios aplicados. Se repitió probe con frase e imagen ficticias: HTTP 200 y texto/imagen correctos a las 21:17:39 UTC del 12/11/2026. Campos de credencial limpiados y pestaña de claves cerrada.
+- Despliegue final confirmado: moderation_required=true, suspended_accounts=0, migration_recorded=true. No se suspendió ninguna cuenta. Las cuatro políticas de visibilidad de suspensión están presentes. Las cuentas normales no pueden ejecutar el RPC reservado que prepara la comprobación y los anónimos no pueden consultar el estado de una cuenta.
+- Los cuerpos de las diez funciones de la migración coinciden por hash con lo desplegado. El asesor conserva los avisos anteriores; se añade una tabla privada con RLS sin políticas de lectura directa de forma intencional. No hay nuevos WARN relativos a este cambio.
+- Apple ha procesado 1.0.2 (36), UUID 0fe73dbb-27d3-40b6-981f-bbb13178825f. Pendiente guardar el cifrado autorizado y asignar el grupo interno. El fallo de postproceso automático de Codemagic es la falta de estado asignable por cifrado; el binario está subido y procesado.
+
+## Activación final de TestFlight 36
+
+- Guardada la declaración de cifrado autorizada: Ninguno de los algoritmos mencionados anteriormente.
+- Guardadas las instrucciones de prueba de aceptación, denuncia, bloqueo, suspensión reversible y publicación moderada.
+- Build 1.0.2 (36) asignada al grupo interno AUTOMOTORS Sandbox, dos testers. Verificada en la tabla del grupo como En pruebas, caduca en 90 días. Se conservan 35 y las compilaciones anteriores.
+- Comprobante local: testflight-build36-en-pruebas.jpg. El despliegue de servidor está completo; las referencias anteriores a autorización o despliegue pendiente son hitos históricos superados por este cierre.
+- Continúan pendientes la instalación y validación física en el iPhone, el vídeo requerido por Apple y el siguiente envío público. No se ha reenviado la app ni declarado realizada la prueba física.
