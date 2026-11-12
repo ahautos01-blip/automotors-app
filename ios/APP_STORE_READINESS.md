@@ -477,3 +477,12 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Build 35 mantiene fuente 422893d, ya empezó preparación de máquina a las 19:01 CET tras la cola. Su cifrado específico está autorizado; todavía sin procesar/activar. 36 aún no lanzada: primero se valida el paquete y se cierra la revisión de requisitos de Apple.
 
 - Validación de las correcciones preparadas para 36: batería completa Flutter 203/203 aprobada, análisis estático de los componentes nuevos sin incidencias. Migración registrada en servidor como 20261112180010; archivo local y prueba alineados. No hay nuevos avisos relevantes del asesor de seguridad respecto a los ya documentados.
+
+
+## Build 35 activada en TestFlight
+
+- Confirmada 1.0.2 (35) En pruebas en AUTOMOTORS Sandbox, grupo interno con 2 testers y caducidad de 90 días. Apple ca5bcd00-f7c0-4cf1-94b6-2a29abd917ed; Codemagic 6af5f9749679c85ac0af2f0d, índice 38, fuente 422893d.
+- Compilación y subida completadas en 7m 4s después de la espera de máquina. Apple procesó el binario; declaración de cifrado específica para 35 guardada con la autorización recibida. Instrucciones de recuperación y contacto oficial guardadas; grupo asignado y disponibilidad confirmada en su pestaña Compilaciones.
+- Captura local: testflight-build35-en-pruebas.jpg. No se cambia la contraseña de ninguna cuenta real. El titular debe comprobar el recorrido completo en el iPhone.
+- Las condiciones públicas de main se actualizaron de forma aislada mediante 315a1a10da918dc2529227f8a3e374ed530f7134; página de términos verificada con tolerancia cero y compromiso de 24 horas en ES/EN/CA.
+- Correcciones preparadas para 36 guardadas en a9de8e7 (203 pruebas aprobadas), todavía no compiladas ni distribuidas. Mantener pendientes la suspensión completa, la exigencia global del filtro y la grabación física que Apple solicita. No se ha respondido ni reenviado la versión pública rechazada.
