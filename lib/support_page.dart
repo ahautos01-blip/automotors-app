@@ -184,7 +184,7 @@ class AutomotorsSupportPage extends StatelessWidget {
             _section(
               context,
               "Normas de la comunidad",
-              "No publiques anuncios fraudulentos, contenido ilegal, amenazas, acoso o datos de terceros sin autorización. Publica información veraz y fotografías que tengas derecho a utilizar. Puedes denunciar un anuncio desde su ficha o contactar con soporte para comunicar un abuso.",
+              "AUTOMOTORS aplica tolerancia cero al contenido inapropiado y a los usuarios abusivos: se prohíben el fraude, el contenido ilegal, las amenazas, el acoso y la publicación de datos ajenos sin autorización. Publica información veraz y fotografías que tengas derecho a utilizar. Puedes denunciar desde la ficha del anuncio o el menú de seguridad del chat y bloquear usuarios abusivos. Revisamos las denuncias en un máximo de 24 horas, retiramos el contenido que infringe estas normas y suspendemos a los responsables cuando corresponde. Contacto: info@automotors.info.",
             ),
             _section(
               context,

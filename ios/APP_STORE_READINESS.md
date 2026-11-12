@@ -460,3 +460,20 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - La revisión pública de 1.0.1 (31) se conserva. Todavía no se guarda cifrado ni se distribuye 35.
 
 - Validación de 35: 198 pruebas Flutter aprobadas (batería completa), incluidos ocho casos nuevos de recuperación y los once casos de confirmación/login. Análisis estático de los dos componentes nuevos sin incidencias.
+
+- Build 35 lanzada en Codemagic, trabajo 38 / 6af5f9749679c85ac0af2f0d, fuente 422893d. Esperando Mac mini M2. Sesión de Apple recuperada por el titular y autorización específica de cifrado para 35 recibida; pendiente procesamiento y activación interna.
+
+
+## Rechazo de Apple del 12 de noviembre y correcciones en preparación para 36
+
+- Apple rechazó 1.0.1 (31) a las 18:07 CET por 1.2 (UGC) y 2.3.7 (capturas con precios de servicios). Ya no está pendiente de revisión. No se ha reenviado ni se ha respondido al revisor todavía.
+- Revisor exige vídeo capturado en dispositivo físico mostrando aceptación de condiciones antes de login/registro, denuncia y bloqueo; debe incluirse también en las notas de siguientes envíos.
+- Se retiró únicamente IMG_8696.PNG (packs con precios) del conjunto iPhone Dynamic Island grande; permanecen IMG_8694.PNG e IMG_8695.PNG. El gestor confirma dos capturas. La imagen retirada permanece en la biblioteca recuperable.
+- Titular confirma asumir revisión en 24 horas. Condiciones de tolerancia cero y consentimiento deliberado preparados en ES/EN/CA, obligatorios antes de login y registro. Recuperación de contraseña accesible sin autenticar.
+- Corrección de bloqueo: política SELECT restrictiva para ocultar al bloqueado solo al bloqueador, aviso privado idempotente en chat_reports y datos de identidad verificados por el RPC. Aprobada explícitamente y desplegada tras bloqueo inicial de revisión automática; trigger activado confirmado. Prueba en PostgreSQL aislado: ocultación persistente, aislamiento entre compradores, bloqueo repetido, moderador autorizado, no acceso privado y reversibilidad.
+- Interfaz 36 retira inmediatamente tarjetas al bloquear y recarga desde el servidor con protección frente a cargas anteriores. Los avisos llegan a la cola Administración; no se ha añadido un nuevo canal de correo/push para moderación.
+- Los asesores de seguridad conservan los avisos anteriores (tablas privadas con RLS sin acceso directo, RPC público mínimo de mes de alta y protección de contraseñas filtradas desactivada). No se presenta como ausencia total de avisos.
+- Pendiente antes de reenvío: revisar cobertura de suspensión de usuarios (actual control restringe chat y permite ocultar anuncios por caso), verificar y activar exigencia global de moderación después de la prueba física; private.content_moderation_enabled() continúa false. No declarar implementados esos puntos hasta resolverlos.
+- Build 35 mantiene fuente 422893d, ya empezó preparación de máquina a las 19:01 CET tras la cola. Su cifrado específico está autorizado; todavía sin procesar/activar. 36 aún no lanzada: primero se valida el paquete y se cierra la revisión de requisitos de Apple.
+
+- Validación de las correcciones preparadas para 36: batería completa Flutter 203/203 aprobada, análisis estático de los componentes nuevos sin incidencias. Migración registrada en servidor como 20261112180010; archivo local y prueba alineados. No hay nuevos avisos relevantes del asesor de seguridad respecto a los ya documentados.

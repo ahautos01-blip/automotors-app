@@ -135,7 +135,7 @@ class ChatSafetyControls extends StatelessWidget {
             uiText(
               context,
               blocking
-                  ? 'No podréis enviaros mensajes en ninguna conversación. Conservarás el historial y podrás denunciarlo o desbloquearlo después.'
+                  ? 'No podréis enviaros mensajes. Sus anuncios se ocultarán de tu catálogo y se registrará un aviso para moderación. Conservarás el historial y podrás desbloquearlo después.'
                   : 'Se retirará tu bloqueo. El chat solo se habilitará si no existe otro bloqueo o restricción de moderación.',
             ),
           ),

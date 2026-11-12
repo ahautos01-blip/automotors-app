@@ -1,3 +1,5 @@
+import 'services/community_visibility.dart';
+import 'terms_acceptance_field.dart';
 import 'password_recovery_page.dart';
 import 'services/password_recovery_service.dart';
 import 'services/local_market_state.dart';
@@ -710,6 +712,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                   const SizedBox(height: 20),
+                  const TermsAcceptanceField(),
                   FilledButton(
                     onPressed: loading ? null : submit,
                     style: FilledButton.styleFrom(
@@ -1308,6 +1311,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   @override
   void initState() {
     super.initState();
+    CommunityVisibility.instance.addListener(_communityVisibilityChanged);
     loadCars();
     loadUnreadChatsCount();
     _chatUnreadChannel = Supabase.instance.client
@@ -1371,7 +1375,16 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     );
   }
 
+  void _communityVisibilityChanged() {
+    if (!mounted) return;
+    final viewer = Supabase.instance.client.auth.currentUser?.id;
+    setState(() => cars.removeWhere((car) => CommunityVisibility.instance.hides(viewer, car.ownerId)));
+    unawaited(loadCars());
+  }
+
+  int _carLoadGeneration = 0;
   Future<void> loadCars() async {
+    final generation = ++_carLoadGeneration;
     unawaited(loadUnreadBuyerAlerts());
     try {
       final supabase = Supabase.instance.client;
@@ -1408,7 +1421,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           isFeatured: featuredIds.contains(raw['id']?.toString())));
       }
 
-      if (!mounted) return;
+      if (!mounted || generation != _carLoadGeneration) return;
       setState(() {
         cars
           ..clear()
@@ -1839,6 +1852,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
   @override
   void dispose() {
+    CommunityVisibility.instance.removeListener(_communityVisibilityChanged);
     _chatUnreadChannel?.unsubscribe();
     searchController.dispose();
     searchFocusNode.dispose();

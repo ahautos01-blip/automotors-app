@@ -1,3 +1,5 @@
+import 'community_visibility.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -64,6 +66,15 @@ class ChatSafetyController extends ChangeNotifier {
         throw const FormatException('Invalid safety response');
       }
       blockedByMe = result['blocked_by_me'] as bool;
+      if ((action == 'block' || action == 'unblock') &&
+          result['viewer_id'] is String &&
+          result['other_user_id'] is String) {
+        CommunityVisibility.instance.record(
+          viewer: result['viewer_id'] as String,
+          seller: result['other_user_id'] as String,
+          blocked: blockedByMe,
+        );
+      }
       _allowed = result['messaging_allowed'] as bool;
       lastReportCreated = result['report_created'] == true;
       loaded = true;
