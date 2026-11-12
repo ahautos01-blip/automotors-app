@@ -486,3 +486,17 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Captura local: testflight-build35-en-pruebas.jpg. No se cambia la contraseña de ninguna cuenta real. El titular debe comprobar el recorrido completo en el iPhone.
 - Las condiciones públicas de main se actualizaron de forma aislada mediante 315a1a10da918dc2529227f8a3e374ed530f7134; página de términos verificada con tolerancia cero y compromiso de 24 horas en ES/EN/CA.
 - Correcciones preparadas para 36 guardadas en a9de8e7 (203 pruebas aprobadas), todavía no compiladas ni distribuidas. Mantener pendientes la suspensión completa, la exigencia global del filtro y la grabación física que Apple solicita. No se ha respondido ni reenviado la versión pública rechazada.
+
+
+## Build 36: cierre de los requisitos de seguridad de Apple
+
+- El titular confirma que la recuperación de contraseña funciona en el iPhone con 35. Tras una demora de disponibilidad y reasignación autorizada al grupo, la build apareció. Consulta a Apple enviada con autorización expresa, caso 30000013639219. No se atribuye su resolución a una causa técnica no confirmada.
+- Preparada suspensión de cuenta por caso denunciado, separada de restringir chat. Exige confirmación y motivo; reversible, privada y auditada. Protege al titular, administradores y moderadores. No suspende automáticamente ninguna cuenta.
+- Marca privada aplicada al guard de acceso existente y al chat; oculta anuncios, perfil público, descripción y reseñas. Los RPC de publicación y aprobación manual rechazan cuentas suspendidas, incluso con sesiones antiguas. Las pruebas PostgreSQL comprueban todos esos caminos con usuarios ficticios, sin tocar cuentas reales.
+- La app consulta solo su propio estado en inicio/renovación de sesión y al volver a primer plano. Una suspensión confirmada cierra la sesión y renueva la navegación pública; un error de red al consultar el estado no se presenta como suspensión. Descarta respuestas que pertenecen a otra sesión.
+- Prueba real del filtro el 12/11/2026 a las 18:54:43 UTC: HTTP 200, connected=true, text_checked=true, image_checked=true, modelo omni-moderation-2024-09-26. Texto ficticio e imagen gris de la función probe, sin anuncios ni fotos reales. Se utilizó la credencial existente solo en memoria/campo privado; no se imprimió ni guardó en archivos. Campos y portapapeles limpiados y pestañas de claves cerradas. Los fallos previos de la prueba eran de autenticación/copia del panel, no un resultado del proveedor.
+- Los cuerpos de las siete funciones preexistentes que reemplaza la migración coinciden por hash con sus fuentes antes de aplicar el cambio. Aún pendiente autorización/despliegue y activación de exigencia global del filtro.
+- La comprobación de inventario actual devuelve cero anuncios en todos los estados; activar la exigencia no ocultará anuncios existentes. No se ha creado inventario ficticio en producción.
+- Pendientes para el envío público: instalar 36, prueba física de aceptación/denuncia/bloqueo, grabación en iPhone requerida por Apple e incorporar el vídeo a las notas y a la respuesta de revisión. No se ha respondido ni reenviado a Apple durante esta preparación.
+
+- Validación final 36: 212 pruebas Flutter aprobadas, análisis de componentes nuevos sin incidencias y pruebas PostgreSQL de suspensión y moderación aprobadas. La solicitud de apply_migration caducó antes de ejecutarse; no se considera desplegada.

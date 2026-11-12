@@ -26,6 +26,7 @@ jobs:
           node test/seller_about.integration.mjs
           node test/chat_safety.integration.mjs
           node test/community_block_visibility.integration.mjs
+          node test/account_suspension.integration.mjs
           node test/content_moderation.integration.mjs
           node test/private_photo_reads.integration.mjs
           node test/buyer_watchlists.integration.mjs

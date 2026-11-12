@@ -1,5 +1,14 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Tu cuenta está suspendida por moderación. Contacta con info@automotors.info.": ["Your account has been suspended by moderation. Contact info@automotors.info.", "El teu compte està suspès per moderació. Contacta amb info@automotors.info."],
+  "Suspender cuenta del usuario": ["Suspend user account", "Suspendre el compte de l’usuari"],
+  "Reactivar cuenta del usuario": ["Reactivate user account", "Reactivar el compte de l’usuari"],
+  "Motivo de la acción (obligatorio)": ["Reason for action (required)", "Motiu de l’acció (obligatori)"],
+  "Escribe el motivo de la acción.": ["Enter the reason for this action.", "Escriu el motiu de l’acció."],
+  "La cuenta perderá el acceso a los datos protegidos y al chat; sus anuncios, perfil público y reseñas se ocultarán. La suspensión es reversible y no elimina datos.": ["The account will lose access to protected data and chat; its listings, public profile and reviews will be hidden. Suspension is reversible and does not delete data.", "El compte perdrà l’accés a les dades protegides i al xat; els anuncis, el perfil públic i les ressenyes s’ocultaran. La suspensió és reversible i no elimina dades."],
+  "Se reactivará la cuenta. Los anuncios volverán a mostrarse según su estado y moderación. Los bloqueos personales y las restricciones del chat se mantienen.": ["The account will be reactivated. Listings will become visible according to their status and moderation. Personal blocks and chat restrictions remain in place.", "Es reactivarà el compte. Els anuncis tornaran a mostrar-se segons l’estat i la moderació. Els bloquejos personals i les restriccions del xat es mantenen."],
+  "Revisa y atiende las denuncias en un máximo de 24 horas. Retira el contenido inapropiado y suspende a los responsables cuando corresponda. Las acciones quedan registradas.": ["Review and act on reports within 24 hours. Remove objectionable content and suspend responsible users as appropriate. Actions are recorded.", "Revisa i atén les denúncies en un màxim de 24 hores. Retira el contingut inapropiat i suspèn els responsables quan correspongui. Les accions queden registrades."],
+
   "No podréis enviaros mensajes. Sus anuncios se ocultarán de tu catálogo y se registrará un aviso para moderación. Conservarás el historial y podrás desbloquearlo después.": ["You will not be able to message each other. Their listings will be hidden from your catalogue and a notice will be registered for moderation. You will keep the history and can unblock them later.", "No podreu enviar-vos missatges. Els seus anuncis s’ocultaran del teu catàleg i es registrarà un avís per a moderació. Conservaràs l’historial i el podràs desbloquejar després."],
 
   "Debes aceptar las condiciones de uso para continuar.": ["You must accept the terms of use to continue.", "Has d’acceptar les condicions d’ús per continuar."],

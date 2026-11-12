@@ -1,3 +1,4 @@
+import 'services/account_session_guard.dart';
 import 'services/community_visibility.dart';
 import 'terms_acceptance_field.dart';
 import 'password_recovery_page.dart';
@@ -1191,7 +1192,9 @@ class AutomotorsApp extends StatefulWidget {
   State<AutomotorsApp> createState() => _AutomotorsAppState();
 }
 
-class _AutomotorsAppState extends State<AutomotorsApp> {
+class _AutomotorsAppState extends State<AutomotorsApp> with WidgetsBindingObserver {
+  StreamSubscription<AuthState>? accountSubscription;
+  late final AccountSessionGuard accountGuard;
   StreamSubscription<Uri>? confirmationSubscription;
   final confirmationLinks = AppLinks();
   late final EmailConfirmationHandler confirmationHandler =
@@ -1244,16 +1247,48 @@ class _AutomotorsAppState extends State<AutomotorsApp> {
   @override
   void initState() {
     super.initState();
+    final db = Supabase.instance.client;
+    accountGuard = AccountSessionGuard(
+      sessionKey: () => db.auth.currentSession?.accessToken,
+      isSuspended: () async {
+        final status = await db.rpc('community_account_status');
+        return status is Map && status['suspended'] == true;
+      },
+      signOut: () => db.auth.signOut(scope: SignOutScope.local),
+      onSuspended: () {
+        final navigator = automotorsNavigatorKey.currentState;
+        if (!mounted || navigator == null) return;
+        unawaited(navigator.pushAndRemoveUntil<void>(MaterialPageRoute(
+          builder: (_) => const HomePage(initialNotice:
+            'Tu cuenta está suspendida por moderación. Contacta con info@automotors.info.'),
+        ), (_) => false));
+      },
+    );
+    WidgetsBinding.instance.addObserver(this);
+    accountSubscription = db.auth.onAuthStateChange.listen((state) {
+      if (state.event == AuthChangeEvent.signedIn || state.event == AuthChangeEvent.tokenRefreshed) {
+        unawaited(accountGuard.check());
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(accountGuard.check()));
     AutomotorsLocaleController.instance.addListener(_refreshLocale);
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => unawaited(startConfirmationLinks()),
     );
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(accountGuard.check());
+  }
+
   void _refreshLocale() => setState(() {});
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    accountGuard.dispose();
+    unawaited(accountSubscription?.cancel());
     unawaited(confirmationSubscription?.cancel());
     AutomotorsLocaleController.instance.removeListener(_refreshLocale);
     super.dispose();
@@ -1275,7 +1310,8 @@ class _AutomotorsAppState extends State<AutomotorsApp> {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.initialNotice});
+  final String? initialNotice;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -1311,6 +1347,11 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   @override
   void initState() {
     super.initState();
+    if (widget.initialNotice != null) WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(uiText(context, widget.initialNotice!)), duration: const Duration(seconds: 8)));
+    });
+
     CommunityVisibility.instance.addListener(_communityVisibilityChanged);
     loadCars();
     loadUnreadChatsCount();

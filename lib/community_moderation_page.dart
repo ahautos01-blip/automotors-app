@@ -14,6 +14,8 @@ const moderationActionLabels = <String, String>{
   'dismiss': 'Descartar denuncia',
   'hide_listing': 'Ocultar anuncio',
   'restore_listing': 'Restaurar anuncio',
+  'suspend_account': 'Suspender cuenta del usuario',
+  'restore_account': 'Reactivar cuenta del usuario',
   'restrict_chat': 'Restringir chat del usuario',
   'restore_chat': 'Retirar restricción del chat',
 };
@@ -147,7 +149,7 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
         Text(
           uiText(
             context,
-            'Revisa las denuncias con frecuencia y atiende los casos de abuso con rapidez. Las acciones quedan registradas.',
+            'Revisa y atiende las denuncias en un máximo de 24 horas. Retira el contenido inapropiado y suspende a los responsables cuando corresponda. Las acciones quedan registradas.',
           ),
         ),
         SwitchListTile(
@@ -477,6 +479,25 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
                         ),
                       ),
                     OutlinedButton(
+                      key: const Key('moderate-account-suspension'),
+                      onPressed: busy
+                          ? null
+                          : () => review(
+                              data['account_suspended'] == true
+                                  ? 'restore_account'
+                                  : 'suspend_account',
+                            ),
+                      child: Text(
+                        uiText(
+                          context,
+                          moderationActionLabels[data['account_suspended'] ==
+                                  true
+                              ? 'restore_account'
+                              : 'suspend_account']!,
+                        ),
+                      ),
+                    ),
+                    OutlinedButton(
                       onPressed: busy
                           ? null
                           : () => review(
@@ -560,6 +581,9 @@ class ModerationActionDialog extends StatefulWidget {
 
 class _ModerationActionDialogState extends State<ModerationActionDialog> {
   final note = TextEditingController();
+  bool missingReason = false;
+  bool get accountAction =>
+      widget.action == 'suspend_account' || widget.action == 'restore_account';
   @override
   void dispose() {
     note.dispose();
@@ -578,6 +602,8 @@ class _ModerationActionDialogState extends State<ModerationActionDialog> {
               'approve_publication' => 'Confirma que has revisado el texto y todas las fotografías. La publicación conservará los límites del plan del vendedor.',
               'hide_listing' => 'El anuncio quedará oculto a otros usuarios. El vendedor podrá verlo, pero no editarlo mientras esté restringido.',
               'restore_listing' => 'El anuncio volverá a mostrarse según su estado de publicación.',
+              'suspend_account' => 'La cuenta perderá el acceso a los datos protegidos y al chat; sus anuncios, perfil público y reseñas se ocultarán. La suspensión es reversible y no elimina datos.',
+              'restore_account' => 'Se reactivará la cuenta. Los anuncios volverán a mostrarse según su estado y moderación. Los bloqueos personales y las restricciones del chat se mantienen.',
               'restrict_chat' => 'El usuario denunciado no podrá enviar ni recibir nuevos mensajes. Podrás retirar esta restricción después.',
               'restore_chat' => 'Se retirará la restricción de moderación. Los bloqueos personales seguirán aplicándose.',
               'reviewing' => 'La denuncia seguirá abierta para revisión.',
@@ -592,7 +618,15 @@ class _ModerationActionDialogState extends State<ModerationActionDialog> {
             minLines: 2,
             maxLines: 5,
             decoration: InputDecoration(
-              labelText: uiText(context, 'Nota de moderación (opcional)'),
+              labelText: uiText(
+                context,
+                accountAction
+                    ? 'Motivo de la acción (obligatorio)'
+                    : 'Nota de moderación (opcional)',
+              ),
+              errorText: missingReason
+                  ? uiText(context, 'Escribe el motivo de la acción.')
+                  : null,
             ),
           ),
         ],
@@ -605,7 +639,13 @@ class _ModerationActionDialogState extends State<ModerationActionDialog> {
       ),
       FilledButton(
         key: const Key('confirm-moderation-action'),
-        onPressed: () => Navigator.pop(context, note.text.trim()),
+        onPressed: () {
+          if (accountAction && note.text.trim().isEmpty) {
+            setState(() => missingReason = true);
+            return;
+          }
+          Navigator.pop(context, note.text.trim());
+        },
         child: Text(uiText(context, 'Confirmar')),
       ),
     ],
