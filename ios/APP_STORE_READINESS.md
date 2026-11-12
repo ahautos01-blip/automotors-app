@@ -404,3 +404,12 @@ Codemagic compiló, firmó y subió 1.0.1 (22) desde 73bccf1d8fa866efc8299aaa7bc
 
 ## Build 31 solo iPhone
 Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8-8b98-caf11fc7b5d0; Codemagic 6aeb02c1d6634fc362f17854; binario d9289ff. Cifrado autorizado guardado. Preparación pública detallada en APP_STORE_SUBMISSION.md, todavía sin envío a revisión. Diez pruebas de ayuda y eliminación aprobadas; textos públicos UTF-8 y enlace de eliminación actualizados.
+
+## Build 32 disponible en TestFlight, 12 de noviembre de 2026
+
+- Version 1.0.2 (32) confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers y caducidad de 90 dias. Apple 096ff0df-3323-4d65-b4ab-d5899fef355d; Codemagic 6af4af979679c85ac0aebf48; binario 45956c860c209fac50c41f87fdae6c9642cea413.
+- Declaracion de cifrado guardada tras autorizacion especifica del titular para 32. Instrucciones de prueba guardadas y grupo interno asignado. No se realizo un envio publico de esta build.
+- Reutilizacion de descargas de fotos en la sesion mediante cache de 24 MiB, 128 entradas y 5 minutos, con aislamiento de sesion, deduplicacion de solicitudes simultaneas y reintento tras error.
+- Perfil publico, garaje y chat abren fichas con portada primero y completan la galeria despues. Tarjetas y miniaturas limitan su resolucion de decodificacion. Nuevas fotos de avatar y portada se seleccionan a tamanos adecuados.
+- Validacion local final de 35 pruebas y analisis estatico de los componentes modificados sin incidencias. Compilacion nativa y procesamiento de Apple completados. La comprobacion fisica en el iPhone queda para los testers.
+- Prueba local de distribucion: testflight-build32-en-pruebas.png.
