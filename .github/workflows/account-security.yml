@@ -31,3 +31,4 @@ jobs:
           node test/private_photo_reads.integration.mjs
           node test/buyer_watchlists.integration.mjs
           node test/listing_favorite_count.integration.mjs
+          node test/seller_listing_metrics.integration.mjs

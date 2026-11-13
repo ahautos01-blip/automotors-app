@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE_PATH).href);const db=new PGlite();
+await db.exec(await readFile(new URL('./fixtures/community_schema.sql',import.meta.url),'utf8'));
+await db.exec(`create table saved_vehicles(listing_id uuid references vehicle_listings on delete cascade,user_id uuid references auth.users on delete cascade);create table private.account_suspensions(user_id uuid);create or replace function private.current_account_active() returns boolean language sql stable security definer set search_path='' as $$select auth.uid() is not null and exists(select 1 from auth.users where id=auth.uid()) and not exists(select 1 from private.account_suspensions where user_id=auth.uid())$$;`);
+await db.exec(await readFile(new URL('../supabase/migrations/20261113104810_seller_listing_metrics.sql',import.meta.url),'utf8'));
+const seller=randomUUID(),buyer=randomUUID(),other=randomUUID(),listing=randomUUID(),draft=randomUUID();
+for(const id of[seller,buyer,other]){await db.query('insert into auth.users values($1)',[id]);await db.query('insert into auth.sessions values($1,$1,null)',[id]);}
+await db.query("insert into vehicle_listings(id,owner_id,status) values($1,$3,'published'),($2,$3,'draft')",[listing,draft,seller]);
+const login=async(id)=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id??'']);await db.query("select set_config('test.session_id',$1,false)",[id??'']);await db.exec(id?'set role authenticated':'set role anon');};
+const insert=()=>db.query('insert into listing_view_days(listing_id,viewer_id) values($1,$2) on conflict do nothing',[listing,buyer]);
+await login(buyer);await insert();await insert();assert.equal((await db.query('select count(*)::int n from listing_view_days')).rows[0].n,1);
+await assert.rejects(()=>db.query('insert into listing_view_days(listing_id,viewer_id) values($1,$2)',[draft,buyer]),e=>e.code==='42501');
+await assert.rejects(()=>db.query('insert into listing_view_days values($1,$2,current_date-1)',[listing,buyer]),e=>e.code==='42501');
+await assert.rejects(()=>db.query('insert into listing_view_days(listing_id,viewer_id) values($1,$2)',[listing,other]),e=>e.code==='42501');
+assert.equal((await db.query('select * from my_listing_metrics()')).rows.length,0);
+await login(other);assert.equal((await db.query('select count(*)::int n from listing_view_days')).rows[0].n,0);
+await login(seller);assert.equal((await db.query('select count(*)::int n from listing_view_days')).rows[0].n,0);
+await assert.rejects(()=>db.query('insert into listing_view_days(listing_id,viewer_id) values($1,$2)',[listing,seller]),e=>e.code==='42501');
+let metrics=(await db.query('select * from my_listing_metrics() where listing_id=$1',[listing])).rows[0];assert.equal(Number(metrics.views),1);assert.equal(Number(metrics.favorites),0);
+await db.exec('reset role');await db.query('insert into saved_vehicles values($1,$2)',[listing,buyer]);await db.query('insert into chat_conversations(listing_id,buyer_id,seller_id) values($1,$2,$3)',[listing,buyer,seller]);
+await login(seller);metrics=(await db.query('select * from my_listing_metrics() where listing_id=$1',[listing])).rows[0];assert.equal(Number(metrics.favorites),1);assert.equal(Number(metrics.conversations),1);
+await db.exec('reset role');await db.query('insert into private.account_suspensions values($1)',[seller]);await login(seller);await assert.rejects(()=>db.query('select * from my_listing_metrics()'),e=>e.code==='42501');
+await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(insert,e=>e.code==='42501');
+await login(null);await assert.rejects(()=>db.query('select * from my_listing_metrics()'),e=>e.code==='42501');await assert.rejects(()=>db.query('select * from listing_view_days'),e=>e.code==='42501');
+await db.close();console.log('PASS owner-only aggregates, daily deduplication, hidden visitor identities, ownership/date forgery denied, drafts denied, suspended/revoked/anonymous denied.');

@@ -147,6 +147,11 @@ class AutomotorsSupportPage extends StatelessWidget {
             ),
             _section(
               context,
+              'Estadísticas de anuncios',
+              'Si visitas un anuncio con sesión iniciada, registramos una visita por cuenta y día. El vendedor solo recibe totales de visitas, favoritos y conversaciones, sin la identidad de quienes guardan o visitan el anuncio. No contamos las visitas del propio vendedor ni rastreamos visitantes sin sesión.',
+            ),
+            _section(
+              context,
               'Seguridad y moderación',
               "Los bloqueos impiden nuevos mensajes entre las cuentas afectadas. Si denuncias una conversación, el equipo autorizado podrá revisar sus mensajes y el contenido denunciado. Las medidas de moderación quedan registradas. Puedes solicitar una revisión escribiendo a soporte.",
             ),

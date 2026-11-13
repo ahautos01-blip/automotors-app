@@ -527,3 +527,14 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Apple bloqueó inicialmente Actualizar revisión por contrato Developer Program actualizado. El titular completó su aceptación; no se aceptó el contrato en su nombre.
 - Respuesta al equipo de revisión enviada el 13/11/2026 a las 10:57. Reenvío confirmado el 13/11/2026 a las 10:58: Pendiente de revisión para la app 1.0.2 (36), grupo de suscripción y cuatro suscripciones. Identificador de envío conservado: 8e3bf9cf-9f53-4268-b188-3ba8637d5dcb.
 - Comprobante local apple-build36-reenviada.jpg. Aún no aprobada ni publicada. Conservada publicación automática tras aprobación.
+
+
+## Actualización 1.0.3 (37) preparada sin modificar el envío 36
+
+- Guía fotográfica y recomendaciones orientativas de ITV, mantenimiento, equipamiento y descripción en alta y edición; sin certificar el coche ni bloquear datos desconocidos. Traducciones ES/EN/CA.
+- Enlaces oficiales /anuncio/?listing=UUID con validación de origen, ruta y UUID. Consulta de ficha bajo RLS y conservación de verificación/recuperación. Fallback web y AASA en el Site oficial; parche de botón oculto pendiente de publicar.
+- Estadísticas privadas del propietario: visitas de usuarios registrados (una por día UTC, excluyendo dueño), favoritos actuales y conversaciones creadas. Nunca identidades de visitantes ni favoritos; errores se muestran como no disponible.
+- Migración seller_listing_metrics desplegada y verificada, versión 20261113104810. RLS activo, sin acceso anónimo ni edición de contadores. Pruebas PostgreSQL locales de deduplicación, falsificación, borrador, suspensión, revocación y acceso ajeno aprobadas. Sin cuentas/anuncios ficticios en producción. Avisos del asesor anteriores conservados.
+- 219 pruebas Flutter aprobadas; componentes nuevos sin incidencias de análisis. Validación de ancho 320, texto al 200 %, contraste de acento y tamaños táctiles mínimos 48.
+- Titular autoriza activar Associated Domains y regenerar perfiles tras bloqueo de revisión automática; capacidad confirmada en Apple. La siguiente compilación debe regenerar perfiles con esa capacidad. Autoriza expresamente subir código y pruebas a ahautos01-blip/automotors-app, rama restore/ios-1.0.1-build10, y compilar 37. Archivos privados marketing excluidos.
+- El envío público 1.0.2 (36) no se retira ni sustituye. Pendiente acceso GitHub/Codemagic y compilación de 37; todavía no disponible en TestFlight.

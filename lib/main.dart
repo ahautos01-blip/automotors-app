@@ -1,3 +1,6 @@
+import 'design/listing_preparation.dart';
+import 'design/seller_listing_metrics.dart';
+import 'services/listing_links.dart';
 import 'services/account_session_guard.dart';
 import 'services/community_visibility.dart';
 import 'terms_acceptance_field.dart';
@@ -44,6 +47,17 @@ import 'package:automotors_base/services/verified_store_plans.dart';
 import 'package:automotors_base/sold_reviews_features.dart';
 import 'package:automotors_base/vehicle_feature_control.dart';
 import 'package:automotors_base/services/ios_push_service.dart';
+
+Future<void> contactSharedListing(BuildContext context,Car car) async {
+  if(!await requireAutomotorsLogin(context)||!context.mounted)return;
+  final db=Supabase.instance.client; final user=db.auth.currentUser;
+  if(user==null||car.ownerId==null||car.listingId==null)return;
+  if(user.id==car.ownerId){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No puedes iniciar un chat contigo mismo.'))));return;}
+  try {
+    final conversation=await getOrCreateConversation(supabase:db,listingId:car.listingId!,buyerId:user.id,sellerId:car.ownerId!);
+    if(context.mounted)await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ChatPage(conversationId:conversation['id'].toString(),listingId:car.listingId,title:'${car.brand} ${car.model}')));
+  }catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo abrir el anuncio. Comprueba la conexión e inténtalo de nuevo.'))));}
+}
 
 const automotorsSupabaseUrl=String.fromEnvironment('SUPABASE_URL',defaultValue:'https://ndicdhlpbyywqyjgxpnx.supabase.co');
 const automotorsSupabaseKey=String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY',defaultValue:'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu');
@@ -1212,7 +1226,30 @@ class _AutomotorsAppState extends State<AutomotorsApp> with WidgetsBindingObserv
         ),
       );
 
+  String? _openingListing;
+  Future<void> openListingLink(String id) async {
+    if(_openingListing==id)return;
+    _openingListing=id;
+    try {
+      final row=await Supabase.instance.client.from('vehicle_listings').select(buyerListingProjection).eq('id',id).inFilter('status',['published','reserved','sold']).maybeSingle();
+      if(!mounted)return;
+      final navigator=automotorsNavigatorKey.currentState;
+      if(row==null) {
+        final context=automotorsNavigatorKey.currentContext;
+        if(context!=null&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Este anuncio ya no está disponible.'))));
+        return;
+      }
+      final car=await buyerCarFromListing(row);
+      if(mounted&&navigator!=null)await navigator.push<void>(MaterialPageRoute(builder:(pageContext)=>CarDetailsPage(car:car,priceText:'${car.price.toStringAsFixed(0)} €',onContact:()=>contactSharedListing(pageContext,car))));
+    } catch(_) {
+      final context=automotorsNavigatorKey.currentContext;
+      if(context!=null&&context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo abrir el anuncio. Comprueba la conexión e inténtalo de nuevo.'))));
+    } finally {_openingListing=null;}
+  }
+
   Future<void> openConfirmation(Uri uri) async {
+    final listingId=listingIdFromUri(uri);
+    if(listingId!=null){await openListingLink(listingId);return;}
     final result = await confirmationHandler.handle(uri);
     if (result == null || !mounted) return;
     final navigator = automotorsNavigatorKey.currentState;
@@ -3597,11 +3634,20 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_recordListingView());
     detailPhotos = List.of(car.photos);
     galleryReady = _loadGallery();
     sellerProfile = _loadPublicSeller();
     listingFavoriteCount = _loadListingFavoriteCount();
     _loadFavorite();
+  }
+
+  Future<void> _recordListingView() async {
+    final db=Supabase.instance.client;
+    final user=db.auth.currentUser;
+    final id=car.listingId;
+    if(user==null||id==null||car.ownerId==user.id)return;
+    try {await db.from('listing_view_days').upsert({'listing_id':id,'viewer_id':user.id},onConflict:'listing_id,viewer_id,viewed_on',ignoreDuplicates:true);}catch(_){}
   }
 
   Future<int?> _loadListingFavoriteCount() async {
@@ -3809,9 +3855,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   Future<void> _shareListing(BuildContext context) async {
     final listingId = car.listingId;
     final hasListingId = listingId != null && listingId.isNotEmpty;
-    final shareUri = hasListingId
-        ? Uri.base.replace(queryParameters: <String, String>{'listing': listingId})
-        : Uri.parse('https://ahautos01-blip.github.io/automotors-app/');
+    final shareUri = listingShareUri(listingId);
     final title = '${car.brand} ${car.model}';
     final summary = <String>[
       title,
@@ -5457,6 +5501,11 @@ class _GaragePageState extends State<GaragePage> {
       final byId={for(final state in states) state['listing_id']:state};
       for(final listing in listings) {listing['content_check_state']=byId[listing['id']]?['state'];}
     } catch(_) {/* Listing management remains available if the status lookup fails. */}
+    try {
+      final result=await supabase.rpc('my_listing_metrics');
+      final metrics={for(final item in List<Map<String,dynamic>>.from(result as List)) item['listing_id'].toString():item};
+      for(final listing in listings){listing['metrics']=metrics[listing['id'].toString()];}
+    } catch(_) {/* Unavailable is not zero activity. */}
     return listings;
   }
 
@@ -5733,6 +5782,7 @@ class _GaragePageState extends State<GaragePage> {
                      PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text(uiText(context, "Eliminar")))),
                   ], icon: const Icon(Icons.more_vert, color: marketAccent)),
                 ])),
+                SellerListingMetrics(metrics:listing['metrics'] as Map<String,dynamic>?),
                 Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 14), child: Row(children: [
                   Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline), label:  Text(uiText(context, "Vendido")))),
                   const SizedBox(width: 8),
@@ -6181,6 +6231,7 @@ class _EditListingPageState extends State<EditListingPage> {
   bool showVinPublicly = false;
   String fuel = 'Diésel';
   String? label;
+  int existingPhotoCount=0;
   bool loading = true;
   bool saving = false;
 
@@ -6191,12 +6242,13 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment,vehicle_photos(id)').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))));
         if (mounted) Navigator.pop(context, false);
         return;
       }
+      existingPhotoCount=(row['vehicle_photos'] as List?)?.length??0;
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
       version.text = '${row['version'] ?? ''}'; transmission.text = '${row['transmission'] ?? ''}'; bodyType.text = '${row['body_type'] ?? ''}'; color.text = '${row['color'] ?? ''}'; doors.text = '${row['doors'] ?? ''}'; seats.text = '${row['seats'] ?? ''}';
       emissionsStandard.text = '${row['emissions_standard'] ?? ''}';
@@ -6268,6 +6320,7 @@ class _EditListingPageState extends State<EditListingPage> {
     DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
     Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
     const SupportLinks(),
+    ListingPreparation(photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
@@ -8336,6 +8389,7 @@ class _AddCarPageState extends State<AddCarPage> {
             ),
             const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
+            ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(
               uiText(context, "Fotografías del vehículo ({0}/15)", [photos.length]),
