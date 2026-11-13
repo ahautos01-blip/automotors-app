@@ -24,6 +24,7 @@ class MarketAlertPreferences extends StatelessWidget {
     color: Colors.transparent,
     child: Column(
       children: [
+        Text(uiText(context,'También recibirás estos avisos en el iPhone si permites las notificaciones de AUTOMOTORS.')),
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
           title: Text(uiText(context, 'Anuncios nuevos')),

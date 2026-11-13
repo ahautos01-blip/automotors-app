@@ -2,7 +2,7 @@ export interface Delivery {
   id: string;
   lease_token: string;
   attempts: number;
-  kind: 'chat_message' | 'review_requested';
+  kind: 'chat_message' | 'review_requested' | 'new_listing' | 'price_drop';
   user_id: string;
   listing_id: string;
   conversation_id: string | null;
@@ -17,9 +17,13 @@ export function payload(job: Delivery) {
     aps: {
       alert: job.kind === 'chat_message'
         ? { title: 'Nuevo mensaje en AUTOMOTORS', body: 'Tienes un mensaje nuevo. Pulsa para abrir la conversación.' }
-        : { title: 'Valora tu compra', body: 'El vendedor ha confirmado tu compra. Cuéntanos tu experiencia.' },
+        : job.kind === 'review_requested'
+        ? { title: 'Valora tu compra', body: 'El vendedor ha confirmado tu compra. Cuéntanos tu experiencia.' }
+        : job.kind === 'price_drop'
+        ? { title: 'Bajada de precio', body: 'Un vehículo que sigues ha bajado de precio. Abre la app para verlo.' }
+        : { title: 'Nuevo vehículo para ti', body: 'Hay un anuncio que coincide con una búsqueda guardada.' },
       sound: 'default',
-      'thread-id': job.kind === 'chat_message' ? `chat-${job.conversation_id}` : 'purchase-reviews',
+      'thread-id': job.kind === 'chat_message' ? `chat-${job.conversation_id}` : job.kind === 'review_requested' ? 'purchase-reviews' : 'vehicle-alerts',
     },
     notification_id: job.id,
     kind: job.kind,

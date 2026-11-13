@@ -17,19 +17,29 @@ Future<List<Uint8List>> loadListingCover(
 Future<List<Uint8List>> loadListingGallery(
   List<String> paths,
   List<Uint8List> cover,
-  ListingPhotoDownload download,
-) async {
-  // A successful cover is always the first ordered path. Do not fetch it twice.
-  final rest = await Future.wait(
-    paths.skip(cover.isEmpty ? 0 : 1).map((path) async {
+  ListingPhotoDownload download, {
+  void Function(List<Uint8List>)? onProgress,
+}) async {
+  // Publish partial results in order, with at most three downloads at once.
+  final loaded = <int, Uint8List>{};
+  if (cover.isNotEmpty) loaded[0] = cover.first;
+  var next = cover.isEmpty ? 0 : 1;
+  Future<void> worker() async {
+    while (next < paths.length) {
+      final index = next++;
       try {
-        return await download(path);
+        loaded[index] = await download(paths[index]);
       } catch (_) {
-        return null;
+        continue;
       }
-    }),
-  );
-  return [...cover, ...rest.whereType<Uint8List>()];
+      final indexes = loaded.keys.toList()..sort();
+      onProgress?.call([for (final i in indexes) loaded[i]!]);
+    }
+  }
+
+  await Future.wait(List.generate(3, (_) => worker()));
+  final indexes = loaded.keys.toList()..sort();
+  return [for (final i in indexes) loaded[i]!];
 }
 
 /// Bounded session cache for private vehicle photos. Failed downloads are retried.

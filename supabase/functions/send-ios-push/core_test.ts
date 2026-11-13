@@ -39,3 +39,12 @@ test('APNs JWT is signed with ES256 and the Apple team and key identifiers',asyn
   assert.deepEqual(JSON.parse(new TextDecoder().decode(decode(claims))),{iss:'TEAM456',iat:123456});
   assert.ok(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},keys.publicKey,decode(signature),new TextEncoder().encode(`${header}.${claims}`)));
 });
+
+test('buyer watch alerts open the listing without chat, price or private search details',()=>{
+ for(const kind of ['new_listing','price_drop'] as const){
+  const value=payload({...job,kind});
+  assert.equal(value.kind,kind);assert.equal(value.listing_id,'listing');
+  assert.equal(value.aps['thread-id'],'vehicle-alerts');assert.ok(!('conversation_id' in value));
+  assert.ok(!JSON.stringify(value).includes(job.token));
+ }
+});

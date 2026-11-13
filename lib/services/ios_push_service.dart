@@ -67,6 +67,7 @@ class IosPushService with WidgetsBindingObserver {
     try {
       await db.rpc('register_push_device', params: {
         'p_token': _device!['token'], 'p_environment': _device!['environment'],
+        'p_buyer_alerts': true,
       });
     } catch (_) { /* Keep the token in memory and retry after resume. */ }
   }
@@ -88,7 +89,7 @@ class IosPushService with WidgetsBindingObserver {
   }
 
   Future<void> _openPending() async {
-    if (_opening || _pending == null) return;
+    if (_opening || _pending == null || db.auth.currentSession == null) return;
     final route = _pending!;
     final id = route['notification_id']?.toString();
     if (id == null || _opened.contains(id)) { _pending = null; return; }
@@ -97,6 +98,7 @@ class IosPushService with WidgetsBindingObserver {
     try {
       await onOpen(route);
       _opened.add(id);
+      if(_opened.length>100)_opened.remove(_opened.first);
     } catch (_) { /* Do not crash when an old notification points to deleted data. */ }
     finally {
       _opening = false;

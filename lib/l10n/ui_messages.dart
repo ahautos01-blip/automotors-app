@@ -1,5 +1,16 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+"Alguna foto supera 6 MB. Elige una versión más pequeña.":["A photo exceeds 6 MB. Choose a smaller version.", "Alguna foto supera 6 MB. Tria una versió més petita."],
+"Ampliar rango de precio":["Widen price range", "Amplia el rang de preu"],
+"Buscar sin estas palabras":["Search without these words", "Cerca sense aquestes paraules"],
+"Quitar todos los filtros":["Clear all filters", "Treu tots els filtres"],
+"Avisarme cuando haya resultados":["Notify me when there are results", "Avisa’m quan hi hagi resultats"],
+"Mejorar este anuncio":["Improve this listing", "Millora aquest anunci"],
+"También recibirás estos avisos en el iPhone si permites las notificaciones de AUTOMOTORS.":["You will also receive these alerts on your iPhone if you allow AUTOMOTORS notifications.", "També rebràs aquests avisos a l’iPhone si permets les notificacions d’AUTOMOTORS."],
+"Recibes visitas pero aún no hay conversaciones. Revisa las fotos, la descripción y el precio frente a coches similares.":["You have views but no conversations yet. Review photos, description and the price compared with similar cars.", "Reps visites però encara no hi ha converses. Revisa les fotos, la descripció i el preu respecte de cotxes similars."],
+"Ya hay personas interesadas. Responde a sus dudas y mantén actualizado el estado del anuncio.":["People are interested. Answer their questions and keep the listing status up to date.", "Ja hi ha persones interessades. Respon els seus dubtes i mantén actualitzat l’estat de l’anunci."],
+"Todavía hay poca actividad registrada. Completa el anuncio y comparte su enlace para darle a conocer.":["There is little recorded activity yet. Complete the listing and share its link.", "Encara hi ha poca activitat registrada. Completa l’anunci i comparteix-ne l’enllaç."],
+
 "Estadísticas de anuncios":["Listing statistics", "Estadístiques d’anuncis"],
 "Si visitas un anuncio con sesión iniciada, registramos una visita por cuenta y día. El vendedor solo recibe totales de visitas, favoritos y conversaciones, sin la identidad de quienes guardan o visitan el anuncio. No contamos las visitas del propio vendedor ni rastreamos visitantes sin sesión.":["If you view a listing while signed in, we record one visit per account per day. The seller only receives totals for visits, favourites and conversations, without the identity of visitors or savers. We exclude the seller’s own visits and do not track signed-out visitors.", "Si visites un anunci amb la sessió iniciada, registrem una visita per compte i dia. El venedor només rep totals de visites, favorits i converses, sense la identitat de qui desa o visita l’anunci. No comptem les visites del venedor ni rastregem visitants sense sessió."],
 

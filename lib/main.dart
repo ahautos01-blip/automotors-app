@@ -1,3 +1,4 @@
+import 'services/draft_photo_files.dart';
 import 'design/listing_preparation.dart';
 import 'design/seller_listing_metrics.dart';
 import 'services/listing_links.dart';
@@ -115,6 +116,12 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
         listingId: conversation['listing_id']?.toString(),
         title: uiText(context, "Mensajes"),
       )));
+    } else if(['new_listing','price_drop'].contains(notification['kind'])) {
+      final id=notification['listing_id']?.toString();if(id==null)return;
+      final row=await db.from('vehicle_listings').select(buyerListingProjection).eq('id',id).inFilter('status',['published','reserved','sold']).maybeSingle();
+      if(row==null)throw StateError('Listing unavailable');
+      final car=await buyerCarFromListing(row);
+      if(navigator.mounted)await navigator.push<void>(MaterialPageRoute(builder:(pageContext)=>CarDetailsPage(car:car,priceText:'${car.price.toStringAsFixed(0)} €',onContact:()=>contactSharedListing(pageContext,car))));
     }
   } catch (_) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -2177,6 +2184,12 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             ],
             if (!loadingCars && filtered.isEmpty)
               MarketEmptyState(icon:Icons.search_off_rounded,title:AppLocalizations.of(context).noVehiclesFound,message:'Prueba otra marca o ajusta los filtros para ampliar tu búsqueda.',actionLabel:AppLocalizations.of(context).filters,onAction:openFilters),
+            if(!loadingCars && filtered.isEmpty) Wrap(spacing:8,runSpacing:8,children:[
+              if(minPrice!=null || maxPrice!=null) OutlinedButton.icon(onPressed:()=>setState((){minPrice=null;maxPrice=null;}),icon:const Icon(Icons.euro),label:Text(uiText(context,'Ampliar rango de precio'))),
+              if(searchController.text.trim().isNotEmpty) OutlinedButton.icon(onPressed:()=>setState(()=>searchController.clear()),icon:const Icon(Icons.search),label:Text(uiText(context,'Buscar sin estas palabras'))),
+              OutlinedButton.icon(onPressed:()=>setState((){searchController.clear();selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();}),icon:const Icon(Icons.filter_alt_off_outlined),label:Text(uiText(context,'Quitar todos los filtros'))),
+              TextButton.icon(onPressed:saveCurrentSearch,icon:const Icon(Icons.notifications_none),label:Text(uiText(context,'Avisarme cuando haya resultados'))),
+            ]),
             const SizedBox(height: 24),
             Text(uiText(context, 'Tu próxima búsqueda'), style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -.5)),
             const SizedBox(height: 12),
@@ -3679,7 +3692,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   Future<void> _loadGallery() async {
     if (car.photoPaths.isEmpty) return;
     final loaded = await loadListingGallery(car.photoPaths, car.photos,
-      widget.downloadPhoto ?? downloadVehiclePhoto);
+      widget.downloadPhoto ?? downloadVehiclePhoto, onProgress:(loaded){if(mounted)setState(()=>detailPhotos=loaded);});
     if (mounted) setState(() => detailPhotos = loaded);
   }
 
@@ -5493,7 +5506,7 @@ class _GaragePageState extends State<GaragePage> {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
     final rows = await supabase.from('vehicle_listings').select(
-      'id,status,year,km,price,fuel,phone,description,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
+      'id,status,year,km,price,fuel,phone,description,equipment,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
     ).eq('owner_id', user.id).order('created_at', ascending: false);
     final listings=List<Map<String,dynamic>>.from(rows);
     try {
@@ -5782,7 +5795,7 @@ class _GaragePageState extends State<GaragePage> {
                      PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text(uiText(context, "Eliminar")))),
                   ], icon: const Icon(Icons.more_vert, color: marketAccent)),
                 ])),
-                SellerListingMetrics(metrics:listing['metrics'] as Map<String,dynamic>?),
+                SellerListingMetrics(metrics:listing['metrics'] as Map<String,dynamic>?, listing:listing, onEdit:()=>editListing(listing)),
                 Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 14), child: Row(children: [
                   Expanded(child: OutlinedButton.icon(onPressed: busy || isSold ? null : () => setListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline), label:  Text(uiText(context, "Vendido")))),
                   const SizedBox(width: 8),
@@ -7283,7 +7296,7 @@ class AddCarPage extends StatefulWidget {
   State<AddCarPage> createState() => _AddCarPageState();
 }
 
-class _AddCarPageState extends State<AddCarPage> {
+class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   final formKey = GlobalKey<FormState>();
   final year = TextEditingController();
   final km = TextEditingController();
@@ -7324,6 +7337,7 @@ class _AddCarPageState extends State<AddCarPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _draftOwner = Supabase.instance.client.auth.currentUser?.id;
     for (final controller in _draftFields.values) { controller.addListener(_scheduleDraft); }
     _initializeDraft();
@@ -7332,6 +7346,29 @@ class _AddCarPageState extends State<AddCarPage> {
 
   LocalMarketState get _draftStorage => widget.localState ?? _localMarketState;
   Timer? _draftTimer;
+  Future<void> _draftWrites = Future.value();
+  List<String> _persistedPhotoPaths = [];
+  List<String> _photoSources = [];
+  Future<void> _persistDraft() {
+    final owner=_draftOwner; if(owner==null || _draftCompleted)return Future.value();
+    final snapshot=_draftSnapshot(); final selected=List<XFile>.of(photos);
+    final work=_draftWrites.then((_) async {
+      final sources=selected.map((p)=>p.path).toList();
+      if(!listEquals(sources,_photoSources)) {
+        _persistedPhotoPaths=await persistDraftPhotos(owner,selected);
+        _photoSources=sources;
+      }
+      snapshot['photoPaths']=_persistedPhotoPaths;
+      await _draftStorage.write(_draftKey,snapshot);
+    });
+    _draftWrites=work.catchError((Object _){});return work;
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if(state==AppLifecycleState.inactive || state==AppLifecycleState.paused) {
+      _draftTimer?.cancel(); if(!_restoringDraft && !_draftCompleted)unawaited(_persistDraft().catchError((Object _){}));
+    }
+  }
   bool _restoringDraft = true;
   bool _draftCompleted = false;
   late final String? _draftOwner;
@@ -7359,9 +7396,8 @@ class _AddCarPageState extends State<AddCarPage> {
         Supabase.instance.client.auth.currentUser?.id != _draftOwner) return;
     _draftTimer?.cancel();
     _publicationDraftPhotos[_draftOwner] = List.of(photos);
-    final snapshot = _draftSnapshot();
     _draftTimer = Timer(const Duration(milliseconds: 500), () {
-      unawaited(_draftStorage.write(_draftKey, snapshot).catchError((Object _) {}));
+      unawaited(_persistDraft().catchError((Object _) {}));
     });
   }
   Future<void> _saveDraft() async {
@@ -7369,7 +7405,7 @@ class _AddCarPageState extends State<AddCarPage> {
         Supabase.instance.client.auth.currentUser?.id != _draftOwner) return;
     _draftTimer?.cancel();
     try {
-      await _draftStorage.write(_draftKey, _draftSnapshot());
+      await _persistDraft();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, 'Borrador guardado en este dispositivo.'))));
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, 'No se pudo guardar el borrador. Inténtalo de nuevo.'))));
@@ -7400,7 +7436,13 @@ class _AddCarPageState extends State<AddCarPage> {
       if (saved['equipment'] is List) selectedEquipment.addAll((saved['equipment'] as List).whereType<String>());
       showMatriculaPublicly = saved['showPlate'] == true;
       showVinPublicly = saved['showVin'] == true;
-      photos.addAll(_publicationDraftPhotos[_draftOwner] ?? []);
+      if(_draftOwner!=null && saved['photoPaths'] is List) {
+        List<XFile> restored=[];
+        try {restored=await restoreDraftPhotos(_draftOwner!,List<String>.from(saved['photoPaths']));}catch(_) {/* Retain text if local photos are unavailable. */}
+        if(!mounted)return;
+        photos.addAll(restored);_persistedPhotoPaths=List<String>.from(saved['photoPaths']);_photoSources=restored.map((p)=>p.path).toList();
+      }
+      if(photos.isEmpty)photos.addAll(_publicationDraftPhotos[_draftOwner] ?? []);
     }
     setState(() => _restoringDraft = false);
     if (saved.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(uiText(context, photos.isEmpty && saved['photoCount'] is num && (saved['photoCount'] as num) > 0
@@ -7410,7 +7452,7 @@ class _AddCarPageState extends State<AddCarPage> {
     _draftCompleted = true;
     _draftTimer?.cancel();
     _publicationDraftPhotos.remove(_draftOwner);
-    unawaited(_draftStorage.remove(_draftKey).catchError((Object _) {}));
+    unawaited(_draftWrites.then((_) async {await _draftStorage.remove(_draftKey);if(_draftOwner!=null)await clearDraftPhotos(_draftOwner!);}).catchError((Object _) {}));
   }
 
   Future<void> loadVehicleLookupAccess() async {
@@ -7720,12 +7762,19 @@ class _AddCarPageState extends State<AddCarPage> {
     try {
       final selected = await imagePicker.pickMultiImage(
         limit: remaining,
-        imageQuality: 75,
-        maxWidth: 1920,
-        maxHeight: 1920,
+        imageQuality: 72,
+        maxWidth: 1600,
+        maxHeight: 1600,
       );
       if (!mounted || selected.isEmpty) return;
-      _updatePublication(() => photos.addAll(selected.take(15 - photos.length)));
+      final accepted=<XFile>[];
+      for(final photo in selected.take(15-photos.length)) {
+        if(await photo.length()<=6*1024*1024)accepted.add(photo);
+      }
+      if(!mounted)return;
+      _updatePublication(() => photos.addAll(accepted));
+      await _persistDraft();
+      if(mounted && accepted.length<selected.length)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Alguna foto supera 6 MB. Elige una versión más pequeña.'))));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -8079,9 +8128,10 @@ class _AddCarPageState extends State<AddCarPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _draftTimer?.cancel();
     if (!_restoringDraft && !_draftCompleted && _draftOwner != null && Supabase.instance.client.auth.currentUser?.id == _draftOwner) {
-      unawaited(_draftStorage.write(_draftKey, _draftSnapshot()).catchError((Object _) {}));
+      unawaited(_persistDraft().catchError((Object _) {}));
     }
     for (final controller in _draftFields.values) { controller.removeListener(_scheduleDraft); }
     year.dispose();
