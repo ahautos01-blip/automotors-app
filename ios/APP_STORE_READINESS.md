@@ -519,3 +519,11 @@ Confirmada En pruebas en AUTOMOTORS Sandbox, 2 testers, Apple c1029814-102a-4ea8
 - Build 1.0.2 (36) asignada al grupo interno AUTOMOTORS Sandbox, dos testers. Verificada en la tabla del grupo como En pruebas, caduca en 90 días. Se conservan 35 y las compilaciones anteriores.
 - Comprobante local: testflight-build36-en-pruebas.jpg. El despliegue de servidor está completo; las referencias anteriores a autorización o despliegue pendiente son hitos históricos superados por este cierre.
 - Continúan pendientes la instalación y validación física en el iPhone, el vídeo requerido por Apple y el siguiente envío público. No se ha reenviado la app ni declarado realizada la prueba física.
+
+## Reenvío público 13 de noviembre de 2026
+
+- El titular aporta cuatro grabaciones físicas de iPhone: condiciones, aceptación obligatoria, mecanismos de denuncia, bloqueo confirmado con mensajes desactivados y catálogo sin el vehículo bloqueado. Se preparó Apple-Review-build36.mp4 (93,73 s, sin audio), conservando los originales fuera del repositorio.
+- Versión pública editable actualizada a 1.0.2 y asociada a build 36. Vídeo adjunto tanto a la información de revisión como al mensaje para Apple, con marcas de tiempo y explicación de las correcciones.
+- Apple bloqueó inicialmente Actualizar revisión por contrato Developer Program actualizado. El titular completó su aceptación; no se aceptó el contrato en su nombre.
+- Respuesta al equipo de revisión enviada el 13/11/2026 a las 10:57. Reenvío confirmado el 13/11/2026 a las 10:58: Pendiente de revisión para la app 1.0.2 (36), grupo de suscripción y cuatro suscripciones. Identificador de envío conservado: 8e3bf9cf-9f53-4268-b188-3ba8637d5dcb.
+- Comprobante local apple-build36-reenviada.jpg. Aún no aprobada ni publicada. Conservada publicación automática tras aprobación.
