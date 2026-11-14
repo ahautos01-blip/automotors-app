@@ -11,3 +11,9 @@ Version 1.0.3+41. Leaves the current App Store review unchanged.
 Validation: 19 targeted Flutter tests pass, including authenticated buyer direct entry, confirmation before writes, no repeat on refresh, and seller cannot open a buyer form. Isolated Postgres integration passes participant access, proposal states, reminders, diagnostics and revoked sessions. Analysis has no errors; existing style warnings remain.
 
 Physical TestFlight check still required with buyer and seller accounts.
+
+## Server follow-up: history loading
+
+Production logs showed SQLSTATE 42702: `a.*` was ambiguous between a PL/pgSQL record and the history table alias. History loading failed, so the client hid the composer. A server-only replacement uses the unique `history_item` alias and qualifies history columns. Build 41 needs no replacement.
+
+The isolated regression now first verifies that the original authorized list fails with 42702, then applies the follow-up and verifies empty history and populated buyer/seller history. Existing participant, blocked-user and revoked-session tests still pass. Production function and unchanged anonymous/authenticated grants verified. Physical client retest requested.

@@ -41,7 +41,10 @@ await db.query("insert into vehicle_listings(id,owner_id,status)values($1,$2,'pu
 const conversation=(await db.query('insert into chat_conversations(listing_id,buyer_id,seller_id)values($1,$2,$3)returning id',[listing,buyer,seller])).rows[0].id;
 const login=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id??'']);await db.query("select set_config('test.session_id',$1,false)",[id??'']);await db.exec(id?'set role authenticated':'set role anon');};
 const action=async(a,id=null,kind=null,amount=null,time=null,place=null)=>(await db.query('select chat_market_action($1,$2,$3,$4,$5,$6,$7) result',[conversation,a,id,kind,amount,time,place])).rows[0].result;
-await login(buyer);const offer=await action('create',null,'offer',12000);
+await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42702');
+await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114145340_chat_market_history_alias.sql',import.meta.url),'utf8'));
+await login(buyer);assert.deepEqual(await action('list'),[]);const offer=await action('create',null,'offer',12000);
+assert.equal((await action('list'))[0].id,offer.id);await login(seller);assert.equal((await action('list'))[0].id,offer.id);await login(buyer);
 await assert.rejects(()=>action('accept',offer.id));
 await assert.rejects(()=>action('create',null,'offer',13000));
 await assert.rejects(()=>db.query("insert into chat_market_activities(conversation_id,creator_id,kind,amount,expires_at)values($1,$2,'offer',10,now())",[conversation,buyer]),e=>e.code==='42501');
