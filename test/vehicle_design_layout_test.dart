@@ -154,6 +154,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // This test deliberately uses an unavailable catalogue. Dismiss its
+      // transient network snackbar before interacting with optional fields.
+      ScaffoldMessenger.of(tester.element(find.byType(AddCarPage))).clearSnackBars();
+      await tester.pumpAndSettle();
       final section = find.byKey(const Key('optional-vehicle-specifications'));
       await tester.scrollUntilVisible(
         section,

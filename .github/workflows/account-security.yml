@@ -33,3 +33,4 @@ jobs:
           node test/listing_favorite_count.integration.mjs
           node test/seller_listing_metrics.integration.mjs
           node test/buyer_push_alerts.integration.mjs
+          node test/moderation_overview.integration.mjs

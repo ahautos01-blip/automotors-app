@@ -11,6 +11,7 @@ class CommunityModerationService {
   CommunityModerationService({CommunityRpc? request})
     : _request = request ?? _communityRpc;
   final CommunityRpc _request;
+  Future<Map<String,dynamic>> overview() async => Map<String,dynamic>.from(await _request('community_overview',{}) as Map);
   Future<bool> hasAccess() async =>
       await _request('community_moderation_access', {}) == true;
   Future<List<Map<String, dynamic>>> reports({

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';import {randomUUID} from 'node:crypto';import {pathToFileURL} from 'node:url';
+process.on('uncaughtException',e=>{console.error(e.message);process.exit(1)});
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE_PATH).href);const db=new PGlite();
+await db.exec(await readFile(new URL('./fixtures/community_schema.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261101205245_chat_safety_and_moderation.sql',import.meta.url),'utf8'));
+await db.exec(`create table vehicle_brands(id bigint primary key,name text);create table vehicle_models(id bigint primary key,name text);
+alter table vehicle_listings add brand_id bigint,add model_id bigint;
+create table private.listing_content_checks(listing_id uuid primary key,state text,lease_until timestamptz,requested_at timestamptz,report_id uuid);
+revoke all on private.listing_content_checks from public,anon,authenticated;`);
+await db.exec(await readFile(new URL('../supabase/migrations/20261114130041_moderation_overview.sql',import.meta.url),'utf8'));
+const owner=randomUUID(),mod=randomUUID(),a=randomUUID(),b=randomUUID();
+for(const id of [owner,mod]){await db.query('insert into auth.users values($1)',[id]);await db.query('insert into auth.sessions values($1,$1,null)',[id]);}
+await db.query('insert into private.community_moderators values($1)',[mod]);
+await db.query("insert into vehicle_listings(id,owner_id,status) values($1,$3,'draft'),($2,$3,'draft')",[a,b,owner]);
+await db.query("insert into private.listing_content_checks values($1,'processing',now()-interval '1 minute',now(),null),($2,'changed',now(),now(),null)",[a,b]);
+const login=async(id)=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id??'']);await db.query("select set_config('test.session_id',$1,false)",[id??'']);await db.exec(id?'set role authenticated':'set role anon');};
+await login(owner);await assert.rejects(()=>db.query('select community_overview()'),e=>e.code==='42501');
+await login(null);await assert.rejects(()=>db.query('select community_overview()'),e=>e.code==='42501');
+await login(mod);const data=(await db.query('select community_overview() data')).rows[0].data;
+assert.equal(data.drafts,2);assert.equal(data.failed_checks,1);assert.equal(data.pending_checks,1);assert.equal(data.open_reports,0);
+assert.equal(data.checks.find(c=>c.listing_id===a).state,'error');assert.equal(data.checks.length,2);
+assert.ok(!JSON.stringify(data).includes(owner));
+await assert.rejects(()=>db.query('select * from private.listing_content_checks'),e=>e.code==='42501');
+await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[mod]);await login(mod);await assert.rejects(()=>db.query('select community_overview()'),e=>e.code==='42501');
+await db.close();console.log('PASS moderator-only overview, expired checks counted as failed, no owner identities, private tables protected, revoked session denied.');

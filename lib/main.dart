@@ -1,3 +1,4 @@
+import 'design/launch_experience.dart';
 import 'services/draft_photo_files.dart';
 import 'design/listing_preparation.dart';
 import 'design/seller_listing_metrics.dart';
@@ -650,6 +651,7 @@ class _LoginPageState extends State<LoginPage> {
                       labelText: uiText(context, "Contraseña"),
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
+                        tooltip:uiText(context,hidePassword?'Mostrar contraseña':'Ocultar contraseña'),
                         onPressed: () =>
                             setState(() => hidePassword = !hidePassword),
                         icon: Icon(
@@ -1379,6 +1381,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
   final List<Car> cars = [];
   bool loadingCars = true;
+  bool catalogueFailed=false;
   int unreadChatsCount = 0;
   int unreadBuyerAlerts=0;
   Future<void> loadUnreadBuyerAlerts() async {
@@ -1512,6 +1515,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           ..clear()
           ..addAll(loadedCars);
         loadingCars = false;
+        catalogueFailed=false;
       });
       final sharedListingId = Uri.base.queryParameters['listing'];
       if (sharedListingId != null && sharedListingId.isNotEmpty) {
@@ -1536,7 +1540,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       }
     } catch (error) {
       if (!mounted) return;
-      setState(() => loadingCars = false);
+      setState(() {loadingCars=false;catalogueFailed=true;});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(uiText(context, "No se pudieron cargar los anuncios desde Supabase: {0}", [error])), duration: const Duration(seconds: 8)),
       );
@@ -1914,11 +1918,12 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       final loggedIn = await requireAutomotorsLogin(context);
       if (!loggedIn || !mounted) return;
     }
-    final car = await Navigator.push<Car>(
-      context,
-      MaterialPageRoute(builder: (_) => const PublishOptionsPage()),
-    );
-    if (car != null && mounted) setState(() => cars.insert(0, car));
+    try {
+      final allowed=await Supabase.instance.client.rpc('can_publish_vehicle_listing');
+      if(!mounted)return;
+      final car=await Navigator.push<Car>(context,MaterialPageRoute(builder:(_)=>allowed==true?const AddCarPage():const PublishOptionsPage()));
+      if(car!=null && mounted)setState(()=>cars.insert(0,car));
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo comprobar el acceso a publicación. Reinténtalo.'))));}
   }
 
   Future<void> openCarDetails(Car car) async {
@@ -2182,9 +2187,11 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                 title:'${car.brand} ${car.model}',price:euros(car.price),details:'${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context,car.fuel)}',version:car.version,photo:car.photos.firstOrNull,favorite:SaveVehicleButton(car:car),status:car.status=='reserved' ? _VehicleStatusBadge(status:car.status) : null,onTap:()=>openCarDetails(car),
               )),
             ],
-            if (!loadingCars && filtered.isEmpty)
+            if(!loadingCars && catalogueFailed)MarketEmptyState(icon:Icons.wifi_off_outlined,title:'No se pudo cargar el catálogo',message:'Comprueba la conexión y vuelve a intentarlo.',actionLabel:'Reintentar',onAction:loadCars),
+            if (!loadingCars && !catalogueFailed && cars.isEmpty) LaunchEmptyCatalogue(onPublish:openAddCar,onSaveSearch:saveCurrentSearch),
+            if (!loadingCars && cars.isNotEmpty && filtered.isEmpty)
               MarketEmptyState(icon:Icons.search_off_rounded,title:AppLocalizations.of(context).noVehiclesFound,message:'Prueba otra marca o ajusta los filtros para ampliar tu búsqueda.',actionLabel:AppLocalizations.of(context).filters,onAction:openFilters),
-            if(!loadingCars && filtered.isEmpty) Wrap(spacing:8,runSpacing:8,children:[
+            if(!loadingCars && cars.isNotEmpty && filtered.isEmpty) Wrap(spacing:8,runSpacing:8,children:[
               if(minPrice!=null || maxPrice!=null) OutlinedButton.icon(onPressed:()=>setState((){minPrice=null;maxPrice=null;}),icon:const Icon(Icons.euro),label:Text(uiText(context,'Ampliar rango de precio'))),
               if(searchController.text.trim().isNotEmpty) OutlinedButton.icon(onPressed:()=>setState(()=>searchController.clear()),icon:const Icon(Icons.search),label:Text(uiText(context,'Buscar sin estas palabras'))),
               OutlinedButton.icon(onPressed:()=>setState((){searchController.clear();selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();}),icon:const Icon(Icons.filter_alt_off_outlined),label:Text(uiText(context,'Quitar todos los filtros'))),
@@ -2208,7 +2215,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                  Text(uiText(context, "¿Tienes un vehículo?"), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 5),
-                 Text(uiText(context, "Publica tu anuncio y llega a miles de compradores."), style: TextStyle(color: marketMuted)),
+                 Text(uiText(context, "Publica tu anuncio y conecta con compradores."), style: TextStyle(color: marketMuted)),
                 const SizedBox(height: 12),
                 SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w700)))),
               ]),
@@ -2219,7 +2226,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               title:  Text(uiText(context, "Packs y suscripción"), style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: marketMuted)),
               trailing: const Icon(Icons.chevron_right_rounded, color: marketAccent),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PublishOptionsPage())),
+              onTap: openAddCar,
             )),
 
           ],
@@ -2537,7 +2544,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
           ))
         : null,
       body: Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => _updateCatalog(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); _updateCatalog(() {}); })) : IconButton(onPressed: () { search.clear(); _updateCatalog(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => _updateCatalog(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); _updateCatalog(() {}); })) : IconButton(tooltip:uiText(context,'Borrar búsqueda'),onPressed: () { search.clear(); _updateCatalog(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         if (!showFilters) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
           automatic: transmission == 'Automático', suv: bodyType == 'SUV',
           electric: fuel == 'Eléctrico', budget: maxPrice == 20000,
@@ -4279,7 +4286,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       return const SizedBox.shrink();
     }
     final isSold = status == 'sold';
-    final color = isSold ? const Color(0xFFE57373) : const Color(0xFF64B5F6);
+    final color = isSold ? const Color(0xFF9F2633) : const Color(0xFF155B91);
     final label = isSold ? 'VEHÍCULO VENDIDO' : 'VEHÍCULO RESERVADO';
     final icon = isSold ? Icons.check_circle_outline : Icons.lock_outline;
     return Container(
@@ -4295,14 +4302,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         children: [
           Icon(icon, color: color, size: 17),
           const SizedBox(width: 7),
-          Text(uiText(context, label),
+          Flexible(child:Text(uiText(context, label),
             style: TextStyle(
               color: color,
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
-          ),
+          )),
         ],
       ),
     );
@@ -5049,9 +5056,9 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                       Row(children: [
                         Expanded(child: OutlinedButton.icon(onPressed: () => editProfileListing(listing), icon: const Icon(Icons.edit_outlined, size: 16), label:  Text(uiText(context, "Editar")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
-                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? uiText(context, "Quitar reserva") : uiText(context, "Reservar"), maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF64B5F6), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, isReserved ? 'published' : 'reserved'), icon: Icon(isReserved ? Icons.event_available : Icons.bookmark_border, size: 16), label: Text(isReserved ? uiText(context, "Quitar reserva") : uiText(context, "Reservar"), maxLines: 1, overflow: TextOverflow.ellipsis), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF155B91), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                         const SizedBox(width: 6),
-                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline, size: 16), label:  Text(uiText(context, "Vendido")), style: OutlinedButton.styleFrom(foregroundColor: Colors.greenAccent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => updateProfileListingStatus(listing, 'sold'), icon: const Icon(Icons.check_circle_outline, size: 16), label:  Text(uiText(context, "Vendido")), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF216E39), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8)))),
                       ]),
                     ],
                   ]),
@@ -5779,9 +5786,9 @@ class _GaragePageState extends State<GaragePage> {
                     const SizedBox(height: 5),
                     Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: marketMuted)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF64B5F6) : isSold ? Colors.greenAccent : marketMuted)),
+                    Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF155B91) : isSold ? const Color(0xFF216E39) : marketMuted)),
                     if(listingContentStateMessage(listing['content_check_state']?.toString()).isNotEmpty)
-                      Text(uiText(context,listingContentStateMessage(listing['content_check_state']?.toString())),style:const TextStyle(color:Colors.orangeAccent)),
+                      Text(uiText(context,listingContentStateMessage(listing['content_check_state']?.toString())),style:const TextStyle(color:Color(0xFF805200))),
                     const SizedBox(height: 8),
                   ]))),
                   PopupMenuButton<String>(enabled: !busy, tooltip: uiText(context, "Opciones del anuncio"), onSelected: (value) {
@@ -6986,7 +6993,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 }
 
 class PublishOptionsPage extends StatefulWidget {
-  const PublishOptionsPage({super.key});
+  const PublishOptionsPage({super.key,this.allowPublication=true});
+  final bool allowPublication;
 
   @override
   State<PublishOptionsPage> createState() => _PublishOptionsPageState();
@@ -7151,11 +7159,11 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: _bg, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(tooltip:uiText(context,'Volver'),icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
         title: Text(appText('Publicar mi vehículo', 'List my vehicle'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: !widget.allowPublication?null:SafeArea(
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
@@ -7170,6 +7178,8 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
         children: [
+          const ListingContextHelp(plans:true),
+          if(widget.allowPublication)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:FilledButton.icon(onPressed:_openingPublication?null:()=>_openPublication(),icon:const Icon(Icons.add),label:Text(uiText(context,'Empezar mi anuncio gratis')))),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -7187,7 +7197,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
           for (final pack in packs) ...[
             _PublishPackCard(
               data: pack,
-              onPublish: _verifiedPlans.isActive(switch (pack.title) {
+              onPublish: widget.allowPublication && _verifiedPlans.isActive(switch (pack.title) {
                 'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
                 'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
               }) && !_openingPublication
@@ -7226,7 +7236,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
             label: Text(appText('Restaurar compras', 'Restore purchases')),
           ),
           if (_planAccessError != null) ...[
-            Text(uiText(context, _planAccessError!), style: const TextStyle(color: Colors.orangeAccent)),
+            Text(uiText(context, _planAccessError!), style: const TextStyle(color: Color(0xFF805200))),
             TextButton(onPressed: _loadVerifiedPlans, child: Text(appText('Reintentar', 'Retry'))),
           ],
           Text(appText('El acceso se activa después de verificar el pago. Puedes restaurar tus compras con la misma cuenta.',
@@ -7330,6 +7340,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   bool loadingBrands = true;
   bool loadingModels = false;
   bool publishing = false;
+  bool _previewingPublication=false;
   bool vehicleLookupBusy = false;
   bool loadingVehicleLookupAccess = true;
   bool canLookupVehicle = false;
@@ -7488,45 +7499,8 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   }
 
   Future<void> showPackages() async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title:  Text(uiText(context, "Planes AUTOMOTORS")),
-        content:  SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(uiText(context, "5 publicaciones de bienvenida no recuperables al vender o eliminar. Después dispones de 3 plazas gratuitas reutilizables.")),
-              SizedBox(height: 12),
-              Text(uiText(context, "PACK 10 · 59 €"), style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(uiText(context, "Hasta 10 anuncios activos y 3 vehículos destacados.")),
-              SizedBox(height: 8),
-              Text(uiText(context, "PACK 15 · 75 €"), style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(uiText(context, "Hasta 15 anuncios activos y 5 vehículos destacados.")),
-              SizedBox(height: 8),
-              Text(uiText(context, "PACK 20 · 99 €"), style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(uiText(context, "Hasta 20 anuncios activos y 8 vehículos destacados.")),
-              SizedBox(height: 16),
-              Divider(),
-              Text(uiText(context, "AUTOMOTORS PRO · 199 €/mes"), style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(uiText(context, "Publicaciones ilimitadas y hasta 15 vehículos destacados mientras la suscripción esté activa.")),
-              SizedBox(height: 12),
-              Text(
-                uiText(context, "Consulta los planes y gestiona tus compras o restauraciones desde las opciones de publicación de la aplicación móvil."),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child:  Text(uiText(context, "Entendido")),
-          ),
-        ],
-      ),
-    );
+    if(!mounted)return;
+    await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage(allowPublication:false)));
   }
 
   Future<void> showSubscriptionInfo() async {
@@ -7929,7 +7903,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   }
 
   Future<void> publishCar() async {
-    if (publishing || !formKey.currentState!.validate()) return;
+    if (publishing || _previewingPublication || vehicleLookupBusy || !formKey.currentState!.validate()) return;
 
     final yearValue = int.tryParse(year.text.trim());
     final kmValue = int.tryParse(km.text.trim());
@@ -7984,6 +7958,18 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       (row) => (row['id'] as num).toInt() == modelId,
     );
 
+    _updatePublication(()=>_previewingPublication=true);
+    bool? accepted;
+    try {accepted=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>PublicationPreviewPage(
+      title:'${selectedBrand['name']} ${selectedModel['name']} ${version.text.trim()}'.trim(),price:'${priceValue.toStringAsFixed(priceValue==priceValue.roundToDouble()?0:2).replaceAll('.',',')} €',
+      details:{'Año':'$yearValue','Kilómetros':'$kmValue','Combustible':fuel,'Cambio':transmission,'Carrocería':bodyType,'Etiqueta medioambiental':etiquetaMedioambiental??'',
+        'Color':color.text.trim(),'CV':cv.text.trim(),'Cilindrada (cc)':cilindradaCc.text.trim(),'Puertas':doors.text.trim(),'Plazas':seats.text.trim(),'Normativa de emisiones':emissionsStandard.text.trim(),
+        ...publicationIdentifiers(showPlate:showMatriculaPublicly,showVin:showVinPublicly,plate:matricula.text,vin:vin.text),if(phoneValue.isNotEmpty)'Teléfono':phoneValue},
+      description:description.text.trim(),photos:List.of(photos),equipment:selectedEquipment.toList(),
+    )));
+    }finally{if(mounted)_updatePublication(()=>_previewingPublication=false);}
+    if(accepted!=true || !mounted)return;
+    if(supabase.auth.currentUser?.id!=user.id){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'La sesión ha cambiado. Abre de nuevo el formulario.'))));return;}
     _updatePublication(() => publishing = true);
     final uploadedPaths = <String>[];
     final uploadedPhotoBytes=<Uint8List>[];
@@ -8171,9 +8157,9 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           ),
           child: Row(children: [
             Expanded(child: FilledButton.icon(
-              onPressed: publishing || _restoringDraft ? null : publishCar,
+              onPressed: publishing || _previewingPublication || _restoringDraft || vehicleLookupBusy ? null : publishCar,
               icon: const Icon(Icons.add_circle_outline_rounded),
-              label: Text(publishing ? uiText(context, "Comprobando y publicando…") : uiText(context, "Publicar gratis")),
+              label: Text(publishing ? uiText(context, "Comprobando y publicando…") : uiText(context, "Revisar mi anuncio")),
               style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black),
             )),
           ]),
@@ -8204,6 +8190,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             const SizedBox(height: 14),
             Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
             const SupportLinks(),
+            const ListingContextHelp(),
             buildListingQualityCard(),
             const SizedBox(height: 8),
             Align(
@@ -8459,7 +8446,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 10),
               SizedBox(
-                height: 145,
+                height: 145+48*(MediaQuery.textScalerOf(context).scale(1)-1),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: photos.length,
@@ -8475,7 +8462,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                               if (!snapshot.hasData) {
                                 return const Center(child: CircularProgressIndicator());
                               }
-                              return Image.memory(snapshot.data!, fit: BoxFit.contain);
+                              return Image.memory(snapshot.data!, fit: BoxFit.contain,semanticLabel:uiText(context,'Fotografía {0} de {1}',[index+1,photos.length]));
                             },
                           ),
                         ),
@@ -8483,7 +8470,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                           right: 0,
                           top: 0,
                           child: IconButton(
-                            tooltip: uiText(context, "Eliminar fotografía"),
+                            tooltip: uiText(context, "Eliminar fotografía {0}",[index+1]),
                             onPressed: publishing ? null : () => _updatePublication(() => photos.removeAt(index)),
                             icon: const Icon(Icons.cancel, color: Colors.red),
                           ),
@@ -8496,7 +8483,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                                 photos.insert(0, selected);
                               }),
                               icon: const Icon(Icons.star_outline_rounded, size: 18),
-                              label: Text(uiText(context, "Usar como principal")),
+                              label: Text(uiText(context, "Usar fotografía {0} como principal",[index+1])),
                             )),
                         if (index == 0)
                            Positioned(

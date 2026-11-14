@@ -123,7 +123,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
     style: FilledButton.styleFrom(
       backgroundColor: marketGold,
       foregroundColor: marketInk,
-      minimumSize: const Size(44, 48),
+      minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       textStyle: const TextStyle(fontWeight: FontWeight.w700),
@@ -133,7 +133,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: marketInk,
       side: const BorderSide(color: marketLine),
-      minimumSize: const Size(44, 48),
+      minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),

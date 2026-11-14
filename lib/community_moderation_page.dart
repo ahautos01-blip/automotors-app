@@ -1,3 +1,4 @@
+import 'design/moderation_overview.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -55,7 +56,7 @@ class _ModerationEntryState extends State<ModerationEntry> {
         leading: const Icon(Icons.shield_outlined),
         title: Text(uiText(context, 'Administración')),
         subtitle: Text(
-          uiText(context, 'Revisar denuncias de anuncios y conversaciones'),
+          uiText(context, 'Denuncias y comprobaciones de publicación'),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.push<void>(
@@ -80,6 +81,8 @@ class CommunityModerationPage extends StatefulWidget {
 class _CommunityModerationPageState extends State<CommunityModerationPage> {
   late final service = widget.service ?? CommunityModerationService();
   final items = <Map<String, dynamic>>[];
+  Map<String,dynamic>? overview;
+  bool overviewFailed=false;
   bool loading = false, failed = false, hasMore = true, includeClosed = false;
   @override
   void initState() {
@@ -98,6 +101,10 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
       }
     });
     try {
+      if(reset){
+        try {final data=await service.overview();if(mounted)setState((){overview=data;overviewFailed=false;});}
+        catch(_){if(mounted)setState((){overview=null;overviewFailed=true;});}
+      }
       final page = await service.reports(
         before: items.isEmpty ? null : items.last,
         includeClosed: includeClosed,
@@ -146,6 +153,8 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if(overview!=null)ModerationOverview(data:overview!,onReport:(id)=>openReport({'kind':'listing','id':id})),
+        if(overviewFailed)Text(uiText(context,'No se pudo cargar el resumen. Actualiza para reintentar.')),
         Text(
           uiText(
             context,
