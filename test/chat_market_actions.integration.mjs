@@ -43,28 +43,32 @@ const login=async id=>{await db.exec('reset role');await db.query("select set_co
 const action=async(a,id=null,kind=null,amount=null,time=null,place=null)=>(await db.query('select chat_market_action($1,$2,$3,$4,$5,$6,$7) result',[conversation,a,id,kind,amount,time,place])).rows[0].result;
 await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42702');
 await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114145340_chat_market_history_alias.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261114150554_offers_in_chat.sql',import.meta.url),'utf8'));
 await login(buyer);assert.deepEqual(await action('list'),[]);const offer=await action('create',null,'offer',12000);
-assert.equal((await action('list'))[0].id,offer.id);await login(seller);assert.equal((await action('list'))[0].id,offer.id);await login(buyer);
+assert.equal((await action('list'))[0].id,offer.id);
+await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from chat_messages where conversation_id=$1 and sender_id=$2 and body like 'Oferta de compra:%' and read_at is null",[conversation,buyer])).rows[0].n,1);await login(seller);assert.equal((await action('list'))[0].id,offer.id);await login(buyer);
 await assert.rejects(()=>action('accept',offer.id));
 await assert.rejects(()=>action('create',null,'offer',13000));
 await assert.rejects(()=>db.query("insert into chat_market_activities(conversation_id,creator_id,kind,amount,expires_at)values($1,$2,'offer',10,now())",[conversation,buyer]),e=>e.code==='42501');
 await login(outsider);await assert.rejects(()=>action('list'),e=>e.code==='42501');assert.equal((await db.query('select * from chat_market_activities')).rows.length,0);
-await login(seller);assert.equal((await action('accept',offer.id)).status,'accepted');await assert.rejects(()=>action('reject',offer.id));
+await login(seller);assert.equal((await action('accept',offer.id)).status,'accepted');
+assert.equal((await db.query("select count(*)::int n from chat_messages where conversation_id=$1 and sender_id=$2 and body like 'Oferta aceptada:%'",[conversation,seller])).rows[0].n,1);await assert.rejects(()=>action('reject',offer.id));
 await login(buyer);const visit=await action('create',null,'visit',null,new Date(Date.now()+7200000).toISOString(),'Parking público');
 await login(seller);assert.equal((await action('accept',visit.id)).status,'accepted');
 await db.exec('reset role');assert.equal((await db.query('select status from vehicle_listings where id=$1',[listing])).rows[0].status,'published');
 // Reminder queued only for capable devices, and revoked on cancellation.
 for(const [id,token]of[[buyer,'a'],[seller,'b']])await db.query("insert into push_devices(user_id,session_id,token,environment,buyer_alerts,market_actions)values($1,$1,repeat($2,64),'production',true,true)",[id,token]);
-await login(buyer);const next=await action('create',null,'offer',11000);await login(seller);await action('reject',next.id);
+await db.query("insert into push_devices(user_id,session_id,token,environment,buyer_alerts,market_actions)values($1,$1,repeat('c',64),'production',false,false)",[seller]);
+await login(buyer);const next=await action('create',null,'offer',11000);await login(seller);await action('reject',next.id);await db.exec('reset role');assert.ok((await db.query("select count(*)::int n from private.push_deliveries q join push_devices d on d.id=q.device_id where q.kind='chat_message' and not d.market_actions")).rows[0].n>0);assert.equal((await db.query("select count(*)::int n from private.push_deliveries where kind='chat_activity' and activity_id=$1",[next.id])).rows[0].n,0);
 await login(buyer);await action('cancel',visit.id);const visit2=await action('create',null,'visit',null,new Date(Date.now()+10800000).toISOString(),'Taller');await login(seller);await action('accept',visit2.id);
 await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from private.push_deliveries where kind='visit_reminder' and activity_id=$1",[visit2.id])).rows[0].n,2);
 assert.equal((await db.query('select private.market_delivery_allowed($1,$2,true) ok',[buyer,visit2.id])).rows[0].ok,true);
 await login(buyer);await action('cancel',visit2.id);await db.exec('reset role');assert.equal((await db.query('select private.market_delivery_allowed($1,$2,true) ok',[buyer,visit2.id])).rows[0].ok,false);
 await db.query('insert into private.chat_user_blocks values($1,$2)',[buyer,seller]);await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42501');await db.exec('reset role');await db.exec('delete from private.chat_user_blocks');
-await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114143914_client_diagnostics_build41.sql',import.meta.url),'utf8'));
+await db.exec('reset role');
 // Aggregated diagnostics never store identity or free text.
 await login(buyer);await db.query("select record_client_error('chat','unknown',40)");await db.query("select record_client_error('chat','unknown',40)");await assert.rejects(()=>db.query("select record_client_error('private conversation','password',40)"));
-await db.query("select record_client_error('chat','unknown',41)");await assert.rejects(()=>db.query("select record_client_error('chat','unknown',42)"));
+await db.query("select record_client_error('chat','unknown',41)");await assert.rejects(()=>db.query("select record_client_error('chat','unknown',43)"));
 await assert.rejects(()=>db.query('select client_error_summary()'),e=>e.code==='42501');
 await db.exec('reset role');const report=randomUUID();await db.query('insert into private.chat_reports values($1,$2)',[report,conversation]);await login(buyer);await assert.rejects(()=>db.query('select community_report_activities($1)',[report]),e=>e.code==='42501');await login(mod);assert.ok((await db.query('select community_report_activities($1) data',[report])).rows[0].data.length>0);const summary=(await db.query('select client_error_summary() data')).rows[0].data;assert.equal(summary[0].occurrences,1);assert.ok(!JSON.stringify(summary).includes(buyer));
 await db.exec('reset role');const worker=(await db.query('select worker_token from private.push_worker_config')).rows[0].worker_token;await db.exec('set role service_role');const jobs=(await db.query('select claim_push_deliveries($1) jobs',[worker])).rows[0].jobs;assert.ok(jobs.every(j=>j.kind!=='visit_reminder'));await db.exec('reset role');

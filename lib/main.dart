@@ -1,3 +1,4 @@
+import 'chat_offer_panel.dart';
 import 'chat_market_page.dart';
 import 'design/market_safety.dart';
 import 'services/app_diagnostics.dart';
@@ -6636,6 +6637,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   bool sending = false;
   bool openingParticipant = false;
   bool? isChatBuyer;
+  int marketRefresh = 0;
   bool markingRead = false;
   late final Stream<List<Map<String, dynamic>>> messagesStream;
   final supabase = Supabase.instance.client;
@@ -6653,6 +6655,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         .stream(primaryKey: ['id'])
         .eq('conversation_id', widget.conversationId)
         .order('created_at');
+  }
+
+  Future<void> openMarketOffers({bool createOffer = false}) async {
+    await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => ChatMarketPage(
+      conversationId: widget.conversationId, openOffer: createOffer)));
+    if (mounted) setState(() => marketRefresh++);
   }
 
   Future<void> _loadChatRole() async {
@@ -6816,7 +6824,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(tooltip:uiText(context,'Ofertas y citas'),onPressed:!chatSafety.canMessage?null:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ChatMarketPage(conversationId:widget.conversationId))),icon:const Icon(Icons.event_available_outlined)),
+          IconButton(tooltip:uiText(context,'Ofertas y citas'),onPressed:!chatSafety.canMessage?null:()=>openMarketOffers(),icon:const Icon(Icons.event_available_outlined)),
           IconButton(
             key: const Key('chat-participant-profile'),
             tooltip: uiText(context, 'Ver perfil de la otra persona'),
@@ -6881,6 +6889,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             ),
           ),
           ChatSafetyBanner(controller: chatSafety),
+          ChatOfferPanel(key: ValueKey('chat-offers-$marketRefresh'),
+            conversationId: widget.conversationId, enabled: chatSafety.canMessage),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: SizedBox(
@@ -6890,10 +6900,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 icon: const Icon(Icons.local_offer_outlined),
                 label: Text(uiText(context, isChatBuyer == true
                     ? 'Hacer una oferta' : 'Ofertas y citas')),
-                onPressed: !chatSafety.canMessage ? null : () => Navigator.push<void>(
-                  context, MaterialPageRoute(builder: (_) => ChatMarketPage(
-                    conversationId: widget.conversationId,
-                    openOffer: isChatBuyer == true))),
+                onPressed: !chatSafety.canMessage ? null : () => openMarketOffers(createOffer: isChatBuyer == true),
               ),
             ),
           ),
