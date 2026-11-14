@@ -6881,6 +6881,20 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             ),
           ),
           ChatSafetyBanner(controller: chatSafety),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.local_offer_outlined),
+                label: Text(uiText(context, isChatBuyer == true
+                    ? 'Hacer una oferta' : 'Ofertas y citas')),
+                onPressed: !chatSafety.canMessage ? null : () => Navigator.push<void>(
+                  context, MaterialPageRoute(builder: (_) => ChatMarketPage(
+                    conversationId: widget.conversationId))),
+              ),
+            ),
+          ),
           Expanded(
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: messagesStream,
