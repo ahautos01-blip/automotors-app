@@ -48,3 +48,7 @@ test('buyer watch alerts open the listing without chat, price or private search 
   assert.ok(!JSON.stringify(value).includes(job.token));
  }
 });
+
+test('offer updates and visit reminders route to chat without amounts or locations',()=>{
+ for(const kind of ['chat_activity','visit_reminder']as const){const value=payload({...job,kind});assert.equal(value.conversation_id,job.conversation_id);assert.equal(value.aps['thread-id'],'chat-'+job.conversation_id);assert.ok(!JSON.stringify(value).includes(job.token));assert.ok(!('meeting_place'in value));assert.ok(!('amount'in value));}
+});

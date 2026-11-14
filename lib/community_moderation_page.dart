@@ -1,3 +1,4 @@
+import 'client_errors_page.dart';
 import 'design/moderation_overview.dart';
 import 'dart:typed_data';
 
@@ -143,6 +144,7 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
     appBar: AppBar(
       title: Text(uiText(context, 'Administración')),
       actions: [
+        IconButton(tooltip:uiText(context,'Incidencias técnicas'),onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const ClientErrorsPage())),icon:const Icon(Icons.bug_report_outlined)),
         IconButton(
           tooltip: uiText(context, 'Actualizar denuncias'),
           onPressed: loading ? null : () => load(reset: true),
@@ -255,6 +257,7 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
     });
     try {
       final result = await widget.service.detail(widget.kind, widget.reportId);
+      if(widget.kind=='chat'){try{result['activities']=await widget.service.activities(widget.reportId);}catch(_){result['activities_unavailable']=true;}}
       if (mounted) {
         setState(() {
           detail = result;
@@ -431,6 +434,8 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
                   for (final path in data['photos'] as List? ?? [])
                     photo(path as String),
                 ],
+                if(data['activities_unavailable']==true)Text(uiText(context,'No se pudieron cargar las propuestas. Actualiza para reintentar.')),
+                if(data['activities'] is List) ...[Text(uiText(context,'Propuestas de la conversación denunciada'),style:Theme.of(context).textTheme.titleMedium),for(final item in data['activities'] as List)Card(child:Padding(padding:const EdgeInsets.all(12),child:SelectableText('${item['kind']} · ${item['status']}\n${item['amount']??''} ${item['scheduled_at']??''}\n${item['meeting_place']??''}')))],
                 if (data['messages'] is List) ...[
                   const Divider(),
                   Text(

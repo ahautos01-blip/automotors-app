@@ -1,3 +1,4 @@
+import 'app_diagnostics.dart';
 import 'dart:async';
 
 import 'store_verification_message.dart';
@@ -52,6 +53,7 @@ class StorePurchaseService {
     _purchaseSubscription ??= _store.purchaseStream.listen(
       _handlePurchaseUpdates,
       onError: (Object error) {
+        AppDiagnostics.record('purchase',error);
         _messages.add('No se pudo consultar el estado de la compra.');
       },
     );
@@ -128,6 +130,7 @@ class StorePurchaseService {
           _messages.add('La compra está pendiente de confirmación de la tienda.');
           break;
         case PurchaseStatus.error:
+          AppDiagnostics.record('purchase',StateError('store_error'));
           _messages.add('La tienda no ha completado la compra.');
           break;
         case PurchaseStatus.canceled:
@@ -189,8 +192,10 @@ class StorePurchaseService {
       }
       _messages.add('Suscripción verificada por el servidor.');
     } on FunctionException catch (error) {
+      AppDiagnostics.record('purchase',error);
       _messages.add(storeVerificationMessage(error.status, error.details));
-    } catch (_) {
+    } catch (error) {
+      AppDiagnostics.record('purchase',error);
       _messages.add(storeVerificationMessage(0, null));
     }
   }

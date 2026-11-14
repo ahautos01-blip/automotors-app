@@ -34,3 +34,4 @@ jobs:
           node test/seller_listing_metrics.integration.mjs
           node test/buyer_push_alerts.integration.mjs
           node test/moderation_overview.integration.mjs
+          node test/chat_market_actions.integration.mjs

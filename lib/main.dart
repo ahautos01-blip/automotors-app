@@ -1,3 +1,6 @@
+import 'chat_market_page.dart';
+import 'design/market_safety.dart';
+import 'services/app_diagnostics.dart';
 import 'design/launch_experience.dart';
 import 'services/draft_photo_files.dart';
 import 'design/listing_preparation.dart';
@@ -77,7 +80,7 @@ Future<Uint8List> downloadVehiclePhoto(String path) {
   final client = Supabase.instance.client;
   return _vehiclePhotoCache.load(
     path,
-    (photoPath) => client.storage.from('vehicle-photos').download(photoPath),
+    (photoPath) async {try{return await client.storage.from('vehicle-photos').download(photoPath);}catch(e){AppDiagnostics.record('photo',e);rethrow;}},
     scope: client.auth.currentSession?.accessToken ?? 'guest',
   );
 }
@@ -104,7 +107,7 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
       await navigator.push<void>(MaterialPageRoute(
         builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
       ));
-    } else if (notification['kind'] == 'chat_message') {
+    } else if (['chat_message','chat_activity','visit_reminder'].contains(notification['kind'])) {
       final conversationId = notification['conversation_id']?.toString();
       if (conversationId == null || !RegExp(r'^[0-9]+$').hasMatch(conversationId)) return;
       // RLS verifies that the current user still belongs to this conversation.
@@ -112,6 +115,7 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
           .eq('id', conversationId).maybeSingle();
       if (conversation == null) throw StateError('Conversation unavailable');
       if (!navigator.mounted) return;
+      if(notification['kind']!='chat_message'){await navigator.push<void>(MaterialPageRoute(builder:(_)=>ChatMarketPage(conversationId:conversationId)));return;}
       await navigator.push<void>(MaterialPageRoute(builder: (_) => ChatPage(
         conversationId: conversationId,
         listingId: conversation['listing_id']?.toString(),
@@ -387,6 +391,7 @@ Future<void> main() async {
 
   await AutomotorsLocaleController.instance.load();
   automotorsPush = IosPushService(db: Supabase.instance.client, onOpen: openAutomotorsPush);
+  AppDiagnostics.install();
   runApp(const AutomotorsApp());
   WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(automotorsPush.start()));
 }
@@ -1540,6 +1545,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       }
     } catch (error) {
       if (!mounted) return;
+      AppDiagnostics.record('catalogue',error);
       setState(() {loadingCars=false;catalogueFailed=true;});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(uiText(context, "No se pudieron cargar los anuncios desde Supabase: {0}", [error])), duration: const Duration(seconds: 8)),
@@ -3801,7 +3807,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             )),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
+        actions: [
+          IconButton(tooltip:uiText(context,'Consejos para una compraventa segura'),icon:const Icon(Icons.shield_outlined),onPressed:()=>showModalBottomSheet<void>(context:context,isScrollControlled:true,builder:(_)=>const SafeArea(child:SingleChildScrollView(child:MarketSafetyAdvice())))),TextButton(onPressed: () => Navigator.pop(dialogContext),
           child: Text(uiText(context, "Cancelar")))],
       ),
     );
@@ -4822,6 +4829,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       // Un fallo al cargar datos públicos del perfil no debe ocultar sus anuncios.
       profile = null;
     }
+    bool emailConfirmed=false;
+    try{final trust=await supabase.rpc('seller_trust_summary',params:{'p_seller':widget.ownerId});emailConfirmed=trust is Map && trust['email_confirmed']==true;}catch(_){}
     String? memberSince;
     try {
       final month = await supabase.rpc('seller_member_since', params: {'p_seller_id': widget.ownerId});
@@ -4862,7 +4871,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       }
       listing['_firstPhotoBytes'] = firstPhoto;
     }
-    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows, 'aboutUs': aboutUs, 'memberSince': memberSince};
+    return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows, 'aboutUs': aboutUs, 'memberSince': memberSince,'emailConfirmed':emailConfirmed};
   }
 
   String? publicPhotoUrl(dynamic path) {
@@ -5183,6 +5192,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   ])),
 
                 ]),
+                SellerTrustIndicators(professional:isProfessional,emailConfirmed:result['emailConfirmed']==true),
                 if (snapshot.data?['memberSince'] is String) Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(uiText(context, 'En AUTOMOTORS desde {0}', [(snapshot.data!['memberSince'] as String).split('-').reversed.join('/')]), style: const TextStyle(color: marketMuted)),
@@ -6761,6 +6771,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       });
       if (mounted && controller.text.trim() == text) controller.clear();
     } catch (error) {
+      AppDiagnostics.record('chat',error);
       chatSafety.load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -6787,6 +6798,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         actions: [
+          IconButton(tooltip:uiText(context,'Ofertas y citas'),onPressed:!chatSafety.canMessage?null:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ChatMarketPage(conversationId:widget.conversationId))),icon:const Icon(Icons.event_available_outlined)),
           IconButton(
             key: const Key('chat-participant-profile'),
             tooltip: uiText(context, 'Ver perfil de la otra persona'),
@@ -8071,6 +8083,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
         ),
       );
     } catch (error) {
+      AppDiagnostics.record('publication',error);
       if(publishedOnServer) {
         if(mounted) {ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Tu anuncio se ha publicado. Actualiza el catálogo para verlo.'))));Navigator.pop(context);}
         return; // A local display failure must never delete an approved publication.

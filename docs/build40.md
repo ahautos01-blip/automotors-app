@@ -1,0 +1,11 @@
+# AUTOMOTORS 1.0.3 (40)
+
+- Conversation participants can propose euro amounts and vehicle viewings. Only the buyer proposes amounts; the counterparty accepts/rejects. Offers expire after seven days. Visits require a future time and a short meeting-place description. Responses lock the current row, block self-acceptance and respect conversation safety and live sessions. Acceptance does not charge money, reserve or sell a vehicle.
+- Confirmed visits schedule a generic reminder, with no location or amount on the lock screen. Cancellation, blocks, restrictions, suspension, session revocation and unavailable listings prevent delivery. New capabilities are registered only by compatible installations. Notifications open offers and appointments in their conversation.
+- Safety advice is available on vehicle details and in proposals. Reported-conversation moderation includes the latest 100 proposals and meeting text, scoped to an existing report and an authorized moderator.
+- Public trust indicators use a server-derived email-confirmation boolean and clearly identify professional profiles as self-declared. No identity, history or vehicle-condition verification is implied.
+- Diagnostic reporting uses fixed category/code values and build number, with local/server deduplication. The database stores daily aggregates for up to 30 days, without user IDs, exception text, stack traces, messages, documents or listing details. Moderator-only summaries cover seven days. Authentication is used to authorize submissions, not stored in the aggregates.
+- In-app and public ES/EN/CA privacy copy explains these features. Only the privacy page was updated on main; native code stays on the release branch. Public review build 36 remains separate.
+
+Validation: 235 Flutter tests, six APNs signing/payload tests, isolated Postgres state/access/reminder tests, production RLS/privilege checks and worker HTTP 200 with zero jobs. No real proposals, test visits or synthetic diagnostic records were created in production. New private diagnostic storage intentionally has RLS and no direct client policies; warning counts remained unchanged.
+Physical iPhone checks of two-party proposals and scheduled APNs delivery remain necessary after installation. App Store metadata should be reviewed before this version is submitted publicly.

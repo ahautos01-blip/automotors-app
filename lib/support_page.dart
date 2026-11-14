@@ -150,6 +150,8 @@ class AutomotorsSupportPage extends StatelessWidget {
               'Estadísticas de anuncios',
               'Si visitas un anuncio con sesión iniciada, registramos una visita por cuenta y día. El vendedor solo recibe totales de visitas, favoritos y conversaciones, sin la identidad de quienes guardan o visitan el anuncio. No contamos las visitas del propio vendedor ni rastreamos visitantes sin sesión.',
             ),
+            _section(context,'Ofertas y citas','Los participantes de una conversación pueden guardar propuestas de importe y citas, con fecha y lugar de encuentro. Solo ellos pueden responder. Si se denuncia la conversación, el equipo autorizado podrá revisar las propuestas. Las visitas confirmadas pueden generar recordatorios si se permiten las notificaciones.'),
+            _section(context,'Diagnósticos técnicos','Cuando hay sesión iniciada, enviamos categorías técnicas de fallo y el número de versión. Se guardan totales agrupados por día, sin mensajes, contraseñas, documentos, identificadores de usuario ni detalles del anuncio. Los datos agrupados se conservan hasta 30 días y solo los consulta el equipo autorizado.'),
             _section(
               context,
               'Seguridad y moderación',
