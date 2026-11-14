@@ -23,8 +23,9 @@ String marketActivityStatus(String value) => switch (value) {
 };
 
 class ChatMarketPage extends StatefulWidget {
-  const ChatMarketPage({super.key, required this.conversationId});
+  const ChatMarketPage({super.key, required this.conversationId, this.openOffer = false});
   final String conversationId;
+  final bool openOffer;
   @override
   State<ChatMarketPage> createState() => _ChatMarketPageState();
 }
@@ -35,6 +36,7 @@ class _ChatMarketPageState extends State<ChatMarketPage>
   List<Map<String, dynamic>> items = [];
   bool loading = true, busy = false, failed = false, buyer = false;
   Timer? timer;
+  bool openedInitialOffer = false;
   @override
   void initState() {
     super.initState();
@@ -94,6 +96,12 @@ class _ChatMarketPageState extends State<ChatMarketPage>
         failed = false;
         loading = false;
       });
+      if (widget.openOffer && buyer && !openedInitialOffer) {
+        openedInitialOffer = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !busy) create('offer');
+        });
+      }
     } catch (e) {
       AppDiagnostics.record('chat', e);
       if (mounted)
