@@ -66,4 +66,3 @@ await db.exec('reset role');const worker=(await db.query('select worker_token fr
 await login(null);await assert.rejects(()=>action('list'),e=>e.code==='42501');const trust=(await db.query('select seller_trust_summary($1) result',[seller])).rows[0].result;assert.deepEqual(trust,{email_confirmed:true});
 await login(buyer);await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42501');
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');
-
