@@ -6,6 +6,30 @@ import 'package:automotors_base/design/market_theme.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
 
 void main() {
+  test('pending offers expire at their exact deadline but accepted offers stay accepted', () {
+    final now = DateTime.utc(2026, 11, 14, 12);
+    expect(
+      marketProposalStatus({
+        'status': 'pending',
+        'expires_at': now.toIso8601String(),
+      }, now: now),
+      'expired',
+    );
+    expect(
+      marketProposalStatus({
+        'status': 'pending',
+        'expires_at': now.add(const Duration(seconds: 1)).toIso8601String(),
+      }, now: now),
+      'pending',
+    );
+    expect(
+      marketProposalStatus({
+        'status': 'accepted',
+        'expires_at': now.toIso8601String(),
+      }, now: now),
+      'accepted',
+    );
+  });
   test('offer amount parser rejects ambiguous grouping, negatives and precision loss', () {
     expect(parseMarketOffer('12000,50'), 12000.5);
     expect(parseMarketOffer('12000.50'), 12000.5);

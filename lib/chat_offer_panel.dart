@@ -76,9 +76,7 @@ class _ChatOfferPanelState extends State<ChatOfferPanel>
       final rows = List<Map<String, dynamic>>.from(
         await request('list') as List,
       ).where((r) => r['kind'] == 'offer').toList();
-      final pending = rows.where(
-        (r) => (r['display_status'] ?? r['status']) == 'pending',
-      );
+      final pending = rows.where((r) => marketProposalStatus(r) == 'pending');
       if (mounted && user == db.auth.currentUser?.id)
         setState(() {
           offer = pending.isNotEmpty ? pending.first : rows.firstOrNull;
@@ -164,12 +162,12 @@ class _ChatOfferPanelState extends State<ChatOfferPanel>
         label: Text(uiText(context, 'Ofertas y citas')),
       );
     if (item == null) return const SizedBox.shrink();
-    final status = (item['display_status'] ?? item['status']).toString();
+    final status = marketProposalStatus(item);
     final incoming = item['creator_id'] != db.auth.currentUser?.id;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 180),
+        constraints: const BoxConstraints(maxHeight: 220),
         child: SingleChildScrollView(
           child: Card(
             child: Padding(
@@ -179,14 +177,31 @@ class _ChatOfferPanelState extends State<ChatOfferPanel>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '${uiText(context, 'Oferta de compra')} · ${item['amount']} €',
+                    '${uiText(context, item['reply_to'] != null ? 'Contraoferta' : 'Oferta de compra')} · ${item['amount']} €',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Text(uiText(context, marketActivityStatus(status))),
+                  if (status == 'pending')
+                    Text(marketOfferValidity(context, item)),
                   if (incoming && status == 'pending')
                     Wrap(
                       spacing: 10,
                       children: [
+                        OutlinedButton(
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  setState(() => busy = true);
+                                  await sendMarketCounterOffer(
+                                    context,
+                                    widget.conversationId,
+                                    item,
+                                  );
+                                  await load();
+                                  if (mounted) setState(() => busy = false);
+                                },
+                          child: Text(uiText(context, 'Contraoferta')),
+                        ),
                         FilledButton(
                           onPressed: busy ? null : () => respond('accept'),
                           child: Text(uiText(context, 'Aceptar')),

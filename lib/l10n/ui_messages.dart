@@ -1,5 +1,14 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Contraoferta": ["Counteroffer", "Contraoferta"],
+  "Hacer contraoferta": ["Make a counteroffer", "Fer una contraoferta"],
+  "Enviar contraoferta": ["Send counteroffer", "Enviar contraoferta"],
+  "Sustituida por contraoferta": ["Replaced by a counteroffer", "Substituïda per contraoferta"],
+  "Validez: 24 horas.": ["Valid for 24 hours.", "Validesa: 24 hores."],
+  "Caduca en {0} h {1} min": ["Expires in {0} h {1} min", "Caduca en {0} h {1} min"],
+  "La contraoferta sustituye a la propuesta anterior y es válida durante 24 horas. No se realizará ningún pago ni reserva.": ["The counteroffer replaces the previous proposal and is valid for 24 hours. No payment or reservation will be made.", "La contraoferta substitueix la proposta anterior i és vàlida durant 24 hores. No es farà cap pagament ni reserva."],
+  "No se pudo enviar la contraoferta. Comprueba si la propuesta sigue vigente y usa un importe diferente.": ["Could not send the counteroffer. Check that the proposal is still valid and use a different amount.", "No s'ha pogut enviar la contraoferta. Comprova que la proposta continuï vigent i utilitza un import diferent."],
+
 "Propuestas de la conversación denunciada":["Proposals in the reported conversation","Propostes de la conversa denunciada"],
 "No se pudieron cargar las propuestas. Actualiza para reintentar.":["Could not load proposals. Refresh to retry.","No s’han pogut carregar les propostes. Actualitza per tornar-ho a provar."],
 "Consejos para una compraventa segura":["Tips for a safer vehicle transaction", "Consells per a una compravenda segura"],

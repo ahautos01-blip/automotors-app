@@ -19,11 +19,76 @@ String marketActivityStatus(String value) => switch (value) {
   'accepted' => 'Aceptada',
   'rejected' => 'Rechazada',
   'cancelled' => 'Cancelada',
+  'countered' => 'Sustituida por contraoferta',
   _ => 'Caducada',
 };
 
+String marketProposalStatus(Map<String, dynamic> item, {DateTime? now}) {
+  final status = (item['display_status'] ?? item['status']).toString();
+  final expires = DateTime.tryParse(item['expires_at']?.toString() ?? '');
+  return status == 'pending' &&
+          expires != null &&
+          !expires.isAfter(now ?? DateTime.now())
+      ? 'expired'
+      : status;
+}
+
+String marketOfferValidity(BuildContext context, Map<String, dynamic> item) {
+  final expires = DateTime.tryParse(item['expires_at']?.toString() ?? '');
+  if (expires == null) return uiText(context, 'Validez: 24 horas.');
+  final minutes = (expires.difference(DateTime.now()).inSeconds / 60).ceil();
+  if (minutes <= 0) return uiText(context, 'Caducada');
+  return uiText(context, 'Caduca en {0} h {1} min', [
+    minutes ~/ 60,
+    minutes % 60,
+  ]);
+}
+
+Future<bool> sendMarketCounterOffer(
+  BuildContext context,
+  String conversationId,
+  Map<String, dynamic> proposal,
+) async {
+  final text = await showDialog<String>(
+    context: context,
+    builder: (_) =>
+        const MarketProposalDialog(kind: 'offer', counterOffer: true),
+  );
+  if (text == null || !context.mounted) return false;
+  try {
+    await Supabase.instance.client.rpc(
+      'chat_market_action',
+      params: {
+        'p_conversation': conversationId,
+        'p_action': 'counter',
+        'p_id': proposal['id'].toString(),
+        'p_amount': parseMarketOffer(text),
+      },
+    );
+    return true;
+  } catch (error) {
+    AppDiagnostics.record('chat', error);
+    if (context.mounted)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            uiText(
+              context,
+              'No se pudo enviar la contraoferta. Comprueba si la propuesta sigue vigente y usa un importe diferente.',
+            ),
+          ),
+        ),
+      );
+    return false;
+  }
+}
+
 class ChatMarketPage extends StatefulWidget {
-  const ChatMarketPage({super.key, required this.conversationId, this.openOffer = false});
+  const ChatMarketPage({
+    super.key,
+    required this.conversationId,
+    this.openOffer = false,
+  });
   final String conversationId;
   final bool openOffer;
   @override
@@ -289,8 +354,7 @@ class _ChatMarketPageState extends State<ChatMarketPage>
             Builder(
               builder: (context) {
                 final mine = item['creator_id'] == db.auth.currentUser?.id;
-                final status = (item['display_status'] ?? item['status'])
-                    .toString();
+                final status = marketProposalStatus(item);
                 final visit = item['kind'] == 'visit';
                 final date = DateTime.tryParse(
                   item['scheduled_at']?.toString() ?? '',
@@ -304,7 +368,11 @@ class _ChatMarketPageState extends State<ChatMarketPage>
                         Text(
                           uiText(
                             context,
-                            visit ? 'Visita al vehículo' : 'Oferta de compra',
+                            visit
+                                ? 'Visita al vehículo'
+                                : item['reply_to'] != null
+                                ? 'Contraoferta'
+                                : 'Oferta de compra',
                           ),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
@@ -318,11 +386,30 @@ class _ChatMarketPageState extends State<ChatMarketPage>
                         if (visit)
                           Text(item['meeting_place']?.toString() ?? ''),
                         Text(uiText(context, marketActivityStatus(status))),
+                        if (!visit && status == 'pending')
+                          Text(marketOfferValidity(context, item)),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             if (status == 'pending' && !mine) ...[
+                              if (!visit)
+                                TextButton(
+                                  onPressed: busy
+                                      ? null
+                                      : () async {
+                                          setState(() => busy = true);
+                                          await sendMarketCounterOffer(
+                                            context,
+                                            widget.conversationId,
+                                            item,
+                                          );
+                                          await load();
+                                          if (mounted)
+                                            setState(() => busy = false);
+                                        },
+                                  child: Text(uiText(context, 'Contraoferta')),
+                                ),
                               TextButton(
                                 onPressed: busy
                                     ? null
@@ -361,8 +448,13 @@ class _ChatMarketPageState extends State<ChatMarketPage>
 }
 
 class MarketProposalDialog extends StatefulWidget {
-  const MarketProposalDialog({super.key, required this.kind});
+  const MarketProposalDialog({
+    super.key,
+    required this.kind,
+    this.counterOffer = false,
+  });
   final String kind;
+  final bool counterOffer;
   @override
   State<MarketProposalDialog> createState() => _MarketProposalDialogState();
 }
@@ -381,7 +473,14 @@ class _MarketProposalDialogState extends State<MarketProposalDialog> {
     final offer = widget.kind == 'offer';
     return AlertDialog(
       title: Text(
-        uiText(context, offer ? 'Proponer un importe' : 'Proponer una visita'),
+        uiText(
+          context,
+          widget.counterOffer
+              ? 'Hacer contraoferta'
+              : offer
+              ? 'Proponer un importe'
+              : 'Proponer una visita',
+        ),
       ),
       content: SingleChildScrollView(
         child: Form(
@@ -397,6 +496,15 @@ class _MarketProposalDialogState extends State<MarketProposalDialog> {
                       : 'Indica un lugar público de encuentro. Evita incluir tu domicilio.',
                 ),
               ),
+              if (offer)
+                Text(
+                  uiText(
+                    context,
+                    widget.counterOffer
+                        ? 'La contraoferta sustituye a la propuesta anterior y es válida durante 24 horas. No se realizará ningún pago ni reserva.'
+                        : 'Validez: 24 horas.',
+                  ),
+                ),
               TextFormField(
                 controller: field,
                 maxLength: offer ? 12 : 120,
@@ -431,7 +539,12 @@ class _MarketProposalDialogState extends State<MarketProposalDialog> {
             if (form.currentState!.validate())
               Navigator.pop(context, field.text.trim());
           },
-          child: Text(uiText(context, 'Enviar propuesta')),
+          child: Text(
+            uiText(
+              context,
+              widget.counterOffer ? 'Enviar contraoferta' : 'Enviar propuesta',
+            ),
+          ),
         ),
       ],
     );

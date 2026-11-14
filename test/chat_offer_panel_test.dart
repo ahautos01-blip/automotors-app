@@ -13,6 +13,7 @@ void main() {
   const user = '11111111-1111-4111-8111-111111111111';
   bool incoming = true;
   String status = 'pending';
+  bool expired = false, countered = false;
   final writes = <Map<String, dynamic>>[];
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
@@ -46,14 +47,25 @@ void main() {
           final body = Map<String, dynamic>.from(jsonDecode(r.body));
           if (body['p_action'] != 'list') {
             writes.add(body);
-            status = body['p_action'] == 'accept' ? 'accepted' : 'rejected';
+            if (body['p_action'] == 'counter') {
+              incoming = false;
+              countered = true;
+              status = 'pending';
+            } else {
+              status = body['p_action'] == 'accept' ? 'accepted' : 'rejected';
+            }
             data = {'status': status};
           } else {
             data = [
               {
                 'id': 'proposal',
                 'kind': 'offer',
-                'amount': 12000,
+                'amount': countered ? 12500 : 12000,
+                'reply_to': countered ? 'proposal' : null,
+                'expires_at': DateTime.now()
+                    .add(Duration(hours: expired ? -1 : 24))
+                    .toUtc()
+                    .toIso8601String(),
                 'creator_id': incoming ? 'other' : user,
                 'status': status,
               },
@@ -73,6 +85,8 @@ void main() {
   tearDownAll(() => Supabase.instance.dispose());
   setUp(() {
     incoming = true;
+    expired = false;
+    countered = false;
     status = 'pending';
     writes.clear();
   });
@@ -120,6 +134,37 @@ void main() {
     await tester.pumpWidget(page(enabled: false));
     await tester.pumpAndSettle();
     expect(find.textContaining('12000'), findsNothing);
+    expect(writes, isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets(
+    'counteroffer opens editable amount and replaces the pending offer only on send',
+    (tester) async {
+      await tester.pumpWidget(page());
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Contraoferta'));
+      await tester.tap(find.text('Contraoferta'));
+      await tester.pumpAndSettle();
+      expect(writes, isEmpty);
+      await tester.enterText(find.byType(TextFormField), '12500');
+      await tester.tap(find.text('Enviar contraoferta'));
+      await tester.pumpAndSettle();
+      expect(writes.single['p_action'], 'counter');
+      expect(writes.single['p_amount'], 12500);
+      expect(find.textContaining('12500'), findsOneWidget);
+      expect(find.text('Aceptar'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets('expired offer has no accept reject or counteroffer actions', (
+    tester,
+  ) async {
+    expired = true;
+    await tester.pumpWidget(page());
+    await tester.pumpAndSettle();
+    expect(find.text('Caducada'), findsOneWidget);
+    expect(find.text('Aceptar'), findsNothing);
+    expect(find.text('Contraoferta'), findsNothing);
     expect(writes, isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
   });

@@ -45,6 +45,8 @@ await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42702');
 await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114145340_chat_market_history_alias.sql',import.meta.url),'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/20261114150554_offers_in_chat.sql',import.meta.url),'utf8'));
 await login(buyer);assert.deepEqual(await action('list'),[]);const offer=await action('create',null,'offer',12000);
+await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114155925_counter_offers_24h.sql',import.meta.url),'utf8'));await login(buyer);
+const capped=(await action('list'))[0];assert.equal(Date.parse(capped.expires_at)-Date.parse(capped.created_at),86400000);
 assert.equal((await action('list'))[0].id,offer.id);
 await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from chat_messages where conversation_id=$1 and sender_id=$2 and body like 'Oferta de compra:%' and read_at is null",[conversation,buyer])).rows[0].n,1);await login(seller);assert.equal((await action('list'))[0].id,offer.id);await login(buyer);
 await assert.rejects(()=>action('accept',offer.id));
@@ -68,9 +70,25 @@ await db.query('insert into private.chat_user_blocks values($1,$2)',[buyer,selle
 await db.exec('reset role');
 // Aggregated diagnostics never store identity or free text.
 await login(buyer);await db.query("select record_client_error('chat','unknown',40)");await db.query("select record_client_error('chat','unknown',40)");await assert.rejects(()=>db.query("select record_client_error('private conversation','password',40)"));
-await db.query("select record_client_error('chat','unknown',41)");await assert.rejects(()=>db.query("select record_client_error('chat','unknown',43)"));
+await db.query("select record_client_error('chat','unknown',41)");await assert.rejects(()=>db.query("select record_client_error('chat','unknown',44)"));
 await assert.rejects(()=>db.query('select client_error_summary()'),e=>e.code==='42501');
 await db.exec('reset role');const report=randomUUID();await db.query('insert into private.chat_reports values($1,$2)',[report,conversation]);await login(buyer);await assert.rejects(()=>db.query('select community_report_activities($1)',[report]),e=>e.code==='42501');await login(mod);assert.ok((await db.query('select community_report_activities($1) data',[report])).rows[0].data.length>0);const summary=(await db.query('select client_error_summary() data')).rows[0].data;assert.equal(summary[0].occurrences,1);assert.ok(!JSON.stringify(summary).includes(buyer));
+// Counteroffers replace the current proposal atomically and alternate participants.
+await login(buyer);const opening=await action('create',null,'offer',10000);
+assert.equal(Date.parse(opening.expires_at)-Date.parse(opening.created_at),86400000);
+await assert.rejects(()=>action('counter',opening.id,null,10500));
+await login(outsider);await assert.rejects(()=>action('counter',opening.id,null,10500));
+await login(seller);await assert.rejects(()=>action('counter',opening.id,null,10000));
+const counter=await action('counter',opening.id,null,10500);assert.equal(counter.reply_to,opening.id);assert.equal(counter.creator_id,seller);
+assert.equal((await action('list')).find(r=>r.id===opening.id).status,'countered');
+await assert.rejects(()=>action('accept',opening.id));await assert.rejects(()=>action('counter',opening.id,null,10600));
+await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from chat_market_activities where conversation_id=$1 and status='pending' and kind='offer'",[conversation])).rows[0].n,1);
+assert.equal((await db.query("select count(*)::int n from chat_messages where body like 'Contraoferta:%' and conversation_id=$1",[conversation])).rows[0].n,1);
+await login(buyer);const counter2=await action('counter',counter.id,null,10200);assert.equal(counter2.reply_to,counter.id);
+await login(seller);assert.equal((await action('accept',counter2.id)).status,'accepted');
+await login(buyer);const expiring=await action('create',null,'offer',9000);await db.exec('reset role');await db.query("update chat_market_activities set expires_at=now()-interval '1 second' where id=$1",[expiring.id]);await login(seller);
+assert.equal((await action('list')).find(r=>r.id===expiring.id).display_status,'expired');await assert.rejects(()=>action('accept',expiring.id));await assert.rejects(()=>action('counter',expiring.id,null,9200));
+await login(buyer);const fresh=await action('create',null,'offer',9500);await db.exec('reset role');await db.query('insert into private.chat_user_blocks values($1,$2)',[buyer,seller]);await login(seller);await assert.rejects(()=>action('counter',fresh.id,null,9600),e=>e.code==='42501');await db.exec('reset role');await db.exec('delete from private.chat_user_blocks');
 await db.exec('reset role');const worker=(await db.query('select worker_token from private.push_worker_config')).rows[0].worker_token;await db.exec('set role service_role');const jobs=(await db.query('select claim_push_deliveries($1) jobs',[worker])).rows[0].jobs;assert.ok(jobs.every(j=>j.kind!=='visit_reminder'));await db.exec('reset role');
 await login(null);await assert.rejects(()=>action('list'),e=>e.code==='42501');const trust=(await db.query('select seller_trust_summary($1) result',[seller])).rows[0].result;assert.deepEqual(trust,{email_confirmed:true});
 await login(buyer);await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42501');
