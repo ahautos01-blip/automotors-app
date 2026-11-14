@@ -41,7 +41,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: Scaffold(
-            body: MarketChatActions(enabled: true, onCompose: composed.add),
+            body: MarketChatActions(isBuyer: true, enabled: true, onCompose: composed.add),
           ),
         ),
       );
@@ -59,12 +59,32 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  for (final code in ['es', 'en', 'ca']) {
+    testWidgets('seller suggestions use the seller role in $code', (tester) async {
+      final composed = <String>[];
+      await tester.pumpWidget(MaterialApp(
+        locale: Locale(code),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(body: MarketChatActions(
+          isBuyer: false, enabled: true, onCompose: composed.add)),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ActionChip).first);
+      expect(composed.single, code == 'es'
+        ? '¿Qué día te viene bien para verlo?'
+        : code == 'en' ? 'What day works for you to view it?'
+        : "Quin dia et va bé per veure'l?");
+      expect(find.text('¿Sigue disponible?'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('blocked chat cannot compose suggestions', (tester) async {
     final composed = <String>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: MarketChatActions(enabled: false, onCompose: composed.add),
+          body: MarketChatActions(isBuyer: true, enabled: false, onCompose: composed.add),
         ),
       ),
     );
@@ -81,7 +101,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: MarketChatActions(enabled: true, onCompose: composed.add),
+          body: MarketChatActions(isBuyer: true, enabled: true, onCompose: composed.add),
         ),
       ),
     );

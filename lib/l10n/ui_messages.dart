@@ -172,6 +172,9 @@ const Map<String, List<String>> uiMessages = {
 
   "La sesión ha cambiado. Abre de nuevo el formulario.": ["Your session has changed. Open the form again.", "La sessió ha canviat. Torna a obrir el formulari."],
   "¿Sigue disponible?": ["Is it still available?", "Encara està disponible?"],
+  "¿Qué día te viene bien para verlo?": ["What day works for you to view it?", "Quin dia et va bé per veure'l?"],
+  "¿Quieres más fotos del coche?": ["Would you like more photos of the car?", "Vols més fotos del cotxe?"],
+  "¿Te viene bien ver el coche el {0} a las {1}? Confírmame si te va bien.": ["Would you like to view the car on {0} at {1}? Please confirm if that works for you.", "Et va bé veure el cotxe el {0} a les {1}? Confirma si et va bé."],
   "¿Tiene historial de mantenimiento?": ["Does it have a service history?", "Té historial de manteniment?"],
   "Proponer visita": ["Suggest a viewing", "Proposar una visita"],
   "Elige una fecha y hora futuras.": ["Choose a future date and time.", "Tria una data i hora futures."],

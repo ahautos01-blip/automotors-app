@@ -8,9 +8,11 @@ class MarketChatActions extends StatelessWidget {
   const MarketChatActions({
     super.key,
     required this.enabled,
+    required this.isBuyer,
     required this.onCompose,
   });
   final bool enabled;
+  final bool isBuyer;
   final ValueChanged<String> onCompose;
 
   Future<void> proposeVisit(BuildContext context) async {
@@ -46,7 +48,9 @@ class MarketChatActions extends StatelessWidget {
     onCompose(
       uiText(
         context,
-        '¿Podemos ver el coche el {0} a las {1}? Confírmame si te va bien.',
+        isBuyer
+            ? '¿Podemos ver el coche el {0} a las {1}? Confírmame si te va bien.'
+            : '¿Te viene bien ver el coche el {0} a las {1}? Confírmame si te va bien.',
         [
           localizations.formatMediumDate(date),
           localizations.formatTimeOfDay(time, alwaysUse24HourFormat: true),
@@ -62,10 +66,9 @@ class MarketChatActions extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       children: [
-        for (final text in [
-          '¿Sigue disponible?',
-          '¿Tiene historial de mantenimiento?',
-        ])
+        for (final text in isBuyer
+            ? ['¿Sigue disponible?', '¿Tiene historial de mantenimiento?']
+            : ['¿Qué día te viene bien para verlo?', '¿Quieres más fotos del coche?'])
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ActionChip(

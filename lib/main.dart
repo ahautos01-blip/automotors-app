@@ -6635,6 +6635,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   final controller = TextEditingController();
   bool sending = false;
   bool openingParticipant = false;
+  bool? isChatBuyer;
   bool markingRead = false;
   late final Stream<List<Map<String, dynamic>>> messagesStream;
   final supabase = Supabase.instance.client;
@@ -6646,11 +6647,28 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     chatSafety = ChatSafetyController(conversationId: widget.conversationId);
     chatSafety.addListener(_safetyChanged);
     chatSafety.load();
+    _loadChatRole();
     messagesStream = supabase
         .from('chat_messages')
         .stream(primaryKey: ['id'])
         .eq('conversation_id', widget.conversationId)
         .order('created_at');
+  }
+
+  Future<void> _loadChatRole() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      final row = await supabase.from('chat_conversations')
+          .select('buyer_id, seller_id')
+          .eq('id', widget.conversationId).maybeSingle();
+      if (!mounted || supabase.auth.currentUser?.id != userId || row == null) return;
+      if (row['buyer_id'] == userId || row['seller_id'] == userId) {
+        setState(() => isChatBuyer = row['buyer_id'] == userId);
+      }
+    } catch (_) {
+      // Keep suggestions hidden when the participant role cannot be confirmed.
+    }
   }
 
   Future<void> openParticipantProfile() async {
@@ -6948,7 +6966,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               },
             ),
           ),
-          MarketChatActions(enabled: chatSafety.canMessage && !sending, onCompose: _composeSuggestion),
+          if (isChatBuyer != null)
+            MarketChatActions(enabled: chatSafety.canMessage && !sending,
+              isBuyer: isChatBuyer!, onCompose: _composeSuggestion),
           SafeArea(
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
