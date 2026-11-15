@@ -47,7 +47,7 @@ await db.exec(await readFile(new URL('../supabase/migrations/20261114150554_offe
 await login(buyer);assert.deepEqual(await action('list'),[]);const offer=await action('create',null,'offer',12000);
 await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261114155925_counter_offers_24h.sql',import.meta.url),'utf8'));await login(buyer);
 const capped=(await action('list'))[0];assert.equal(Date.parse(capped.expires_at)-Date.parse(capped.created_at),86400000);
-await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261115112950_launch_polish_reminders.sql',import.meta.url),'utf8'));await login(buyer);
+await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261115114825_launch_polish_reminders.sql',import.meta.url),'utf8'));await login(buyer);
 assert.equal((await action('list'))[0].id,offer.id);
 await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from chat_messages where conversation_id=$1 and sender_id=$2 and body like 'Oferta de compra:%' and read_at is null",[conversation,buyer])).rows[0].n,1);await login(seller);assert.equal((await action('list'))[0].id,offer.id);await login(buyer);
 await assert.rejects(()=>action('accept',offer.id));
