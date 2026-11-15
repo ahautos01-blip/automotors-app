@@ -139,4 +139,34 @@ await db.exec("insert into private.market_usage_totals(day,stage,app_build)value
 assert.equal((await db.query('select count(*)::int n from private.market_usage_totals where day<current_date-30')).rows[0].n,0);
 assert.ok((await db.query('select count(*)::int n from private.market_usage_totals where day=current_date')).rows[0].n>0);
 await db.exec(await readFile(new URL('../supabase/migrations/20261115141556_store_checkout_build46.sql',import.meta.url),'utf8'));await login(seller);await db.query("select record_client_error('purchase','unknown',46)");await db.query("select record_market_usage('catalogue',46)");await assert.rejects(()=>db.query("select record_market_usage('catalogue',47)"));await login(null);await assert.rejects(()=>db.query("select record_client_error('purchase','unknown',46)"),e=>e.code==='42501');
+
+// Personal inbox preferences never delete messages or change the other participant's flags.
+await db.exec('reset role');await db.exec('alter table chat_conversations add column updated_at timestamptz default now()');
+await db.exec(await readFile(new URL('../supabase/migrations/20261115224429_personal_chat_inbox_build47.sql',import.meta.url),'utf8'));
+await login(seller);await db.query("select record_client_error('chat','unknown',47)");await db.query("select record_market_usage('catalogue',47)");await assert.rejects(()=>db.query("select record_market_usage('catalogue',48)"));await login(null);await db.exec('reset role');
+await db.query('insert into auth.sessions values($1,$1,null)',[buyer]);
+const inboxListing=randomUUID();await db.query("insert into vehicle_listings(id,owner_id,status)values($1,$2,'published')",[inboxListing,seller]);
+const inboxId=(await db.query('insert into chat_conversations(listing_id,buyer_id,seller_id)values($1,$2,$3)returning id',[inboxListing,buyer,seller])).rows[0].id;
+await db.query("insert into chat_messages(conversation_id,sender_id,body,created_at)values($1,$2,'Question',now()-interval '1 minute'),($1,$3,'Answer',now())",[inboxId,buyer,seller]);
+const inbox=async()=>(await db.query('select chat_inbox_snapshot() rows')).rows[0].rows;
+const inboxAction=async(action)=>(await db.query('select chat_inbox_action($1,$2)',[inboxId,action]));
+await login(buyer);let row=(await inbox()).find(r=>r.id===String(inboxId));assert.equal(row.last_message,'Answer');assert.equal(row.unread_count,1);assert.equal(row.last_message_by_me,false);
+const unreadBefore=Number((await db.query('select chat_inbox_unread_count() n')).rows[0].n);
+await inboxAction('pin');assert.equal((await inbox()).find(r=>r.id===String(inboxId)).pinned,true);
+await login(seller);assert.equal((await inbox()).find(r=>r.id===String(inboxId)).pinned,false);
+await login(buyer);await inboxAction('hide');row=(await inbox()).find(r=>r.id===String(inboxId));assert.equal(row.deleted,true);assert.equal(row.pinned,false);
+assert.equal(Number((await db.query('select chat_inbox_unread_count() n')).rows[0].n),unreadBefore-1);
+assert.equal((await db.query('select count(*)::int n from chat_messages where conversation_id=$1',[inboxId])).rows[0].n,2);
+await assert.rejects(()=>db.query('select * from private.chat_inbox_preferences'),e=>e.code==='42501');
+await login(seller);assert.equal((await inbox()).find(r=>r.id===String(inboxId)).deleted,false);await inboxAction('pin');
+await login(outsider);assert.ok(!(await inbox()).some(r=>r.id===String(inboxId)));await assert.rejects(()=>inboxAction('hide'),e=>e.code==='42501');
+await login(buyer);await inboxAction('restore');assert.equal((await inbox()).find(r=>r.id===String(inboxId)).deleted,false);await inboxAction('hide');
+await login(seller);await db.query("insert into chat_messages(conversation_id,sender_id,body)values($1,$2,'New reply')",[inboxId,seller]);
+await login(buyer);assert.equal((await inbox()).find(r=>r.id===String(inboxId)).deleted,false);
+await login(seller);assert.equal((await inbox()).find(r=>r.id===String(inboxId)).pinned,true);await inboxAction('unpin');
+await db.exec('reset role');await db.exec("create policy inbox_fixture_hidden_message on chat_messages as restrictive for select to authenticated using(body<>'hidden-by-policy')");await db.query("insert into chat_messages(conversation_id,sender_id,body,created_at)values($1,$2,'hidden-by-policy',now()+interval '1 minute')",[inboxId,seller]);
+await login(buyer);assert.ok(!JSON.stringify(await inbox()).includes('hidden-by-policy'));
+await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>inboxAction('pin'),e=>e.code==='42501');
+await login(null);await assert.rejects(()=>inbox(),e=>e.code==='42501');await assert.rejects(()=>inboxAction('hide'),e=>e.code==='42501');
+
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');

@@ -1,3 +1,6 @@
+import 'chat_inbox_page.dart';
+import 'services/chat_inbox_service.dart';
+import 'design/market_plans_highlight.dart';
 import 'services/market_facts.dart';
 import 'design/market_facts.dart';
 import 'services/market_usage.dart';
@@ -1448,21 +1451,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     }
 
     try {
-      // Consultar todos los mensajes pendientes en una sola petición y contar
-      // los conversation_id distintos: varios mensajes en un chat cuentan como 1.
-      final rows = await supabase
-          .from('chat_messages')
-          .select('conversation_id')
-          .neq('sender_id', user.id)
-          .isFilter('read_at', null);
-      final unreadConversationIds = List<Map<String, dynamic>>.from(rows)
-          .map((message) => message['conversation_id']?.toString())
-          .whereType<String>()
-          .where((id) => id.isNotEmpty)
-          .toSet();
-      if (mounted && unreadConversationIds.length != unreadChatsCount) {
-        setState(() => unreadChatsCount = unreadConversationIds.length);
-      }
+      final count=await supabase.rpc('chat_inbox_unread_count');
+      if(mounted && supabase.auth.currentUser?.id==user.id && count is num && count.toInt()!=unreadChatsCount){setState(()=>unreadChatsCount=count.toInt());}
     } catch (error) {
       // Mantener el contador visible con su último valor si falla la consulta.
       debugPrint('No se pudo actualizar el contador de chats no leídos: $error');
@@ -1941,16 +1931,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   }
 
   Future<void> openAddCar() async {
-    if (Supabase.instance.client.auth.currentUser == null) {
-      final loggedIn = await requireAutomotorsLogin(context);
-      if (!loggedIn || !mounted) return;
-    }
-    try {
-      final allowed=await Supabase.instance.client.rpc('can_publish_vehicle_listing');
-      if(!mounted)return;
-      final car=await Navigator.push<Car>(context,MaterialPageRoute(builder:(_)=>allowed==true?const AddCarPage():const PublishOptionsPage()));
-      if(car!=null && mounted)setState(()=>cars.insert(0,car));
-    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo comprobar el acceso a publicación. Reinténtalo.'))));}
+    final car=await Navigator.push<Car>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage()));
+    if(car!=null && mounted)setState(()=>cars.insert(0,car));
   }
 
   Future<void> openCarDetails(Car car) async {
@@ -2183,6 +2165,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               ]),
             ),
             const SizedBox(height: 12),
+            MarketPlansHighlight(onOpen:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage(allowPublication:false)))),
+            const SizedBox(height:16),
             MarketRadiusFilter(criteria:_homeGeo,onChanged:(v)=>setState(()=>_homeGeo=v)),
             MarketQuickFilters(
               automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
@@ -2250,13 +2234,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               ]),
             ),
             const SizedBox(height: 12),
-            Card(color: marketPaper, margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: marketAccent.withValues(alpha: .35))), child: ListTile(
-              leading: const Icon(Icons.diamond_outlined, color: marketAccent, size: 34),
-              title:  Text(uiText(context, "Packs y suscripción"), style: TextStyle(fontWeight: FontWeight.w700)),
-              subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: marketMuted)),
-              trailing: const Icon(Icons.chevron_right_rounded, color: marketAccent),
-              onTap: () => Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage(allowPublication:false))),
-            )),
+
 
           ],
         ),
@@ -6424,257 +6402,15 @@ class _EditListingPageState extends State<EditListingPage> {
   ])));
 }
 
-class InboxPage extends StatefulWidget {
+class InboxPage extends StatelessWidget {
   const InboxPage({super.key});
-  @override
-  State<InboxPage> createState() => _InboxPageState();
-}
-
-class _InboxPageState extends State<InboxPage> {
-  final supabase = Supabase.instance.client;
-  late Future<List<Map<String, dynamic>>> future;
-
-  @override
-  void initState() {
-    super.initState();
-    future = loadConversations();
-  }
-
-  Future<List<Map<String, dynamic>>> loadConversations() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) throw Exception('Inicia sesión para consultar tus chats.');
-    final rows = await supabase
-        .from('chat_conversations')
-        .select('id, listing_id, buyer_id, seller_id, updated_at')
-        .or('buyer_id.eq.${user.id},seller_id.eq.${user.id}')
-        .order('updated_at', ascending: false);
-
-    final conversations = <Map<String, dynamic>>[];
-    for (final item in List<Map<String, dynamic>>.from(rows)) {
-      final row = Map<String, dynamic>.from(item);
-      row['vehicle_title'] = 'Vehículo anunciado';
-      row['seller_name'] = 'Vendedor';
-      row['vehicle_photo'] = null;
-
-      try {
-        final listing = await supabase
-            .from('vehicle_listings')
-            .select('id, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
-            .eq('id', row['listing_id'].toString())
-            .maybeSingle();
-
-        if (listing != null) {
-          final brand = listing['vehicle_brands'];
-          final model = listing['vehicle_models'];
-          final brandName = brand is Map ? brand['name']?.toString() : null;
-          final modelName = model is Map ? model['name']?.toString() : null;
-          final title = '${brandName ?? ''} ${modelName ?? ''}'.trim();
-          if (title.isNotEmpty) row['vehicle_title'] = title;
-
-          final rawPhotos = listing['vehicle_photos'];
-          final photos = rawPhotos is List
-              ? List<Map<String, dynamic>>.from(rawPhotos)
-              : <Map<String, dynamic>>[];
-          photos.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
-              .compareTo((b['position'] as num?)?.toInt() ?? 0));
-          final path = photos.isEmpty ? null : photos.first['storage_path']?.toString();
-          if (path != null && path.isNotEmpty) {
-            try {
-              row['vehicle_photo'] = await downloadVehiclePhoto(path);
-            } catch (_) {
-              // Si la foto no está disponible, se conserva el icono del vehículo.
-            }
-          }
-        }
-      } catch (_) {
-        // Un anuncio eliminado o inaccesible no debe impedir ver el resto de chats.
-      }
-
-      // Contar mensajes recibidos que todavía no se han leído en esta conversación.
-      try {
-        final messageRows = await supabase
-            .from('chat_messages')
-            .select('sender_id, read_at')
-            .eq('conversation_id', row['id'].toString());
-        row['unread_count'] = List<Map<String, dynamic>>.from(messageRows)
-            .where((message) =>
-                message['sender_id']?.toString() != user.id &&
-                message['read_at'] == null)
-            .length;
-      } catch (_) {
-        row['unread_count'] = 0;
-      }
-
-      final sellerUserId = row['seller_id']?.toString();
-      if (sellerUserId != null && sellerUserId.isNotEmpty) {
-        try {
-          final profile = await supabase
-              .from('user_profiles')
-              .select('full_name, business_name')
-              .eq('id', sellerUserId)
-              .maybeSingle();
-          if (profile != null) {
-            final businessName = profile['business_name']?.toString().trim() ?? '';
-            final fullName = profile['full_name']?.toString().trim() ?? '';
-            row['seller_name'] = businessName.isNotEmpty
-                ? businessName
-                : (fullName.isNotEmpty ? fullName : 'Usuario');
-          }
-        } catch (_) {
-          // Mantener el nombre genérico si el perfil no está disponible.
-        }
-      }
-      conversations.add(row);
-    }
-    return conversations;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final userId = supabase.auth.currentUser?.id;
-    return Scaffold(
-      appBar: AppBar(
-        title:  Text(uiText(context, "Mis mensajes"), style: TextStyle(fontWeight: FontWeight.w700)),
-        actions: [
-          IconButton(
-            tooltip: uiText(context, "Actualizar mensajes"),
-            onPressed: () => setState(() => future = loadConversations()),
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: marketAccent));
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  uiText(context, "No se pudieron cargar los mensajes. Comprueba que has iniciado sesión y aplicado la migración de chat.\n\n{0}", [snapshot.error]),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-          final rows = snapshot.data ?? [];
-          if (rows.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children:  [
-                    Icon(Icons.forum_outlined, size: 54, color: marketAccent),
-                    SizedBox(height: 14),
-                    Text(uiText(context, "Todavía no tienes conversaciones"),
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                    SizedBox(height: 6),
-                    Text(uiText(context, "Cuando contactes con un vendedor, tus mensajes aparecerán aquí."),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: marketMuted)),
-                  ],
-                ),
-              ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final row = rows[index];
-              final isBuyer = row['buyer_id'] == userId;
-              final title = row['vehicle_title']?.toString() ?? 'Vehículo anunciado';
-              final sellerName = row['seller_name']?.toString() ?? 'Usuario';
-              final photo = row['vehicle_photo'];
-              final unreadCount = (row['unread_count'] as num?)?.toInt() ?? 0;
-              return Card(
-                color: marketSurface,
-                margin: EdgeInsets.zero,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(17),
-                  side: BorderSide(color: marketInk.withValues(alpha: .08)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () async {
-                    await Navigator.push<void>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatPage(
-                          conversationId: row['id'].toString(),
-                          listingId: row['listing_id']?.toString(),
-                          title: title,
-                          vehiclePhoto: photo is Uint8List ? photo : null,
-                        ),
-                      ),
-                    );
-                    if (mounted) setState(() => future = loadConversations());
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 76,
-                            height: 76,
-                            color: marketSurface,
-                            child: photo is Uint8List
-                                ? Image.memory(photo, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.directions_car_filled, color: marketAccent, size: 34))
-                                : const Icon(Icons.directions_car_filled, color: marketAccent, size: 34),
-                          ),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 6),
-                              Text(sellerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: marketAccent, fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 4),
-                              Text(isBuyer ? uiText(context, "Vendedor") : uiText(context, "Comprador"),
-                                style: const TextStyle(color: marketMuted, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        if (unreadCount > 0)
-                          Container(
-                            constraints: const BoxConstraints(minWidth: 23),
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                            decoration: const BoxDecoration(color: marketAccent, shape: BoxShape.circle),
-                            child: Text('$unreadCount', textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w700)),
-                          ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.chevron_right_rounded, color: marketAccent),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
+  @override Widget build(BuildContext context)=>ChatInboxPage(
+    loadPhoto:downloadVehiclePhoto,
+    openChat:(context,row)=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ChatPage(
+      conversationId:row['id'].toString(),listingId:row['listing_id']?.toString(),
+      title:row['vehicle_title']?.toString()??uiText(context,'Vehículo anunciado'),vehiclePhoto:row['vehicle_photo'] is Uint8List?row['vehicle_photo']:null,
+    ))),
+  );
 }
 
 class ChatPage extends StatefulWidget {
@@ -6700,6 +6436,18 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) chatSafety.load();
+  }
+  bool _deletingConversation=false;
+  Future<void> _deleteConversation() async {
+    if(_deletingConversation || !await confirmPersonalChatDeletion(context) || !mounted)return;
+    setState(()=>_deletingConversation=true);
+    try{
+      await ChatInboxService(supabase).action(widget.conversationId,'hide');
+      if(!mounted)return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'Conversación eliminada de tu lista.'))));
+      await Navigator.of(context).maybePop();
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo actualizar la conversación. Vuelve a intentarlo.'))));}
+    finally{if(mounted)setState(()=>_deletingConversation=false);}
   }
   final controller = TextEditingController();
   bool sending = false;
@@ -6901,7 +6649,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.person_outline),
           ),
-          ChatSafetyControls(controller: chatSafety),
+          ChatSafetyControls(controller: chatSafety,onDeleteConversation:_deleteConversation),
         ],
         titleSpacing: 0,
         title: Row(
@@ -7284,7 +7032,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       appBar: AppBar(
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(tooltip:uiText(context,'Volver'),icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
-        title: Text(widget.allowPublication ? appText('Publicar mi vehículo', 'List my vehicle') : uiText(context,'Packs y suscripción'), style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(uiText(context,'Packs y suscripción'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       bottomNavigationBar: !widget.allowPublication?null:SafeArea(
@@ -7302,8 +7050,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
         children: [
-          const ListingContextHelp(plans:true),
-          if(widget.allowPublication)Padding(padding:const EdgeInsets.symmetric(vertical:12),child:FilledButton.icon(onPressed:_openingPublication?null:()=>_openPublication(),icon:const Icon(Icons.add),label:Text(uiText(context,'Empezar mi anuncio gratis')))),
+
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -7349,6 +7096,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
           if (_purchaseService.isLoading) Padding(padding:const EdgeInsets.all(12),child:Row(children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)),const SizedBox(width:12),Expanded(child:Text(uiText(context,'Cargando productos de Apple…')))])),
           if (_purchaseService.isStartingPurchase) Padding(padding:const EdgeInsets.all(12),child:Text(uiText(context,'Abriendo pago de Apple…'))),
           TextButton.icon(onPressed:_purchaseService.isLoading?null:()=>_purchaseService.initialize(),icon:const Icon(Icons.refresh),label:Text(uiText(context,'Actualizar productos de la tienda'))),
+          const ListingContextHelp(plans:true),
           const SubscriptionDisclosure(),
           TextButton.icon(
             onPressed: _purchaseService.restorePurchases,

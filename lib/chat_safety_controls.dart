@@ -101,9 +101,18 @@ class _ChatReportDialogState extends State<ChatReportDialog> {
 }
 
 class ChatSafetyControls extends StatelessWidget {
-  const ChatSafetyControls({super.key, required this.controller});
+  const ChatSafetyControls({
+    super.key,
+    required this.controller,
+    this.onDeleteConversation,
+  });
   final ChatSafetyController controller;
+  final Future<void> Function()? onDeleteConversation;
   Future<void> _select(BuildContext context, String action) async {
+    if (action == 'delete') {
+      await onDeleteConversation?.call();
+      return;
+    }
     if (action == 'refresh') {
       await controller.load();
       return;
@@ -182,9 +191,19 @@ class ChatSafetyControls extends StatelessWidget {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: controller,
     builder: (context, _) => PopupMenuButton<String>(
-      tooltip: uiText(context, 'Seguridad del chat'),
+      tooltip: uiText(
+        context,
+        onDeleteConversation == null
+            ? 'Seguridad del chat'
+            : 'Opciones del chat',
+      ),
       onSelected: (action) => _select(context, action),
       itemBuilder: (_) => [
+        if (onDeleteConversation != null)
+          PopupMenuItem(
+            value: 'delete',
+            child: Text(uiText(context, 'Eliminar conversación')),
+          ),
         if (controller.loaded && !controller.failed)
           PopupMenuItem(
             value: controller.blockedByMe ? 'unblock' : 'block',

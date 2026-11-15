@@ -259,4 +259,43 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+  testWidgets('Publicar prioritizes plans and keeps free publication visible', (
+    t,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await t.binding.setSurfaceSize(const Size(430, 950));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(
+      MaterialApp(
+        locale: const Locale('es'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: const HomePage(),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await t.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 40)),
+      );
+      await t.pump();
+    }
+    await t.tap(find.text('Publicar'));
+    await t.pumpAndSettle();
+    expect(find.byType(PublishOptionsPage), findsOneWidget);
+    expect(
+      t
+          .widget<PublishOptionsPage>(find.byType(PublishOptionsPage))
+          .allowPublication,
+      true,
+    );
+    expect(find.byType(AddCarPage), findsNothing);
+    expect(find.text('PACK 10'), findsOneWidget);
+    expect(find.textContaining('PUBLICAR GRATIS'), findsOneWidget);
+    expect(find.text('Empezar mi anuncio gratis'), findsNothing);
+    await t.pumpWidget(const SizedBox.shrink());
+    await t.pumpAndSettle();
+    await t.runAsync(() => Supabase.instance.client.realtime.disconnect());
+    debugDefaultTargetPlatformOverride = null;
+  });
 }
