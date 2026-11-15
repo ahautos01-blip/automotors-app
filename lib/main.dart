@@ -1,3 +1,6 @@
+import 'design/active_market_filters.dart';
+import 'design/market_activity_page.dart';
+import 'design/listing_price_history.dart';
 import 'chat_inbox_page.dart';
 import 'services/chat_inbox_service.dart';
 import 'design/market_plans_highlight.dart';
@@ -74,6 +77,15 @@ Future<void> contactSharedListing(BuildContext context,Car car) async {
     if(context.mounted)await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>ChatPage(conversationId:conversation['id'].toString(),listingId:car.listingId,title:'${car.brand} ${car.model}')));
   }catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo abrir el anuncio. Comprueba la conexión e inténtalo de nuevo.'))));}
 }
+
+Future<void> openMarketActivity(BuildContext context) async {
+  if (!await requireAutomotorsLogin(context) || !context.mounted) return;
+  await Navigator.push<void>(context,MaterialPageRoute(builder:(page)=>MarketActivityPage(
+    openInbox:()=>Navigator.push<void>(page,MaterialPageRoute(builder:(_)=>const InboxPage())),
+    openChat:(id)=>Navigator.push<void>(page,MaterialPageRoute(builder:(_)=>ChatPage(conversationId:id,title:uiText(page,'Mensajes')))),
+  )));
+}
+Widget marketActivityEntry(BuildContext context)=>ListTile(leading:const Icon(Icons.space_dashboard_outlined,color:marketAccent),title:Text(uiText(context,'Mi actividad')),subtitle:Text(uiText(context,'Ofertas, citas y mensajes pendientes')),trailing:const Icon(Icons.chevron_right),onTap:()=>openMarketActivity(context));
 
 const automotorsSupabaseUrl=String.fromEnvironment('SUPABASE_URL',defaultValue:'https://ndicdhlpbyywqyjgxpnx.supabase.co');
 const automotorsSupabaseKey=String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY',defaultValue:'sb_publishable_TBWahz_XJ9lcoBdSSxfpNQ_vhzdDTlu');
@@ -1282,6 +1294,8 @@ class _AutomotorsAppState extends State<AutomotorsApp> with WidgetsBindingObserv
   }
 
   Future<void> openConfirmation(Uri uri) async {
+    final sellerId=sellerIdFromUri(uri);
+    if(sellerId!=null){final nav=automotorsNavigatorKey.currentState;if(nav!=null)await nav.push<void>(MaterialPageRoute(builder:(_)=>PublicSellerProfilePage(ownerId:sellerId)));return;}
     final listingId=listingIdFromUri(uri);
     if(listingId!=null){await openListingLink(listingId);return;}
     final result = await confirmationHandler.handle(uri);
@@ -1639,7 +1653,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       if (selectedModel != 'Todos') selectedModel,
       if (selectedFuel != 'Todos') selectedFuel,
     ].join(' ').trim();
-    final name = await promptMarketSavedSearchName(context, initialName);
+    var notifyNew=true;
+    final name = await promptMarketSavedSearchName(context, initialName,onAlertsChanged:(value)=>notifyNew=value);
     if (name == null || !mounted) return;
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) return;
@@ -1647,6 +1662,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       await Supabase.instance.client.from('saved_vehicle_searches').insert({
         'user_id': currentUser.id,
         'name': name,
+        'notify_new_listings':notifyNew,
         'criteria': {
           ..._homeGeo,
           'brand': selectedBrand,
@@ -1682,6 +1698,23 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       );
     }
   }
+
+  void clearHomeFilters()=>setState((){searchController.clear();_homeGeo={};selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();});
+  List<MapEntry<String,VoidCallback>> get activeHomeFilters=>[
+    if(_homeGeo.isNotEmpty)MapEntry(MarketLocality.fromJson(_homeGeo['locality'])?.label??uiText(context,'Localidad'),()=>setState(()=>_homeGeo={})),
+    if(selectedBrand!='Todas')MapEntry(selectedBrand,()=>setState((){selectedBrand='Todas';selectedModel='Todos';})),
+    if(selectedModel!='Todos')MapEntry(selectedModel,()=>setState(()=>selectedModel='Todos')),
+    if(selectedFuel!='Todos')MapEntry(uiText(context,selectedFuel),()=>setState(()=>selectedFuel='Todos')),
+    if(minPrice!=null||maxPrice!=null)MapEntry(uiText(context,'Precio (€)')+': '+(minPrice?.toStringAsFixed(0)??'0')+'–'+(maxPrice?.toStringAsFixed(0)??'∞'),()=>setState((){minPrice=null;maxPrice=null;})),
+    if(minYear!=null||maxYear!=null)MapEntry(uiText(context,'Año')+': '+(minYear?.toString()??'…')+'–'+(maxYear?.toString()??'…'),()=>setState((){minYear=null;maxYear=null;})),
+    if(minKm!=null||maxKm!=null)MapEntry(uiText(context,'Kilómetros')+': '+(minKm?.toString()??'0')+'–'+(maxKm?.toString()??'∞'),()=>setState((){minKm=null;maxKm=null;})),
+    if(selectedTransmission!='Todas')MapEntry(uiText(context,selectedTransmission),()=>setState(()=>selectedTransmission='Todas')),
+    if(selectedBodyType!='Todos')MapEntry(uiText(context,selectedBodyType),()=>setState(()=>selectedBodyType='Todos')),
+    if(selectedLabel!='Todas')MapEntry(uiText(context,'Etiqueta ambiental')+': '+selectedLabel,()=>setState(()=>selectedLabel='Todas')),
+    if(selectedColor.isNotEmpty)MapEntry(uiText(context,selectedColor),()=>setState(()=>selectedColor='')),
+    if(minCv!=null||maxCv!=null||minCc!=null||maxDoors!=null||minSeats!=null)MapEntry(uiText(context,'Datos técnicos adicionales'),()=>setState((){minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;})),
+    if(selectedEquipmentFilters.isNotEmpty)MapEntry(uiText(context,'Equipamiento')+': ${selectedEquipmentFilters.length}',()=>setState(()=>selectedEquipmentFilters.clear())),
+  ];
 
   Future<void> openFilters() async {
     final minPriceController =
@@ -2167,6 +2200,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             const SizedBox(height: 12),
             MarketPlansHighlight(onOpen:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage(allowPublication:false)))),
             const SizedBox(height:16),
+            ActiveMarketFilters(filters:activeHomeFilters,onClear:clearHomeFilters),
             MarketRadiusFilter(criteria:_homeGeo,onChanged:(v)=>setState(()=>_homeGeo=v)),
             MarketQuickFilters(
               automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
@@ -2207,7 +2241,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             if(!loadingCars && cars.isNotEmpty && filtered.isEmpty) Wrap(spacing:8,runSpacing:8,children:[
               if(minPrice!=null || maxPrice!=null) OutlinedButton.icon(onPressed:()=>setState((){minPrice=null;maxPrice=null;}),icon:const Icon(Icons.euro),label:Text(uiText(context,'Ampliar rango de precio'))),
               if(searchController.text.trim().isNotEmpty) OutlinedButton.icon(onPressed:()=>setState(()=>searchController.clear()),icon:const Icon(Icons.search),label:Text(uiText(context,'Buscar sin estas palabras'))),
-              OutlinedButton.icon(onPressed:()=>setState((){searchController.clear();selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();}),icon:const Icon(Icons.filter_alt_off_outlined),label:Text(uiText(context,'Quitar todos los filtros'))),
+              OutlinedButton.icon(onPressed:clearHomeFilters,icon:const Icon(Icons.filter_alt_off_outlined),label:Text(uiText(context,'Quitar todos los filtros'))),
               TextButton.icon(onPressed:saveCurrentSearch,icon:const Icon(Icons.notifications_none),label:Text(uiText(context,'Avisarme cuando haya resultados'))),
             ]),
             const SizedBox(height: 24),
@@ -2219,7 +2253,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             MarketQuickLink(title: 'Tus búsquedas', subtitle: 'Recupera tus filtros guardados',
               icon: Icons.bookmark_outline_rounded, onTap: _openSavedSearches),
             const SizedBox(height: 10),
-            MarketQuickLink(title: 'Guardar esta búsqueda', subtitle: 'Vuelve a los coches que encajan contigo',
+            MarketQuickLink(title: 'Guardar esta búsqueda', subtitle: 'Recibe avisos de los coches que encajan contigo',
               icon: Icons.saved_search_rounded, onTap: saveCurrentSearch),
             const SizedBox(height: 18),
             Container(
@@ -2403,11 +2437,13 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
     ].join(' ');
     _updateCatalog(() => savingSearch = true);
     try {
-      final name = await promptMarketSavedSearchName(context, suggested);
+      var notifyNew=true;
+      final name = await promptMarketSavedSearchName(context, suggested,onAlertsChanged:(value)=>notifyNew=value);
       if (name == null || !mounted || db.auth.currentUser?.id != uid) return;
       await db.from('saved_vehicle_searches').insert({
         'user_id': uid,
         'name': name,
+        'notify_new_listings':notifyNew,
         'criteria': criteria,
       });
       if (!mounted) return;
@@ -4388,6 +4424,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ],
         ),
       ),
+      if(car.listingId!=null) ListingPriceHistory(listingId:car.listingId!,currentPrice:car.price),
       if(car.listingId!=null) Padding(padding:const EdgeInsets.only(top:10),child:FutureBuilder<int?>(future:listingFavoriteCount,builder:(context,snapshot)=>Row(children:[
         const Icon(Icons.favorite_border_rounded,size:17,color:marketMuted),const SizedBox(width:6),
         Flexible(child:Text(snapshot.connectionState==ConnectionState.waiting ? uiText(context,'Cargando favoritos…') : snapshot.data==null ? uiText(context,'Favoritos no disponibles') : snapshot.data==1 ? uiText(context,'1 favorito') : uiText(context,'{0} favoritos',[snapshot.data]),style:const TextStyle(color:marketMuted,fontSize:13))),
@@ -4809,7 +4846,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   bool get isOwnProfile => supabase.auth.currentUser?.id == widget.ownerId;
 
   Future<void> refreshSeller() async {
-    setState(() => dataFuture = loadSeller());
+    setState(() { dataFuture = loadSeller(); });
   }
 
   Future<void> updateProfileListingStatus(Map<String, dynamic> listing, String status) async {
@@ -4873,24 +4910,15 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         .order('created_at', ascending: false);
     final listingRows = List<Map<String, dynamic>>.from(listings);
     final soldRows = List<Map<String, dynamic>>.from(soldListings);
-    for (final listing in [...listingRows, ...soldRows]) {
-      final rawPhotos = listing['vehicle_photos'];
-      final photoRows = rawPhotos is List
-          ? List<Map<String, dynamic>>.from(rawPhotos)
-          : <Map<String, dynamic>>[];
-      photoRows.sort((a, b) => ((a['position'] as num?)?.toInt() ?? 0)
-          .compareTo((b['position'] as num?)?.toInt() ?? 0));
-      final path = photoRows.isEmpty ? null : photoRows.first['storage_path']?.toString();
-      Uint8List? firstPhoto;
-      if (path != null && path.isNotEmpty) {
-        try {
-          firstPhoto = await downloadVehiclePhoto(path);
-        } catch (_) {
-          // Si no se puede descargar la imagen, se muestra el icono del vehículo.
-        }
-      }
-      listing['_firstPhotoBytes'] = firstPhoto;
+    final allRows=[...listingRows,...soldRows];
+    final paths=<String?>[];
+    for(final listing in allRows){
+      final photos=List<Map<String,dynamic>>.from(listing['vehicle_photos'] as List? ?? []);
+      photos.sort((a,b)=>((a['position'] as num?)?.toInt()??0).compareTo((b['position'] as num?)?.toInt()??0));
+      paths.add(photos.isEmpty?null:photos.first['storage_path']?.toString());
     }
+    final covers=await loadProfileListingCovers(paths,downloadVehiclePhoto);
+    for(var i=0;i<allRows.length;i++){allRows[i]['_firstPhotoBytes']=covers[i];}
     return {'profile': profile, 'listings': listingRows, 'soldListings': soldRows, 'aboutUs': aboutUs, 'memberSince': memberSince,'emailConfirmed':emailConfirmed};
   }
 
@@ -5128,7 +5156,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         onSelected:(value) async {
           await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>value=='delete' ? const DeleteAccountPage() : const ProfilePage()));
           if (!mounted) return;
-          setState(() => dataFuture = loadSeller());
+          setState(() { dataFuture = loadSeller(); });
         },
         itemBuilder:(context)=>[
           PopupMenuItem(value:'profile',child:Text(uiText(context,'Mi perfil'))),
@@ -5241,7 +5269,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   const SizedBox(width: 2),
                   profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
+                if (isProfessional) Padding(padding:const EdgeInsets.only(top:16),child:OutlinedButton.icon(
+                  icon:const Icon(Icons.ios_share_rounded),label:Text(uiText(context,'Compartir perfil profesional')),
+                  onPressed:() async {try {final box=context.findRenderObject() as RenderBox?;await SharePlus.instance.share(ShareParams(text:'$name · AUTOMOTORS\n${sellerShareUri(widget.ownerId)}',sharePositionOrigin:box==null?null:box.localToGlobal(Offset.zero)&box.size));}catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(uiText(context,'No se pudo compartir el perfil.'))));}},
+                )),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
+                  marketActivityEntry(context),
                   const ModerationEntry(),
                 ],
                 if (supabase.auth.currentUser?.id != widget.ownerId) ...[
@@ -6251,6 +6284,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
               ),
             ),
+            marketActivityEntry(context),
             const MarketUsagePreference(),
             const ModerationEntry(),
             const AccountDeletionEntry(),
@@ -6396,7 +6430,7 @@ class _EditListingPageState extends State<EditListingPage> {
     DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
     Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
     const SupportLinks(),
-    ListingPreparation(photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty),
+    ListingPreparation(photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty,marketFacts:marketFacts),
     MarketFactsForm(value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
@@ -7706,79 +7740,12 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       MapEntry('Al menos 5 fotografías', photos.length >= 5),
       MapEntry('Descripción detallada', description.text.trim().length >= 80),
       MapEntry('Equipamiento confirmado', selectedEquipment.isNotEmpty),
-      MapEntry('Mantenimiento mencionado', RegExp(r'manten|revisi|servic',caseSensitive:false).hasMatch(description.text)),
+      MapEntry('Mantenimiento mencionado', marketFacts['maintenance']!=null || RegExp(r'manten|revisi|servic',caseSensitive:false).hasMatch(description.text)),
       MapEntry('Datos técnicos adicionales', cv.text.trim().isNotEmpty || cilindradaCc.text.trim().isNotEmpty || version.text.trim().isNotEmpty),
     ];
   }
 
-  Widget buildListingQualityCard() {
-    final checks = listingQualityChecks;
-    final completed = checks.where((item) => item.value).length;
-    final progress = completed / checks.length;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: panel,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: marketAccent.withValues(alpha: .45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome_rounded, color: marketAccent),
-              const SizedBox(width: 8),
-               Expanded(
-                child: Text(uiText(context, "Calidad de tu anuncio"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              ),
-              Text('$completed/${checks.length}', style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 7,
-              backgroundColor: marketLine,
-              valueColor: const AlwaysStoppedAnimation<Color>(gold),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            completed == checks.length
-                ? uiText(context, "¡Excelente! Tu anuncio incluye la información clave para generar confianza.")
-                : uiText(context, "Completa estas recomendaciones para que los compradores conozcan mejor el vehículo."),
-            style: const TextStyle(color: marketMuted, height: 1.35, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          ...checks.map((item) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                Icon(
-                  item.value ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                  size: 17,
-                  color: item.value ? gold : marketMuted,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    uiText(context, item.key),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: item.value ? marketInk : marketMuted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
-  }
+  Widget buildListingQualityCard() => ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty,checks:listingQualityChecks,marketFacts:marketFacts);
 
   Future<void> publishCar() async {
     if (publishing || _previewingPublication || vehicleLookupBusy || !formKey.currentState!.validate()) return;
@@ -8310,7 +8277,6 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
             PhotoGuideChecklist(completed:_photoGuideCompleted,onChanged:(value)=>_updatePublication((){_photoGuideCompleted..clear()..addAll(value);})),
-            ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty),
             MarketFactsForm(value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(

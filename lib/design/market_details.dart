@@ -244,24 +244,44 @@ class MarketSellerSummary extends StatelessWidget {
 
 Future<String?> promptMarketSavedSearchName(
   BuildContext context,
-  String initialName,
-) async {
+  String initialName, {
+  ValueChanged<bool>? onAlertsChanged,
+}) async {
   final controller = TextEditingController(text: initialName);
+  var notifyNew = true;
   final route = DialogRoute<String>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, refresh) => AlertDialog(
         title: Text(uiText(context, 'Guardar búsqueda')),
-        content: TextField(
-          key: const Key('market-search-name'),
-          controller: controller,
-          autofocus: true,
-          maxLength: 80,
-          onChanged: (_) => refresh(() {}),
-          decoration: InputDecoration(
-            labelText: uiText(context, 'Nombre de la búsqueda'),
-            hintText: uiText(context, 'Ej. SUV diésel hasta 20.000 €'),
-          ),
+        scrollable: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const Key('market-search-name'),
+              controller: controller,
+              autofocus: true,
+              maxLength: 80,
+              onChanged: (_) => refresh(() {}),
+              decoration: InputDecoration(
+                labelText: uiText(context, 'Nombre de la búsqueda'),
+                hintText: uiText(context, 'Ej. SUV diésel hasta 20.000 €'),
+              ),
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(uiText(context, 'Avisarme de coches nuevos')),
+              subtitle: Text(
+                uiText(
+                  context,
+                  'Puedes cambiarlo en Tus búsquedas. Para recibir avisos fuera de la app, permite las notificaciones en el iPhone.',
+                ),
+              ),
+              value: notifyNew,
+              onChanged: (value) => refresh(() => notifyNew = value),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -281,6 +301,7 @@ Future<String?> promptMarketSavedSearchName(
   final result = await Navigator.of(context).push(route);
   await route.completed;
   controller.dispose();
+  if (result != null) onAlertsChanged?.call(notifyNew);
   return result;
 }
 

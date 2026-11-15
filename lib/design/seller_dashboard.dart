@@ -1,3 +1,4 @@
+import 'seller_performance_report.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/ui_text.dart';
@@ -82,6 +83,7 @@ class SellerDashboard extends StatelessWidget {
             ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
+          SellerPerformanceReport(listings:listings),
           TextButton.icon(
             onPressed: onInbox,
             icon: const Icon(Icons.chat_bubble_outline),

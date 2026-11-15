@@ -89,6 +89,10 @@ void main() {
         await tester.pumpWidget(localized(code, const AddCarPage()));
         await tester.pumpAndSettle();
         expect(find.text(tr('Calidad de tu anuncio')), findsOneWidget);
+        await tester.ensureVisible(find.text(tr('Ver datos completados')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(tr('Ver datos completados')));
+        await tester.pumpAndSettle();
         expect(find.text(tr('Marca y modelo seleccionados')), findsOneWidget);
         final year = find.byWidgetPredicate(
           (widget) =>

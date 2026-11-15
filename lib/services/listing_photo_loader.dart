@@ -123,3 +123,26 @@ class _CachedListingPhoto {
   final Uint8List bytes;
   final DateTime createdAt;
 }
+
+Future<List<Uint8List?>> loadProfileListingCovers(
+  List<String?> paths,
+  ListingPhotoDownload download,
+) async {
+  final result = List<Uint8List?>.filled(paths.length, null);
+  var next = 0;
+  Future<void> worker() async {
+    while (next < paths.length) {
+      final i = next++;
+      final path = paths[i];
+      if (path == null || path.isEmpty) continue;
+      try {
+        result[i] = await download(path);
+      } catch (_) {
+        /* One photo must not break the profile. */
+      }
+    }
+  }
+
+  await Future.wait(List.generate(3, (_) => worker()));
+  return result;
+}

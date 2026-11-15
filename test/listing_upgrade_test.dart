@@ -87,9 +87,9 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
-        await t.ensureVisible(find.byType(ExpansionTile));
+        await t.ensureVisible(find.widgetWithText(ExpansionTile, 'Guía de fotografías'));
         await t.pumpAndSettle();
-        await t.tap(find.byType(ExpansionTile));
+        await t.tap(find.widgetWithText(ExpansionTile, 'Guía de fotografías'));
         await t.pumpAndSettle();
         expect(t.takeException(), isNull);
       },

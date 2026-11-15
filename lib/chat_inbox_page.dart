@@ -323,6 +323,8 @@ class _ChatInboxPageState extends State<ChatInboxPage>
                                   child: photo is Uint8List
                                       ? Image.memory(
                                           photo,
+                                          cacheWidth: 240,
+                                          excludeFromSemantics: true,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               const Icon(

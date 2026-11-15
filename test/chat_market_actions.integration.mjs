@@ -15,7 +15,7 @@ create table private.account_suspensions(user_id uuid);
 create table private.chat_user_blocks(blocker_id uuid,blocked_id uuid);
 create table private.test_listing_holds(listing_id uuid);
 create function private.community_subject_active(u uuid) returns boolean language sql as $$select not exists(select 1 from private.account_suspensions where user_id=u)$$;
-create function private.listing_not_held(v uuid) returns boolean language sql as $$select not exists(select 1 from private.test_listing_holds where listing_id=v)$$;
+create function private.listing_not_held(v uuid) returns boolean language sql security definer set search_path='' as $$select not exists(select 1 from private.test_listing_holds where listing_id=v)$$;
 create function private.content_moderation_enabled() returns boolean language sql as $$select false$$;
 create function private.listing_content_approved(v uuid) returns boolean language sql as $$select true$$;`);
 await db.exec(await readFile(new URL('../supabase/fixes/enable_ios_push.sql',import.meta.url),'utf8'));
@@ -168,5 +168,32 @@ await db.exec('reset role');await db.exec("create policy inbox_fixture_hidden_me
 await login(buyer);assert.ok(!JSON.stringify(await inbox()).includes('hidden-by-policy'));
 await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>inboxAction('pin'),e=>e.code==='42501');
 await login(null);await assert.rejects(()=>inbox(),e=>e.code==='42501');await assert.rejects(()=>inboxAction('hide'),e=>e.code==='42501');
+
+// Build 48: only approved public prices, read visibility, and personal activity.
+await login(null);await db.exec('reset role');
+await db.exec(await readFile(new URL('../supabase/migrations/20261115232313_activity_price_history_build48.sql',import.meta.url),'utf8'));
+await db.query('insert into auth.sessions values($1,$1,null) on conflict do nothing',[buyer]);
+const priced=randomUUID();await db.query("insert into vehicle_listings(id,owner_id,status,price)values($1,$2,'draft',12300)",[priced,seller]);
+const prices=async()=> (await db.query('select price from listing_price_history where listing_id=$1 order by recorded_at desc,id desc',[priced])).rows.map(r=>Number(r.price));
+assert.deepEqual(await prices(),[]);
+await db.query("update vehicle_listings set price=12000,status='published' where id=$1",[priced]);assert.deepEqual(await prices(),[12000]);
+await db.query("update vehicle_listings set price=11000,status='draft' where id=$1",[priced]);assert.deepEqual(await prices(),[12000]);
+await db.query("update vehicle_listings set status='published' where id=$1",[priced]);assert.deepEqual(await prices(),[11000,12000]);
+await db.query("update vehicle_listings set status='reserved' where id=$1",[priced]);assert.deepEqual(await prices(),[11000,12000]);
+await login(null);assert.deepEqual(await prices(),[11000,12000]);await assert.rejects(()=>db.query('insert into listing_price_history(listing_id,price)values($1,1)',[priced]),e=>e.code==='42501');
+await db.exec('reset role');await db.query("update vehicle_listings set status='draft' where id=$1",[priced]);await login(seller);assert.deepEqual(await prices(),[]);await assert.rejects(()=>db.query('delete from listing_price_history where listing_id=$1',[priced]),e=>e.code==='42501');
+await login(null);await db.exec('reset role');await db.query("update vehicle_listings set status='published' where id=$1",[priced]);
+await db.exec("create policy price_fixture_hidden on vehicle_listings as restrictive for select to anon,authenticated using(version<>'hidden-price')");await db.query("update vehicle_listings set version='hidden-price' where id=$1",[priced]);await login(buyer);assert.deepEqual(await prices(),[]);
+await login(null);await db.exec('reset role');
+const newOffer=(await db.query("insert into chat_market_activities(conversation_id,creator_id,kind,amount,expires_at)values($1,$2,'offer',9900,now()+interval '1 hour')returning id",[inboxId,seller])).rows[0].id;
+const newVisit=(await db.query("insert into chat_market_activities(conversation_id,creator_id,kind,status,scheduled_at,meeting_place,expires_at)values($1,$2,'visit','accepted',now()+interval '2 days','Public test place',now()+interval '2 days')returning id",[inboxId,buyer])).rows[0].id;
+const activity=async()=>(await db.query('select my_market_activity() data')).rows[0].data;
+await login(buyer);let activityData=await activity();assert.ok(activityData.offers.some(o=>o.id===newOffer&&o.role==='buyer'));assert.ok(activityData.visits.some(v=>v.id===newVisit));
+await login(seller);assert.ok(!(await activity()).offers.some(o=>o.id===newOffer));assert.ok((await activity()).visits.some(v=>v.id===newVisit));
+await login(outsider);assert.ok(!(await activity()).visits.some(v=>v.id===newVisit));assert.ok(!(await activity()).offers.some(o=>o.id===newOffer));
+await login(null);await db.exec('reset role');await db.query('insert into private.chat_user_blocks values($1,$2)',[buyer,seller]);await login(buyer);assert.ok(!(await activity()).offers.some(o=>o.id===newOffer));assert.ok(!(await activity()).visits.some(v=>v.id===newVisit));
+await login(null);await db.exec('reset role');await db.exec('delete from private.chat_user_blocks');await db.query("update chat_market_activities set expires_at=now()-interval '1 second' where id=$1",[newOffer]);await db.query("update chat_market_activities set status='cancelled' where id=$1",[newVisit]);await login(buyer);assert.ok(!(await activity()).offers.some(o=>o.id===newOffer));assert.ok(!(await activity()).visits.some(v=>v.id===newVisit));
+await db.query("select record_client_error('chat','unknown',48)");await db.query("select record_market_usage('catalogue',48)");await assert.rejects(()=>db.query("select record_market_usage('catalogue',49)"));
+await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>activity(),e=>e.code==='42501');await login(null);await assert.rejects(()=>activity(),e=>e.code==='42501');
 
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');

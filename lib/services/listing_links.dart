@@ -15,3 +15,20 @@ String? listingIdFromUri(Uri uri) {
   final id = uri.queryParameters['listing'];
   return id != null && _listingIdPattern.hasMatch(id) ? id : null;
 }
+
+// Reuse the already associated public /anuncio/ route, with a distinct seller key.
+Uri sellerShareUri(String id) => _listingIdPattern.hasMatch(id)
+    ? Uri.https('automotors.info', '/anuncio/', {'seller': id})
+    : Uri.https('automotors.info', '/');
+String? sellerIdFromUri(Uri uri) {
+  final official =
+      uri.scheme == 'https' &&
+      const ['automotors.info', 'www.automotors.info'].contains(uri.host) &&
+      uri.path == '/anuncio/';
+  final native =
+      uri.scheme == 'com.automotors.automotorsbase' && uri.host == 'seller';
+  if ((!official && !native) || uri.queryParameters.containsKey('listing'))
+    return null;
+  final id = uri.queryParameters['seller'];
+  return id != null && _listingIdPattern.hasMatch(id) ? id : null;
+}

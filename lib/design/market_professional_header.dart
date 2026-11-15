@@ -44,6 +44,8 @@ class MarketProfessionalHeader extends StatelessWidget {
                           )
                         : Image.network(
                             coverUrl!,
+                            cacheWidth: 1600,
+                            semanticLabel: name,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.directions_car_outlined,
