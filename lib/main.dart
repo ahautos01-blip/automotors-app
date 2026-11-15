@@ -2255,7 +2255,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               title:  Text(uiText(context, "Packs y suscripción"), style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle:  Text(uiText(context, "Destaca tus anuncios y consigue más visibilidad."), style: TextStyle(color: marketMuted)),
               trailing: const Icon(Icons.chevron_right_rounded, color: marketAccent),
-              onTap: openAddCar,
+              onTap: () => Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage(allowPublication:false))),
             )),
 
           ],
@@ -7284,7 +7284,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
       appBar: AppBar(
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(tooltip:uiText(context,'Volver'),icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
-        title: Text(appText('Publicar mi vehículo', 'List my vehicle'), style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(widget.allowPublication ? appText('Publicar mi vehículo', 'List my vehicle') : uiText(context,'Packs y suscripción'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
       bottomNavigationBar: !widget.allowPublication?null:SafeArea(
@@ -7321,6 +7321,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
           for (final pack in packs) ...[
             _PublishPackCard(
               data: pack,
+              busy:_purchaseService.isStartingPurchase,
               onPublish: widget.allowPublication && _verifiedPlans.isActive(switch (pack.title) {
                 'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
                 'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
@@ -7329,15 +7330,10 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
                     'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
                     'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
                   }) : null,
-              onSelect: StorePurchaseService.checkoutEnabled &&
-                      _purchaseService.products.any((product) => storePeriodMessage(product) != null && (!_usesSpanishAppStoreCatalog || spanishStoreDisplayPrice(product) != null) && product.id == switch (pack.title) {
-                        'PACK 10' => 'automotors_pack_10',
-                        'PACK 15' => 'automotors_pack_15',
-                        'PACK 20' => 'automotors_pack_20',
-                        'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
-                        _ => '',
-                      })
-                  ? () {
+              onSelect: _purchaseService.isStartingPurchase ? null : () async {
+                if (Supabase.instance.client.auth.currentUser == null) {
+                  if (!await requireAutomotorsLogin(context) || !mounted) return;
+                }
                 final productId = switch (pack.title) {
                   'PACK 10' => 'automotors_pack_10',
                   'PACK 15' => 'automotors_pack_15',
@@ -7345,14 +7341,14 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
                   'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
                   _ => '',
                 };
-                if (productId.isNotEmpty) {
-                  _purchaseService.purchaseSubscription(productId);
-                }
-              }
-                  : null,
+                if (productId.isNotEmpty) await _purchaseService.purchaseSubscription(productId);
+              },
             ),
             const SizedBox(height: 14),
           ],
+          if (_purchaseService.isLoading) Padding(padding:const EdgeInsets.all(12),child:Row(children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)),const SizedBox(width:12),Expanded(child:Text(uiText(context,'Cargando productos de Apple…')))])),
+          if (_purchaseService.isStartingPurchase) Padding(padding:const EdgeInsets.all(12),child:Text(uiText(context,'Abriendo pago de Apple…'))),
+          TextButton.icon(onPressed:_purchaseService.isLoading?null:()=>_purchaseService.initialize(),icon:const Icon(Icons.refresh),label:Text(uiText(context,'Actualizar productos de la tienda'))),
           const SubscriptionDisclosure(),
           TextButton.icon(
             onPressed: _purchaseService.restorePurchases,
@@ -7382,9 +7378,10 @@ class _PublishPackData {
 
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
+  final bool busy;
   final VoidCallback? onSelect;
   final VoidCallback? onPublish;
-  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish});
+  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish, this.busy=false});
   static const Color gold = Color(0xFFFFC447);
   @override
   Widget build(BuildContext context) {
@@ -7407,7 +7404,7 @@ class _PublishPackCard extends StatelessWidget {
         const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(left: 44, bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: marketAccent, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: marketMuted, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 13)), child: busy ? Row(mainAxisAlignment:MainAxisAlignment.center,children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)),const SizedBox(width:10),Flexible(child:Text(uiText(context,'Abriendo pago de Apple…')))]) : Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
         if (onPublish != null) ...[
           const SizedBox(height: 8),
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
