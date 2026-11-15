@@ -131,4 +131,11 @@ assert.equal(typeof (await db.query('select my_market_dashboard() data')).rows[0
 await login(mod);const usage=(await db.query('select market_usage_summary() data')).rows[0].data;assert.equal(usage[0].occurrences,1);assert.ok(!JSON.stringify(usage).includes(seller));
 await db.exec('reset role');await db.query("update vehicle_listings set market_facts=$1 where id=$2",[{maintenance:'documented'},listing]);assert.notEqual((await db.query('select private.listing_content_hash(to_jsonb(v)) h from vehicle_listings v where id=$1',[listing])).rows[0].h,beforeHash);
 await login(null);await assert.rejects(()=>db.query('select my_market_dashboard()'),e=>e.code==='42501');await assert.rejects(()=>db.query("select record_market_usage('catalogue',45)"),e=>e.code==='42501');
+await db.exec('reset role');await db.exec(`create schema cron;create table private.test_usage_schedule(name text,schedule text,command text);
+create function cron.schedule(text,text,text) returns bigint language plpgsql as $$begin insert into private.test_usage_schedule values($1,$2,$3);return 1;end;$$;`);
+await db.exec(await readFile(new URL('../supabase/migrations/20261115133339_market_usage_retention.sql',import.meta.url),'utf8'));
+const retention=(await db.query('select * from private.test_usage_schedule')).rows[0];assert.equal(retention.name,'automotors-market-usage-retention');
+await db.exec("insert into private.market_usage_totals(day,stage,app_build)values(current_date-60,'detail',45)");await db.exec(retention.command);
+assert.equal((await db.query('select count(*)::int n from private.market_usage_totals where day<current_date-30')).rows[0].n,0);
+assert.ok((await db.query('select count(*)::int n from private.market_usage_totals where day=current_date')).rows[0].n>0);
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');
