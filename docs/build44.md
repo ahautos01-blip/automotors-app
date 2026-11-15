@@ -10,3 +10,5 @@ Version 1.0.3+44. Keep the existing public App Store submission unchanged.
 6. Validation: 250 Flutter tests passed; post-adjustment targeted tests also passed. Seven APNs payload/retry/JWT tests and isolated Postgres offer/reminder, account deletion, moderation and profile-authority scenarios passed. No real accounts deleted, no purchases performed, no test listings published and no synthetic notifications sent to real devices.
 
 Server migration 20261115114825 and send-ios-push v7 were deployed after explicit owner authorization. Reminder capability and anonymous access denial verified; security advisor counts are unchanged. Device validation is recorded separately in launch-validation-44.md; real APNs delivery and Apple's purchase sheet still require the owner's iPhones.
+
+Follow-up 20261115115150 queues due reminders before the idle dispatcher checks pending deliveries. Isolated regression starts with no delivery jobs, advances an offer into its reminder window and verifies a single queued reminder and network dispatch. This avoids relying on another chat message to wake the worker.

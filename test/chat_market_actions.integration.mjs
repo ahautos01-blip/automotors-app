@@ -97,6 +97,14 @@ await db.query("update chat_market_activities set expires_at=now()+interval '1 h
 const reminderRows=(await db.query("select user_id from private.push_deliveries where kind='offer_reminder' and activity_id=$1",[fresh.id])).rows;assert.equal(reminderRows.length,1);assert.equal(reminderRows[0].user_id,seller);
 await login(buyer);await action('cancel',fresh.id);
 await db.exec('reset role');const worker=(await db.query('select worker_token from private.push_worker_config')).rows[0].worker_token;await db.exec('set role service_role');const jobs=(await db.query('select claim_push_deliveries($1) jobs',[worker])).rows[0].jobs;assert.ok(jobs.every(j=>!['visit_reminder','offer_reminder'].includes(j.kind)));assert.equal((await db.query("select status from private.push_deliveries where kind='offer_reminder' limit 1")).rows[0].status,'discarded');await db.exec('reset role');
+// An idle dispatcher must generate a due offer reminder even with no pre-existing jobs.
+await db.exec('reset role');await db.exec(`create schema net;create table private.dispatch_test_calls(n integer);
+create function net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds integer)returns bigint language plpgsql as $$begin insert into private.dispatch_test_calls values(1);return 1;end;$$;`);
+await db.exec(await readFile(new URL('../supabase/migrations/20261115115150_wake_offer_expiry_reminders.sql',import.meta.url),'utf8'));
+await login(buyer);const idleOffer=await action('create',null,'offer',9600);await db.exec('reset role');await db.query("update chat_market_activities set expires_at=now()+interval '1 hour' where id=$1",[idleOffer.id]);await db.exec('delete from private.push_deliveries');await login(null);await db.exec('reset role');
+assert.equal((await db.query('select private.dispatch_ios_push() result')).rows[0].result,1);
+assert.equal((await db.query("select count(*)::int n from private.push_deliveries where kind='offer_reminder'")).rows[0].n,1);
+assert.equal((await db.query('select count(*)::int n from private.dispatch_test_calls')).rows[0].n,1);
 await login(null);await assert.rejects(()=>action('list'),e=>e.code==='42501');const trust=(await db.query('select seller_trust_summary($1) result',[seller])).rows[0].result;assert.deepEqual(trust,{email_confirmed:true});
 await login(buyer);await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42501');
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');
