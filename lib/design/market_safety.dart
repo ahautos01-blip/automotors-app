@@ -34,37 +34,73 @@ class SellerTrustIndicators extends StatelessWidget {
     this.emailConfirmed = false,
   });
   final bool professional, emailConfirmed;
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          if (emailConfirmed)
-            Chip(
-              avatar: const Icon(Icons.mark_email_read_outlined, size: 18),
-              label: Text(uiText(context, 'Correo confirmado')),
-            ),
-          if (professional)
-            Chip(
-              avatar: const Icon(Icons.business_outlined, size: 18),
-              label: Text(uiText(context, 'Perfil profesional declarado')),
-            ),
+  void _showDetails(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          uiText(
+            dialogContext,
+            professional ? 'Perfil profesional' : 'Correo confirmado',
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (professional) ...[
+                Text(
+                  uiText(
+                    dialogContext,
+                    'El vendedor ha indicado que es profesional. AUTOMOTORS no ha verificado su documentación.',
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              Text(
+                uiText(
+                  dialogContext,
+                  'Estos indicadores no acreditan la identidad del vendedor ni el historial o estado del vehículo.',
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                uiText(
+                  dialogContext,
+                  'Información facilitada por el vendedor. Consulta sus valoraciones y confirma los datos antes de comprar.',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(uiText(dialogContext, 'Cerrar')),
+          ),
         ],
       ),
-      if (emailConfirmed || professional)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            uiText(
-              context,
-              'Estos indicadores no acreditan la identidad del vendedor ni el historial o estado del vehículo.',
-            ),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      if (emailConfirmed)
+        ActionChip(
+          onPressed: () => _showDetails(context),
+          avatar: const Icon(Icons.mark_email_read_outlined, size: 18),
+          label: Text(uiText(context, 'Correo confirmado')),
+        ),
+      if (professional)
+        ActionChip(
+          onPressed: () => _showDetails(context),
+          avatar: const Icon(Icons.business_outlined, size: 18),
+          label: Text(uiText(context, 'Perfil profesional')),
         ),
     ],
   );

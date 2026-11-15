@@ -1,3 +1,8 @@
+import 'services/market_facts.dart';
+import 'design/market_facts.dart';
+import 'services/market_usage.dart';
+import 'design/market_usage.dart';
+import 'design/seller_dashboard.dart';
 import 'services/listing_share_card.dart';
 import 'design/photo_guide_checklist.dart';
 import 'chat_offer_panel.dart';
@@ -73,7 +78,7 @@ const gold = marketGold;
 const black = marketPaper;
 const panel = marketSurface;
 
-const buyerListingProjection = 'id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
+const buyerListingProjection = 'market_facts, id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
 
 final _vehiclePhotoCache = ListingPhotoCache();
 final _localMarketState = LocalMarketState();
@@ -815,6 +820,7 @@ class Car {
   final int km;
   final double price;
   final String fuel;
+  final Map<String,dynamic> marketFacts;
   final String description;
   final String phone;
   final String? matricula;
@@ -859,6 +865,7 @@ class Car {
     required this.price,
     required this.fuel,
     required this.description,
+    this.marketFacts=const {},
     required this.phone,
     this.matricula,
     this.cv,
@@ -909,6 +916,7 @@ class Car {
         km: (raw['km'] as num?)?.toInt() ?? 0,
         price: (raw['price'] as num?)?.toDouble() ?? 0,
         fuel: raw['fuel']?.toString() ?? '',
+        marketFacts:raw['market_facts'] is Map ? Map<String,dynamic>.from(raw['market_facts']):{},
         description: raw['description']?.toString() ?? '',
         phone: raw['phone']?.toString() ?? '',
         matricula: raw['show_matricula_publicly'] == true ? raw['matricula']?.toString() : null,
@@ -959,6 +967,7 @@ Future<Map<String, dynamic>> getOrCreateConversation({
     return row == null ? null : Map<String, dynamic>.from(row);
   }
 
+  MarketUsage.record('contact');
   final existing = await findConversation();
   if (existing != null) return existing;
 
@@ -1184,6 +1193,11 @@ class VehicleComparisonPage extends StatelessWidget {
       ['Velocidad máxima', ...cars.map((c) => _value(c.maxSpeedKmh, ' km/h'))],
       ['Consumo combinado', ...cars.map((c) => c.consumptionL100 == null ? 'No indicado' : '${c.consumptionL100!.toStringAsFixed(1)} l/100 km')],
       ['Normativa de emisiones', ...cars.map((c) => _value(c.emissionsStandard))],
+      ['Versión', ...cars.map((c) => _value(c.version))],
+      ['Mantenimiento', ...cars.map((c) => marketMaintenance[c.marketFacts['maintenance']]??'No informado')],
+      ['ITV', ...cars.map((c) => marketItv[c.marketFacts['itv']]??'No informado')],
+      ['Garantía', ...cars.map((c) => marketWarranty[c.marketFacts['warranty']]??'No informado')],
+      ['Localidad', ...cars.map((c) => MarketLocality.fromJson(c.marketFacts['locality'])?.label??'No informado')],
       ['Cambio', ...cars.map((c) => _value(c.transmission))],
       ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
       ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
@@ -1372,6 +1386,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePage> {
+  Map<String,dynamic> _homeGeo={};
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
   String selectedFuel = 'Todos';
@@ -1402,6 +1417,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   @override
   void initState() {
     super.initState();
+    MarketUsage.record('catalogue');
     if (widget.initialNotice != null) WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(uiText(context, widget.initialNotice!)), duration: const Duration(seconds: 8)));
@@ -1581,7 +1597,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       final matchesMaxDoors = maxDoors == null || (car.doors != null && car.doors! <= maxDoors!);
       final matchesMinSeats = minSeats == null || (car.seats != null && car.seats! >= minSeats!);
       final matchesEquipment = selectedEquipmentFilters.every((item) => car.equipment.contains(item));
-      return matchesSearch &&
+      return matchesMarketRadius(_homeGeo,car.marketFacts) && matchesSearch &&
           matchesBrand &&
           matchesModel &&
           matchesFuel &&
@@ -1604,6 +1620,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         return value != null && value.isFinite ? value : null;
       }
       setState(() {
+        _homeGeo={if(criteria.containsKey('locality'))'locality':criteria['locality'],if(criteria.containsKey('radius_km'))'radius_km':criteria['radius_km']};
         searchController.text = criteria['query']?.toString() ?? '';
         selectedBrand = criteria['brand']?.toString() ?? 'Todas';
         selectedModel = criteria['model']?.toString() ?? 'Todos';
@@ -1641,6 +1658,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         'user_id': currentUser.id,
         'name': name,
         'criteria': {
+          ..._homeGeo,
           'brand': selectedBrand,
           'model': selectedModel,
           'fuel': selectedFuel,
@@ -1963,6 +1981,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     final filtered = filteredCars;
     final isWide = MediaQuery.of(context).size.width >= 760;
     final activeFilterCount = [
+      _homeGeo.isNotEmpty,
       selectedFuel != 'Todos',
       selectedBrand != 'Todas',
       selectedModel != 'Todos',
@@ -2164,6 +2183,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               ]),
             ),
             const SizedBox(height: 12),
+            MarketRadiusFilter(criteria:_homeGeo,onChanged:(v)=>setState(()=>_homeGeo=v)),
             MarketQuickFilters(
               automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
               electric: selectedFuel == 'Eléctrico', budget: maxPrice == 20000,
@@ -2318,6 +2338,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   double minPrice = 0, maxPrice = 200000;
   int minKm = 0, maxKm = 300000, minCv = 0, maxCv = 1000;
   int minYear = 1990, maxYear = DateTime.now().year + 1;
+  Map<String,dynamic> geoCriteria={};
   bool showFilters = false;
   String sortOrder = 'featured';
   final Set<String> _comparisonIds = <String>{};
@@ -2331,6 +2352,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   void initState() {
     super.initState();
     _restoreCatalog();
+    MarketUsage.record('catalogue');
   }
 
   void _updateCatalog(VoidCallback change) {
@@ -2351,6 +2373,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
       return value is num && value.isFinite ? value.toInt().clamp(0, maximum) : fallback;
     }
     setState(() {
+      geoCriteria={if(saved.containsKey('locality'))'locality':saved['locality'],if(saved.containsKey('radius_km'))'radius_km':saved['radius_km']};
       search.text = saved['query'] is String ? saved['query'] as String : '';
       brand = brands.contains(saved['brand']) ? saved['brand'] as String : 'Todas';
       model = models.contains(saved['model']) ? saved['model'] as String : 'Todos';
@@ -2369,6 +2392,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
 
   bool savingSearch = false;
   Map<String, dynamic> get catalogCriteria => {
+    ...geoCriteria,
     'query': search.text.trim(),
     'brand': brand,
     'model': model,
@@ -2451,6 +2475,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   void _resetFilters() {
     _updateCatalog(() {
       search.clear();
+      geoCriteria={};
       brand = 'Todas';
       model = 'Todos';
       fuel = 'Todos';
@@ -2478,7 +2503,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   List<String> get models => ['Todos', ...widget.cars.where((c) => brand == 'Todas' || c.brand == brand).map((c) => c.model).toSet().toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
-    return matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
+    return matchesMarketRadius(geoCriteria,c.marketFacts) && matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
       matchesVehicleTransmission(c.transmission, transmission) && (bodyType == 'Todos' || normalizeVehicleSearch(c.bodyType ?? '') == normalizeVehicleSearch(bodyType)) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
@@ -2553,6 +2578,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
           ))
         : null,
       body: Column(children: [
+        Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:MarketRadiusFilter(criteria:geoCriteria,onChanged:(v)=>_updateCatalog(()=>geoCriteria=v))),
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => _updateCatalog(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); _updateCatalog(() {}); })) : IconButton(tooltip:uiText(context,'Borrar búsqueda'),onPressed: () { search.clear(); _updateCatalog(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         if (!showFilters) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
           automatic: transmission == 'Automático', suv: bodyType == 'SUV',
@@ -3663,6 +3689,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   void initState() {
     super.initState();
+    MarketUsage.record('detail');
     unawaited(_recordListingView());
     detailPhotos = List.of(car.photos);
     galleryReady = _loadGallery();
@@ -4470,6 +4497,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ],
         const SizedBox(height: 18),
+        MarketFactsView(facts:car.marketFacts),
         if (car.description.trim().isNotEmpty) ...[
           Container(
             width: double.infinity,
@@ -4918,7 +4946,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select(buyerListingProjection)
           .eq('id', listingId)
           .inFilter('status', ['published', 'reserved', 'sold'])
           .maybeSingle();
@@ -4980,27 +5008,42 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   int selectedProfileTab = 0;
 
   Widget profileStat(String value, String label) => Expanded(
-    child: Column(children: [
-      Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: marketInk)),
-      const SizedBox(height: 3),
-      Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center),
-    ]),
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
+      decoration: BoxDecoration(color: marketSurface, borderRadius: BorderRadius.circular(18), border: Border.all(color: marketLine)),
+      child: Column(children: [
+        Text(value, style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, color: marketInk)),
+        const SizedBox(height: 6),
+        Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center),
+      ]),
+    ),
   );
 
   Widget profileStatWidget(Widget value, String label) => Expanded(
-    child: Column(children: [value, const SizedBox(height: 3), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center)]),
+    child: Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
+      decoration: BoxDecoration(color: marketSurface, borderRadius: BorderRadius.circular(18), border: Border.all(color: marketLine)),
+      child: Column(children: [value, const SizedBox(height: 6), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center)]),
+    ),
   );
 
   Widget profileVehicleGrid(List<Map<String, dynamic>> rows, {required bool sold}) {
     if (rows.isEmpty) {
-      return Center(child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Text(
-          sold ? uiText(context, "Este vendedor todavía no tiene vehículos vendidos.") : uiText(context, "Este vendedor no tiene anuncios disponibles."),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: marketMuted, fontSize: 15),
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+          decoration: BoxDecoration(color: marketSurface, borderRadius: BorderRadius.circular(24), border: Border.all(color: marketLine)),
+          child: Column(children: [
+            Container(padding: const EdgeInsets.all(18), decoration: const BoxDecoration(shape: BoxShape.circle, color: marketTint), child: Icon(sold ? Icons.handshake_outlined : Icons.directions_car_outlined, color: marketAccent, size: 32)),
+            const SizedBox(height: 18),
+            Text(sold ? uiText(context, "Este vendedor todavía no tiene vehículos vendidos.") : uiText(context, "Este vendedor no tiene anuncios disponibles."), textAlign: TextAlign.center, style: const TextStyle(color: marketMuted, fontSize: 15, height: 1.5)),
+          ]),
         ),
-      ));
+      );
     }
     return LayoutBuilder(builder: (context, constraints) {
       final columns = constraints.maxWidth < 520 ? 1 : constraints.maxWidth < 900 ? 2 : 3;
@@ -5140,12 +5183,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         final profileTabs = <String>['Anuncios', 'Vendidos', if (isProfessional) 'Sobre nosotros', 'Valoraciones'];
         final profileTabChildren = <Widget>[
           Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: Color(0xFF168BFF), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos disponibles"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${listings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.directions_car_filled, color: marketAccent, size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos disponibles"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${listings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
              Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Anuncios publicados y reservados actualmente"), style: TextStyle(color: marketMuted, fontSize: 12)))),
             profileVehicleGrid(listings, sold: false),
           ]),
           Column(children: [
-            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.verified_rounded, color: Color(0xFFFF424A), size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos vendidos"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${soldListings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 15, 16, 0), child: Row(children: [const Icon(Icons.check_circle_outline, color: marketAccent, size: 24), const SizedBox(width: 8),  Expanded(child: Text(uiText(context, "Vehículos vendidos"), style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: marketInk))), Text('${soldListings.length}', style: const TextStyle(color: marketMuted, fontWeight: FontWeight.bold))])),
              Padding(padding: EdgeInsets.fromLTRB(16, 4, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Text(uiText(context, "Historial de vehículos vendidos por este vendedor"), style: TextStyle(color: marketMuted, fontSize: 12)))),
             profileVehicleGrid(soldListings, sold: true),
           ]),
@@ -5211,14 +5254,13 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(uiText(context, 'En AUTOMOTORS desde {0}', [(snapshot.data!['memberSince'] as String).split('-').reversed.join('/')]), style: const TextStyle(color: marketMuted)),
                 ),
-                Padding(padding: const EdgeInsets.only(top: 8), child: Text(uiText(context, 'Información facilitada por el vendedor. Consulta sus valoraciones y confirma los datos antes de comprar.'), style: const TextStyle(color: marketMuted, fontSize: 12))),
                 if(aboutUs.trim().isNotEmpty) Padding(padding:const EdgeInsets.only(top:16),child:Text(aboutUs.trim(),maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:marketMuted,height:1.5))),
                 const SizedBox(height: 19),
                 Row(children: [
                   profileStat('${listings.length}', uiText(context, "Anuncios")),
-                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
+                  const SizedBox(width: 2),
                   profileStat('${soldListings.length}', uiText(context, "Vendidos")),
-                  Container(width: 1, height: 34, color: const Color(0xFFE4E5DF)),
+                  const SizedBox(width: 2),
                   profileStatWidget(SellerTrustScore(sellerId: widget.ownerId), 'Confianza / 10'),
                 ]),
                 if (supabase.auth.currentUser?.id == widget.ownerId) ...[
@@ -5307,14 +5349,20 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   );
 
   Widget _profileTabButton(String label, int index) => Expanded(
-    child: InkWell(
+    child: Semantics(
+      selected: selectedProfileTab == index,
+      button: true,
+      child: InkWell(
+      borderRadius: BorderRadius.circular(14),
       onTap: () => setState(() => selectedProfileTab = index),
       child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 3),
-        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: selectedProfileTab == index ? const Color(0xFF168BFF) : Colors.transparent, width: 3))),
-        child: Text(uiText(context, label), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketInk : marketMuted)),
+        decoration: BoxDecoration(color: selectedProfileTab == index ? marketInk : marketTint, borderRadius: BorderRadius.circular(14)),
+        child: Text(uiText(context, label), maxLines: 2, textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketSurface : marketMuted)),
       ),
+    ),
     ),
   );
 
@@ -5517,6 +5565,7 @@ class GaragePage extends StatefulWidget {
 class _GaragePageState extends State<GaragePage> {
   final supabase = Supabase.instance.client;
   late Future<List<Map<String, dynamic>>> listingsFuture;
+  Map<String,dynamic>? dashboard;
   bool busy = false;
   String statusFilter = 'Todos';
   String searchQuery = '';
@@ -5550,6 +5599,7 @@ class _GaragePageState extends State<GaragePage> {
       final metrics={for(final item in List<Map<String,dynamic>>.from(result as List)) item['listing_id'].toString():item};
       for(final listing in listings){listing['metrics']=metrics[listing['id'].toString()];}
     } catch(_) {/* Unavailable is not zero activity. */}
+    try{final data=await supabase.rpc('my_market_dashboard');dashboard=data is Map?Map<String,dynamic>.from(data):null;}catch(_){dashboard=null;}
     return listings;
   }
 
@@ -5708,7 +5758,7 @@ class _GaragePageState extends State<GaragePage> {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: marketAccent));
         if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(uiText(context, "No se pudieron cargar tus anuncios: {0}", [snapshot.error]))));
         final rows = snapshot.data ?? [];
-        if (rows.isEmpty) return  Center(child: Padding(padding: EdgeInsets.all(24), child: Text(uiText(context, "Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí."))));
+        if (rows.isEmpty) return ListView(padding:const EdgeInsets.all(16),children:[SellerDashboard(listings:rows,offers:dashboard,onInbox:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const InboxPage()))),Text(uiText(context,"Todavía no tienes anuncios. Publica tu primer vehículo para verlo aquí."))]);
         final counts = <String, int>{
           'Todos': rows.length,
           'Publicados': rows.where((r) => r['status']?.toString() == 'published').length,
@@ -5729,6 +5779,7 @@ class _GaragePageState extends State<GaragePage> {
         }).toList();
         return Stack(children: [
           ListView(padding: const EdgeInsets.all(16), children: [
+            SellerDashboard(listings:rows,offers:dashboard,onInbox:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const InboxPage()))),
              Text(uiText(context, "Tus vehículos"), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
              Text(uiText(context, "Filtra por estado o busca por marca, modelo, año y combustible.")),
@@ -6222,6 +6273,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 14)),
               ),
             ),
+            const MarketUsagePreference(),
             const ModerationEntry(),
             const AccountDeletionEntry(),
             const SizedBox(height: 10),
@@ -6253,6 +6305,7 @@ class EditListingPage extends StatefulWidget {
 
 class _EditListingPageState extends State<EditListingPage> {
   final supabase = Supabase.instance.client;
+  Map<String,dynamic> marketFacts={};
   final formKey = GlobalKey<FormState>();
   final year = TextEditingController();
   final km = TextEditingController();
@@ -6286,12 +6339,13 @@ class _EditListingPageState extends State<EditListingPage> {
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment,vehicle_photos(id)').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('market_facts,id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment,vehicle_photos(id)').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))));
         if (mounted) Navigator.pop(context, false);
         return;
       }
+      marketFacts=row['market_facts'] is Map?Map<String,dynamic>.from(row['market_facts']):{};
       existingPhotoCount=(row['vehicle_photos'] as List?)?.length??0;
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
       version.text = '${row['version'] ?? ''}'; transmission.text = '${row['transmission'] ?? ''}'; bodyType.text = '${row['body_type'] ?? ''}'; color.text = '${row['color'] ?? ''}'; doors.text = '${row['doors'] ?? ''}'; seats.text = '${row['seats'] ?? ''}';
@@ -6319,7 +6373,7 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Revisa año, kilómetros y precio.")))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'status':'draft','year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      await supabase.from('vehicle_listings').update({'market_facts':marketFacts.isEmpty?null:marketFacts,'status':'draft','year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
       var saveMessage='Anuncio actualizado.';
       final previousStatus=current['status']?.toString();
       if(previousStatus=='published'||previousStatus=='reserved') {
@@ -6365,6 +6419,7 @@ class _EditListingPageState extends State<EditListingPage> {
     Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
     const SupportLinks(),
     ListingPreparation(photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty),
+    MarketFactsForm(value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.black), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
@@ -7377,6 +7432,7 @@ class AddCarPage extends StatefulWidget {
 
 class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   final formKey = GlobalKey<FormState>();
+  Map<String,dynamic> marketFacts={};
   final year = TextEditingController();
   final km = TextEditingController();
   final price = TextEditingController();
@@ -7418,6 +7474,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    MarketUsage.record('publication_start');
     WidgetsBinding.instance.addObserver(this);
     _draftOwner = Supabase.instance.client.auth.currentUser?.id;
     for (final controller in _draftFields.values) { controller.addListener(_scheduleDraft); }
@@ -7468,6 +7525,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     'showPlate': showMatriculaPublicly, 'showVin': showVinPublicly,
     'photoCount': photos.length,
     'photoGuide': _photoGuideCompleted.toList(),
+    'marketFacts':marketFacts,
   };
   void _updatePublication(VoidCallback change) {
     setState(change);
@@ -7498,6 +7556,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     final saved = _draftOwner == null ? <String, dynamic>{} : await _draftStorage.read(_draftKey);
     if (!mounted || Supabase.instance.client.auth.currentUser?.id != _draftOwner) return;
     if (saved.isNotEmpty) {
+      marketFacts=saved['marketFacts'] is Map?Map<String,dynamic>.from(saved['marketFacts']):{};
       final fields = saved['fields'];
       if (fields is Map) {
         for (final entry in _draftFields.entries) {
@@ -8038,6 +8097,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       title:'${selectedBrand['name']} ${selectedModel['name']} ${version.text.trim()}'.trim(),price:'${priceValue.toStringAsFixed(priceValue==priceValue.roundToDouble()?0:2).replaceAll('.',',')} €',
       details:{'Año':'$yearValue','Kilómetros':'$kmValue','Combustible':fuel,'Cambio':transmission,'Carrocería':bodyType,'Etiqueta medioambiental':etiquetaMedioambiental??'',
         'Color':color.text.trim(),'CV':cv.text.trim(),'Cilindrada (cc)':cilindradaCc.text.trim(),'Puertas':doors.text.trim(),'Plazas':seats.text.trim(),'Normativa de emisiones':emissionsStandard.text.trim(),
+        'Mantenimiento':marketMaintenance[marketFacts['maintenance']]??'No informado','ITV':marketItv[marketFacts['itv']]??'No informado','Garantía':marketWarranty[marketFacts['warranty']]??'No informado','Caducidad ITV':marketFacts['itv_until']?.toString()??'No informado','Defectos conocidos':marketFacts['defects']?.toString()??'No informado','Localidad':MarketLocality.fromJson(marketFacts['locality'])?.label??'No informado',
         ...publicationIdentifiers(showPlate:showMatriculaPublicly,showVin:showVinPublicly,plate:matricula.text,vin:vin.text),if(phoneValue.isNotEmpty)'Teléfono':phoneValue},
       description:description.text.trim(),photos:List.of(photos),equipment:selectedEquipment.toList(),
     )));
@@ -8075,6 +8135,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
         'etiqueta_medioambiental': etiquetaMedioambiental,
         // El VIN se guarda, pero no se incluye en la consulta pública de anuncios.
         'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(),
+        'market_facts':marketFacts.isEmpty?null:marketFacts,
         'description': description.text.trim(),
         'owner_id': user.id,
         'status': 'draft',
@@ -8121,6 +8182,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(content: Text(uiText(context, "¡Anuncio publicado correctamente!"))),
       );
+      MarketUsage.record('publication_complete');
       Navigator.pop(
         context,
         Car(
@@ -8130,6 +8192,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           km: kmValue,
           price: priceValue,
           fuel: fuel,
+          marketFacts:marketFacts,
           description: description.text.trim(),
           phone: phoneValue,
           matricula: matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(),
@@ -8503,6 +8566,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
             PhotoGuideChecklist(completed:_photoGuideCompleted,onChanged:(value)=>_updatePublication((){_photoGuideCompleted..clear()..addAll(value);})),
             ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty),
+            MarketFactsForm(value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(
               uiText(context, "Fotografías del vehículo ({0}/15)", [photos.length]),

@@ -1,3 +1,4 @@
+import 'design/market_usage.dart';
 import 'client_errors_page.dart';
 import 'design/moderation_overview.dart';
 import 'dart:typed_data';
@@ -144,6 +145,7 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
     appBar: AppBar(
       title: Text(uiText(context, 'Administración')),
       actions: [
+        IconButton(tooltip:uiText(context,'Uso de la app'),onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const MarketUsagePage())),icon:const Icon(Icons.insights_outlined)),
         IconButton(tooltip:uiText(context,'Incidencias técnicas'),onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const ClientErrorsPage())),icon:const Icon(Icons.bug_report_outlined)),
         IconButton(
           tooltip: uiText(context, 'Actualizar denuncias'),

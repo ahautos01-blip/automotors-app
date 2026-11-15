@@ -115,7 +115,7 @@ void main() {
         await tester.tap(find.byType(ExpansionTile));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.byType(Chip), findsNWidgets(2));
+        expect(find.byType(ActionChip), findsNWidgets(2));
       },
     );
   testWidgets('no unperformed identity or email verification is claimed', (
@@ -129,7 +129,22 @@ void main() {
         home: const Scaffold(body: SellerTrustIndicators(professional: true)),
       ),
     );
-    expect(find.text('Perfil profesional declarado'), findsOneWidget);
+    expect(find.text('Perfil profesional'), findsOneWidget);
+    const explanation =
+        'Estos indicadores no acreditan la identidad del vendedor ni el historial o estado del vehículo.';
+    expect(find.text(explanation), findsNothing);
+    await tester.tap(find.text('Perfil profesional'));
+    await tester.pumpAndSettle();
+    expect(find.text(explanation), findsOneWidget);
+    expect(
+      find.text(
+        'El vendedor ha indicado que es profesional. AUTOMOTORS no ha verificado su documentación.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cerrar'));
+    await tester.pumpAndSettle();
+    expect(find.text(explanation), findsNothing);
     expect(find.text('Correo confirmado'), findsNothing);
     expect(find.text('Identidad verificada'), findsNothing);
   });

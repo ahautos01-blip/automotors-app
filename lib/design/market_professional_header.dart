@@ -18,14 +18,14 @@ class MarketProfessionalHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       SizedBox(
-        height: 232,
+        height: 274,
         child: Stack(
           children: [
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 178,
+              height: 214,
               child: Container(
                 key: const Key('professional-cover'),
                 decoration: const BoxDecoration(
@@ -33,25 +33,49 @@ class MarketProfessionalHeader extends StatelessWidget {
                     colors: [Color(0xFFF1EEE6), Color(0xFFDCD6C7)],
                   ),
                 ),
-                child: coverUrl == null
-                    ? const Icon(
-                        Icons.directions_car_outlined,
-                        color: marketMuted,
-                        size: 64,
-                      )
-                    : Image.network(
-                        coverUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.directions_car_outlined,
-                          color: marketMuted,
-                          size: 64,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    coverUrl == null
+                        ? const Icon(
+                            Icons.directions_car_outlined,
+                            color: marketMuted,
+                            size: 84,
+                          )
+                        : Image.network(
+                            coverUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.directions_car_outlined,
+                              color: marketMuted,
+                              size: 84,
+                            ),
+                          ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0x4422342B)],
                         ),
                       ),
+                    ),
+                    Positioned(
+                      left: 24,
+                      bottom: 22,
+                      child: Container(width: 38, height: 3, color: marketGold),
+                    ),
+                    Positioned(
+                      right: 24,
+                      bottom: 22,
+                      child: Container(width: 38, height: 3, color: marketGold),
+                    ),
+                  ],
+                ),
               ),
             ),
             Positioned(
-              top: 124,
+              top: 154,
               left: 0,
               right: 0,
               child: Center(
@@ -70,7 +94,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                     ],
                   ),
                   child: CircleAvatar(
-                    radius: 50,
+                    radius: 56,
                     backgroundColor: marketSurface,
                     backgroundImage: avatarUrl == null
                         ? null
@@ -93,7 +117,7 @@ class MarketProfessionalHeader extends StatelessWidget {
         ),
       ),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 22),
         child: Column(
           children: [
             Text(
@@ -101,17 +125,32 @@ class MarketProfessionalHeader extends StatelessWidget {
               key: const Key('professional-display-name'),
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 23,
-                height: 1.2,
-                fontWeight: FontWeight.w700,
+                fontSize: 27,
+                height: 1.12,
+                letterSpacing: -.7,
+                fontWeight: FontWeight.w800,
                 color: marketInk,
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              accountLabel,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: marketMuted, fontSize: 14),
+            Container(
+              margin: const EdgeInsets.only(top: 6, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: marketTint,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: marketGold.withValues(alpha: .3)),
+              ),
+              child: Text(
+                accountLabel,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: marketAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .8,
+                ),
+              ),
             ),
             if (location.trim().isNotEmpty) ...[
               const SizedBox(height: 4),

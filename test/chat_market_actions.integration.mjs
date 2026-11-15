@@ -107,4 +107,28 @@ assert.equal((await db.query("select count(*)::int n from private.push_deliverie
 assert.equal((await db.query('select count(*)::int n from private.dispatch_test_calls')).rows[0].n,1);
 await login(null);await assert.rejects(()=>action('list'),e=>e.code==='42501');const trust=(await db.query('select seller_trust_summary($1) result',[seller])).rows[0].result;assert.deepEqual(trust,{email_confirmed:true});
 await login(buyer);await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>action('list'),e=>e.code==='42501');
+await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261115130030_profile_editorial_build45.sql',import.meta.url),'utf8'));
+await login(seller);await db.query("select record_client_error('chat','unknown',45)");await assert.rejects(()=>db.query("select record_client_error('chat','unknown',46)"));
+await login(null);await assert.rejects(()=>db.query("select record_client_error('chat','unknown',45)"),e=>e.code==='42501');
+
+await db.exec('reset role');
+const watchSql=await readFile(new URL('../supabase/migrations/20261102212151_buyer_watchlists_and_price_alerts.sql',import.meta.url),'utf8');
+await db.exec(watchSql.slice(watchSql.indexOf('create function private.normalize_buyer_search'),watchSql.indexOf('-- Internal cross-user')));
+await db.exec(`create function private.listing_photo_manifest(uuid) returns jsonb language sql as $$select '[]'::jsonb$$;`);
+const beforeHash=(await db.query("select encode(sha256(convert_to(jsonb_build_object('listing',to_jsonb(v)-array['status','updated_at','created_at','sold_at','sold_to_buyer_id','sold_externally'],'photos','[]'::jsonb)::text,'UTF8')),'hex') h from vehicle_listings v where id=$1",[listing])).rows[0].h;
+await db.exec(await readFile(new URL('../supabase/migrations/20261115132750_market_tools_build45.sql',import.meta.url),'utf8'));
+assert.equal((await db.query('select private.listing_content_hash(to_jsonb(v)) h from vehicle_listings v where id=$1',[listing])).rows[0].h,beforeHash);
+assert.equal((await db.query(`select private.valid_market_facts('{"maintenance":"documented","defects":"scratch"}') ok`)).rows[0].ok,true);
+for(const bad of [{maintenance:'verified'},{locality:{id:'1',label:'Madrid',lat:40.123456,lon:-3.7}},{itv_until:'2026-02-30'},{defects:'x'.repeat(1001)},{admin:true}])assert.equal((await db.query('select private.valid_market_facts($1::jsonb) ok',[JSON.stringify(bad)])).rows[0].ok,false);
+const geo={locality:{id:'28079',label:'Madrid',lat:40.42,lon:-3.7},radius_km:25};
+const near={locality:{id:'28079',label:'Madrid',lat:40.42,lon:-3.7}};
+assert.equal((await db.query('select private.market_radius_matches($1,$2) ok',[geo,near])).rows[0].ok,true);
+assert.equal((await db.query('select private.market_radius_matches($1,$2) ok',[geo,{locality:{lat:41.54,lon:2.44}}])).rows[0].ok,false);
+assert.equal((await db.query('select private.market_radius_matches($1,$2) ok',[geo,{}])).rows[0].ok,false);
+assert.equal((await db.query("select private.buyer_search_matches($1,jsonb_build_object('market_facts',$2::jsonb),'VW','Golf') ok",[geo,near])).rows[0].ok,true);
+await login(seller);await db.query("select record_market_usage('catalogue',45)");await db.query("select record_market_usage('catalogue',45)");await assert.rejects(()=>db.query("select record_market_usage('private chat',45)"));await assert.rejects(()=>db.query('select market_usage_summary()'),e=>e.code==='42501');
+assert.equal(typeof (await db.query('select my_market_dashboard() data')).rows[0].data.pending_offers,'number');
+await login(mod);const usage=(await db.query('select market_usage_summary() data')).rows[0].data;assert.equal(usage[0].occurrences,1);assert.ok(!JSON.stringify(usage).includes(seller));
+await db.exec('reset role');await db.query("update vehicle_listings set market_facts=$1 where id=$2",[{maintenance:'documented'},listing]);assert.notEqual((await db.query('select private.listing_content_hash(to_jsonb(v)) h from vehicle_listings v where id=$1',[listing])).rows[0].h,beforeHash);
+await login(null);await assert.rejects(()=>db.query('select my_market_dashboard()'),e=>e.code==='42501');await assert.rejects(()=>db.query("select record_market_usage('catalogue',45)"),e=>e.code==='42501');
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');
