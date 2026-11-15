@@ -164,6 +164,8 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      await Scrollable.ensureVisible(tester.element(find.text('Ficha técnica ampliada')), alignment: .25);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ficha técnica ampliada'));
       await tester.pumpAndSettle();
       final versionLabel = find.text('Versión / acabado (opcional)');
@@ -181,9 +183,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Ficha técnica ampliada'));
       await tester.pumpAndSettle();
+      await Scrollable.ensureVisible(tester.element(find.text('Ficha técnica ampliada')), alignment: .25);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ficha técnica ampliada'));
       await tester.pumpAndSettle();
       expect(find.text('Sport'), findsNothing);
+      await Scrollable.ensureVisible(tester.element(find.text('Ficha técnica ampliada')), alignment: .25);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ficha técnica ampliada'));
       await tester.pumpAndSettle();
       expect(find.text('Sport'), findsOneWidget);

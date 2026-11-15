@@ -88,9 +88,11 @@ class ChatMarketPage extends StatefulWidget {
     super.key,
     required this.conversationId,
     this.openOffer = false,
+    this.openVisit = false,
   });
   final String conversationId;
   final bool openOffer;
+  final bool openVisit;
   @override
   State<ChatMarketPage> createState() => _ChatMarketPageState();
 }
@@ -161,6 +163,12 @@ class _ChatMarketPageState extends State<ChatMarketPage>
         failed = false;
         loading = false;
       });
+      if (widget.openVisit && !openedInitialOffer) {
+        openedInitialOffer = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !busy) create('visit');
+        });
+      }
       if (widget.openOffer && buyer && !openedInitialOffer) {
         openedInitialOffer = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {

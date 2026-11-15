@@ -52,6 +52,8 @@ class ListingPreparation extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
+                  Text(uiText(context, 'Recomendaciones por completar: {0}', [tips.length])),
+                  const SizedBox(height: 8),
                   Text(
                     uiText(
                       context,

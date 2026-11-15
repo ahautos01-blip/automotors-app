@@ -52,3 +52,11 @@ test('buyer watch alerts open the listing without chat, price or private search 
 test('offer updates and visit reminders route to chat without amounts or locations',()=>{
  for(const kind of ['chat_activity','visit_reminder']as const){const value=payload({...job,kind});assert.equal(value.conversation_id,job.conversation_id);assert.equal(value.aps['thread-id'],'chat-'+job.conversation_id);assert.ok(!JSON.stringify(value).includes(job.token));assert.ok(!('meeting_place'in value));assert.ok(!('amount'in value));}
 });
+
+test('offer expiry reminder routes to the conversation without exposing its amount',()=>{
+ const value=payload({...job,kind:'offer_reminder'});
+ assert.equal(value.conversation_id,job.conversation_id);
+ assert.equal(value.aps['thread-id'],'chat-'+job.conversation_id);
+ assert.equal(value.aps.alert.title,'Tu propuesta caduca pronto');
+ assert.ok(!('amount' in value));assert.ok(!JSON.stringify(value).includes(job.token));
+});

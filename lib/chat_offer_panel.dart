@@ -1,3 +1,5 @@
+import 'design/offer_agreement_card.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,9 +15,11 @@ class ChatOfferPanel extends StatefulWidget {
     super.key,
     required this.conversationId,
     required this.enabled,
+    this.onMessage,
   });
   final String conversationId;
   final bool enabled;
+  final VoidCallback? onMessage;
   @override
   State<ChatOfferPanel> createState() => _ChatOfferPanelState();
 }
@@ -176,10 +180,30 @@ class _ChatOfferPanelState extends State<ChatOfferPanel>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '${uiText(context, item['reply_to'] != null ? 'Contraoferta' : 'Oferta de compra')} · ${item['amount']} €',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  if (status == 'accepted')
+                    OfferAgreementCard(
+                      amount: item['amount'].toString(),
+                      onMessage: widget.onMessage,
+                      onVisit: busy
+                          ? null
+                          : () async {
+                              await Navigator.push<void>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChatMarketPage(
+                                    conversationId: widget.conversationId,
+                                    openVisit: true,
+                                  ),
+                                ),
+                              );
+                              await load();
+                            },
+                    ),
+                  if (status != 'accepted')
+                    Text(
+                      '${uiText(context, item['reply_to'] != null ? 'Contraoferta' : 'Oferta de compra')} · ${item['amount']} €',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   Text(uiText(context, marketActivityStatus(status))),
                   if (status == 'pending')
                     Text(marketOfferValidity(context, item)),

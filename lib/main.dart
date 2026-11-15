@@ -1,3 +1,5 @@
+import 'services/listing_share_card.dart';
+import 'design/photo_guide_checklist.dart';
 import 'chat_offer_panel.dart';
 import 'chat_market_page.dart';
 import 'design/market_safety.dart';
@@ -108,7 +110,7 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
       await navigator.push<void>(MaterialPageRoute(
         builder: (_) => BuyerPurchaseReviewPage(listingId: listingId),
       ));
-    } else if (['chat_message','chat_activity','visit_reminder'].contains(notification['kind'])) {
+    } else if (['chat_message','chat_activity','visit_reminder','offer_reminder'].contains(notification['kind'])) {
       final conversationId = notification['conversation_id']?.toString();
       if (conversationId == null || !RegExp(r'^[0-9]+$').hasMatch(conversationId)) return;
       // RLS verifies that the current user still belongs to this conversation.
@@ -116,7 +118,7 @@ Future<void> openAutomotorsPush(Map<String, dynamic> notification) async {
           .eq('id', conversationId).maybeSingle();
       if (conversation == null) throw StateError('Conversation unavailable');
       if (!navigator.mounted) return;
-      if(notification['kind']!='chat_message'){await navigator.push<void>(MaterialPageRoute(builder:(_)=>ChatMarketPage(conversationId:conversationId)));return;}
+      if(!['chat_message','offer_reminder'].contains(notification['kind'])){await navigator.push<void>(MaterialPageRoute(builder:(_)=>ChatMarketPage(conversationId:conversationId)));return;}
       await navigator.push<void>(MaterialPageRoute(builder: (_) => ChatPage(
         conversationId: conversationId,
         listingId: conversation['listing_id']?.toString(),
@@ -3880,7 +3882,14 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     }
   }
 
+  bool _sharingListing = false;
   Future<void> _shareListing(BuildContext context) async {
+    if (_sharingListing) return;
+    setState(() => _sharingListing = true);
+    try { await _shareListingContent(context); }
+    finally { if(mounted) setState(() => _sharingListing = false); }
+  }
+  Future<void> _shareListingContent(BuildContext context) async {
     final listingId = car.listingId;
     final hasListingId = listingId != null && listingId.isNotEmpty;
     final shareUri = listingShareUri(listingId);
@@ -3992,7 +4001,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     }
     try {
       await SharePlus.instance.share(
-        ShareParams(title: title, text: summary, uri: shareUri),
+        ShareParams(title: title, text: summary,
+          files: [XFile.fromData(await listingShareCard(title:title,price:priceText,
+            details:'${car.year} · ${_formatKm(car.km)} km · ${car.fuel}',link:shareUri.toString(),
+            photo:car.photos.firstOrNull),mimeType:'image/png',name:'automotors-anuncio.png')],
+          fileNameOverrides:['automotors-anuncio.png']),
       );
     } catch (_) {
       await Clipboard.setData(ClipboardData(text: summary));
@@ -4421,7 +4434,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         const SizedBox(height: 16),
         Row(children: [
           Expanded(child: OutlinedButton.icon(
-            onPressed: () => _shareListing(context),
+            onPressed: _sharingListing ? null : () => _shareListing(context),
             icon: const Icon(Icons.ios_share_rounded, size: 18),
             label:  Text(uiText(context, "Compartir anuncio")),
             style: OutlinedButton.styleFrom(
@@ -6890,7 +6903,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           ),
           ChatSafetyBanner(controller: chatSafety),
           ChatOfferPanel(key: ValueKey('chat-offers-$marketRefresh'),
-            conversationId: widget.conversationId, enabled: chatSafety.canMessage),
+            conversationId: widget.conversationId, enabled: chatSafety.canMessage,
+            onMessage:()=>_composeSuggestion(uiText(context,'Hemos acordado el importe. ¿Qué día te viene bien para la visita?'))),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: SizedBox(
@@ -7385,6 +7399,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
 
   final ImagePicker imagePicker = ImagePicker();
   final List<XFile> photos = [];
+  final Set<String> _photoGuideCompleted = {};
   final List<Map<String, dynamic>> brands = [];
   final List<Map<String, dynamic>> models = [];
 
@@ -7452,6 +7467,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     'label': etiquetaMedioambiental, 'equipment': selectedEquipment.toList(),
     'showPlate': showMatriculaPublicly, 'showVin': showVinPublicly,
     'photoCount': photos.length,
+    'photoGuide': _photoGuideCompleted.toList(),
   };
   void _updatePublication(VoidCallback change) {
     setState(change);
@@ -7499,6 +7515,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       if (['Manual', 'Automático', 'Automático (DSG)'].contains(saved['transmission'])) transmission = saved['transmission'] as String;
       if (['Berlina','Compacto','SUV','Familiar','Coupé','Cabrio','Monovolumen','Furgoneta','Pickup'].contains(saved['body'])) bodyType = saved['body'] as String;
       if (['Sin etiqueta','B','C','ECO','0'].contains(saved['label'])) etiquetaMedioambiental = saved['label'] as String;
+      if(saved['photoGuide'] is List) _photoGuideCompleted.addAll((saved['photoGuide'] as List).whereType<String>().where(photoGuideShots.containsKey));
       if (saved['equipment'] is List) selectedEquipment.addAll((saved['equipment'] as List).whereType<String>());
       showMatriculaPublicly = saved['showPlate'] == true;
       showVinPublicly = saved['showVin'] == true;
@@ -7882,8 +7899,10 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       MapEntry('Año válido', yearValue != null && yearValue >= 1886 && yearValue <= DateTime.now().year + 1),
       MapEntry('Kilometraje válido', kmValue != null && kmValue >= 0),
       MapEntry('Precio válido', priceValue != null && priceValue > 0),
-      MapEntry('Al menos 3 fotografías', photos.length >= 3),
-      MapEntry('Descripción detallada', description.text.trim().length >= 40),
+      MapEntry('Al menos 5 fotografías', photos.length >= 5),
+      MapEntry('Descripción detallada', description.text.trim().length >= 80),
+      MapEntry('Equipamiento confirmado', selectedEquipment.isNotEmpty),
+      MapEntry('Mantenimiento mencionado', RegExp(r'manten|revisi|servic',caseSensitive:false).hasMatch(description.text)),
       MapEntry('Datos técnicos adicionales', cv.text.trim().isNotEmpty || cilindradaCc.text.trim().isNotEmpty || version.text.trim().isNotEmpty),
     ];
   }
@@ -8247,7 +8266,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
             const SupportLinks(),
             const ListingContextHelp(),
-            buildListingQualityCard(),
+            ListenableBuilder(listenable:Listenable.merge(_draftFields.values.toList()),builder:(_,__)=>buildListingQualityCard()),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
@@ -8482,6 +8501,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
+            PhotoGuideChecklist(completed:_photoGuideCompleted,onChanged:(value)=>_updatePublication((){_photoGuideCompleted..clear()..addAll(value);})),
             ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
             Text(

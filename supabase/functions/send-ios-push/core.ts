@@ -2,7 +2,7 @@ export interface Delivery {
   id: string;
   lease_token: string;
   attempts: number;
-  kind: 'chat_message' | 'review_requested' | 'new_listing' | 'price_drop' | 'chat_activity' | 'visit_reminder';
+  kind: 'chat_message' | 'review_requested' | 'new_listing' | 'price_drop' | 'chat_activity' | 'visit_reminder' | 'offer_reminder';
   user_id: string;
   listing_id: string;
   conversation_id: string | null;
@@ -15,7 +15,9 @@ export interface Delivery {
 export function payload(job: Delivery) {
   return {
     aps: {
-      alert: job.kind === 'visit_reminder'
+      alert: job.kind === 'offer_reminder'
+        ? {title:'Tu propuesta caduca pronto',body:'Tienes una oferta pendiente próxima a caducar. Abre el chat para revisarla.'}
+        : job.kind === 'visit_reminder'
         ? {title:'Recordatorio de visita',body:'Tienes una visita acordada próximamente. Consulta los detalles en el chat.'}
         : job.kind === 'chat_activity'
         ? {title:'Nueva actividad en tu conversación',body:'Hay una novedad en una oferta o visita. Abre el chat para consultarla.'}
@@ -27,13 +29,13 @@ export function payload(job: Delivery) {
         ? { title: 'Bajada de precio', body: 'Un vehículo que sigues ha bajado de precio. Abre la app para verlo.' }
         : { title: 'Nuevo vehículo para ti', body: 'Hay un anuncio que coincide con una búsqueda guardada.' },
       sound: 'default',
-      'thread-id': ['chat_message','chat_activity','visit_reminder'].includes(job.kind) ? `chat-${job.conversation_id}` : job.kind === 'review_requested' ? 'purchase-reviews' : 'vehicle-alerts',
+      'thread-id': ['chat_message','chat_activity','visit_reminder','offer_reminder'].includes(job.kind) ? `chat-${job.conversation_id}` : job.kind === 'review_requested' ? 'purchase-reviews' : 'vehicle-alerts',
     },
     notification_id: job.id,
     kind: job.kind,
     user_id: job.user_id,
     listing_id: job.listing_id,
-    ...(['chat_message','chat_activity','visit_reminder'].includes(job.kind) ? { conversation_id: job.conversation_id } : {}),
+    ...(['chat_message','chat_activity','visit_reminder','offer_reminder'].includes(job.kind) ? { conversation_id: job.conversation_id } : {}),
   };
 }
 

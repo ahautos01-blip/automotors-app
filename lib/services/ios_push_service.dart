@@ -65,7 +65,7 @@ class IosPushService with WidgetsBindingObserver {
   Future<void> _saveDevice() async {
     if (_device == null || db.auth.currentSession == null) return;
     try {
-      await db.rpc('register_market_push_device', params: {
+      await db.rpc('register_launch_push_device', params: {
         'p_token': _device!['token'], 'p_environment': _device!['environment'],
       });
     } catch (_) { /* Keep the token in memory and retry after resume. */ }
