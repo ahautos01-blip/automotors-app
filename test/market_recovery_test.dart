@@ -4,6 +4,7 @@ import 'package:automotors_base/main.dart';
 import 'package:automotors_base/services/local_market_state.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -29,8 +30,21 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late LocalMarketState storage;
   setUpAll(() async {
+    // Recovery tests exercise local drafts, not the native app-links plugin.
+    // Mock both channels so Linux CI cannot deliver a delayed missing-plugin error.
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.app_links/events'),
+      (_) async => null,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('com.llfbandit.app_links/messages'),
+      (_) async => null,
+    );
     SharedPreferences.setMockInitialValues({});
     final token =
         '${base64Url.encode(utf8.encode('{"alg":"HS256"}'))}.${base64Url.encode(utf8.encode(jsonEncode({'sub': owner, 'exp': DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600})))}.fixture';
