@@ -315,11 +315,11 @@ void main() {
           );
           await t.pumpAndSettle();
           await Scrollable.ensureVisible(
-            t.element(find.byType(FilledButton)),
+            t.element(find.byKey(const Key('home-plans-highlight'))),
             alignment: .5,
           );
           await t.pumpAndSettle();
-          await t.tap(find.byType(FilledButton));
+          await t.tap(find.byKey(const Key('home-plans-highlight')));
           expect(opened, true);
           expect(t.takeException(), isNull);
         },

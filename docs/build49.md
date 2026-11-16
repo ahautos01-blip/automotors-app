@@ -1,0 +1,15 @@
+# Build 49 — approved integral editorial redesign
+
+Version 1.0.3+49. The user approved the six-screen interactive design in automotors-redesign-integral.html. This release transfers its structure to the native app using real account/catalogue data. No demo business, ratings, vehicle, photography or price is inserted into production. Preserve the current App Store review submission.
+
+Home: image-led editorial introduction using an already authorized catalogue photo (green gradient fallback without inventory), retained original app icon, search and all filters intact, compact one-tap packs strip, quieter utility links and consistent card radius.
+Vehicle detail: photos remain first, followed by price and seller immediately, then essential facts. Price history/favourite total are retained after essential facts. Gallery expansion, moderation, seller profile/contact, sharing and all vehicle facts remain. Primary contact uses the shared green/white treatment.
+Business profile: original uploaded photo or actual-business initials in a rounded identity overlapping the cover, one legal/business name, quieter stats and all current tabs/actions. No verification claims are added.
+Inbox/chat: editorial heading, calmer conversation rows, green sent messages and readable timestamps/read receipts; personal deletion/recovery, pins, search, profile access, report/block, offers/counteroffers/24h deadlines and visits remain.
+Plans: four capacity selectors and one focused StoreKit-backed card, full expandable comparison, native loading feedback and visible free publication where supported. Prices, product IDs, server verification and entitlements are unchanged. The unsupported 'Most popular' claim is removed. Controls disable during native purchase start.
+Publication: Vehicle → Photos → Review, all fields kept mounted under one Form so drafts and input survive navigation. Vehicle validation occurs when leaving its step; photo absence stops review with immediate feedback replacing stale success notices. Final existing preview, authentication, eligibility checks and mandatory moderation remain the publishing path. Backward navigation retains data and all advanced facts/equipment remain available.
+
+New text is localized in ES/EN/CA; reduced motion, native text scaling and existing accessibility targets remain. The new shared components are checked at 320px and 200% text. SQL change only adds build 49 to the existing diagnostic and voluntary usage allowlists, preserving grants/auth/retention. No real payment is made during validation.
+
+Web profile fallback remains blocked by the prior credential-publication auto-review rejection; this native redesign does not retry or bypass that action.
+Validation: full suite 292 passed with one stale below-fold favourite assertion; corrected assertion scrolls to its new location and final affected suite passed 38/38. Static analysis has no errors (141 existing/style notices). PGlite authorization regression passed. Server allowlist migration deployed as 20261116135933; definitions include 49 and anon has no private diagnostic execute permission.

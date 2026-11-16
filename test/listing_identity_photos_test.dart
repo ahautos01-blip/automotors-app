@@ -60,6 +60,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('7 favoritos'), 250, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     expect(find.text('7 favoritos'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

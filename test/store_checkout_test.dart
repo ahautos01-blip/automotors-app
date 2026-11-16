@@ -290,7 +290,8 @@ void main() {
       true,
     );
     expect(find.byType(AddCarPage), findsNothing);
-    expect(find.text('PACK 10'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNWidgets(4));
+    expect(find.text('PACK 15'), findsOneWidget);
     expect(find.textContaining('PUBLICAR GRATIS'), findsOneWidget);
     expect(find.text('Empezar mi anuncio gratis'), findsNothing);
     await t.pumpWidget(const SizedBox.shrink());

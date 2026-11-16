@@ -196,4 +196,6 @@ await login(null);await db.exec('reset role');await db.exec('delete from private
 await db.query("select record_client_error('chat','unknown',48)");await db.query("select record_market_usage('catalogue',48)");await assert.rejects(()=>db.query("select record_market_usage('catalogue',49)"));
 await db.exec('reset role');await db.query('delete from auth.sessions where user_id=$1',[buyer]);await login(buyer);await assert.rejects(()=>activity(),e=>e.code==='42501');await login(null);await assert.rejects(()=>activity(),e=>e.code==='42501');
 
+await login(null);await db.exec('reset role');await db.exec(await readFile(new URL('../supabase/migrations/20261116135933_editorial_release_build49.sql',import.meta.url),'utf8'));
+await login(seller);await db.query("select record_client_error('app','unknown',49)");await db.query("select record_market_usage('catalogue',49)");await assert.rejects(()=>db.query("select record_market_usage('catalogue',50)"));await login(null);await assert.rejects(()=>db.query("select record_client_error('app','unknown',49)"),e=>e.code==='42501');
 await db.close();console.log('PASS participant-only offers/visits, state transitions, no automatic sale, reminder capability and cancellation, blocks, aggregate diagnostics, trust minimalism and revoked sessions.');

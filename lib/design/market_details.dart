@@ -79,17 +79,17 @@ class MarketQuickLink extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Material(
-    color: marketSurface,
+    color: Colors.transparent,
     borderRadius: BorderRadius.circular(18),
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: marketTint,
                 borderRadius: BorderRadius.circular(12),
@@ -105,7 +105,7 @@ class MarketQuickLink extends StatelessWidget {
                     uiText(context, title),
                     style: const TextStyle(
                       color: marketInk,
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

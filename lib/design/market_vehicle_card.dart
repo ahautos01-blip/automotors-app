@@ -38,7 +38,7 @@ class MarketVehicleCard extends StatelessWidget {
     child: Card(
       color: marketSurface,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         onTap: onTap,
         child: LayoutBuilder(

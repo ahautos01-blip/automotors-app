@@ -197,4 +197,47 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await settle(tester);
   });
+  testWidgets(
+    'publication stages preserve a valid draft and require photos before review',
+    (tester) async {
+      storage = LocalMarketState();
+      await storage.write('automotors.publication-draft.v1.$owner', {
+        'brand': 1,
+        'model': 2,
+        'fields': {
+          'year': '2022',
+          'km': '10000',
+          'price': '24990',
+          'phone': '612345678',
+        },
+      });
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(app(AddCarPage(localState: storage)));
+      await settle(tester);
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Continuar con las fotos'),
+      );
+      await settle(tester);
+      expect(find.text('Seleccionar fotografías'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Revisar mi anuncio'));
+      await settle(tester);
+      expect(find.text('Añade al menos una fotografía.'), findsOneWidget);
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Vehículo'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Vehículo'));
+      await settle(tester);
+      final year = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == 'Año',
+      );
+      await tester.scrollUntilVisible(
+        year,
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.widget<TextField>(year).controller!.text, '2022');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await settle(tester);
+    },
+  );
 }

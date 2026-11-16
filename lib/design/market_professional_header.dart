@@ -85,7 +85,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                   key: const Key('professional-avatar'),
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(28),
                     color: marketPaper,
                     boxShadow: [
                       BoxShadow(
@@ -95,22 +95,45 @@ class MarketProfessionalHeader extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: CircleAvatar(
-                    radius: 56,
-                    backgroundColor: marketSurface,
-                    backgroundImage: avatarUrl == null
-                        ? null
-                        : NetworkImage(avatarUrl!),
-                    onBackgroundImageError: avatarUrl == null
-                        ? null
-                        : (_, __) {},
-                    child: avatarUrl == null
-                        ? const Icon(
-                            Icons.business_outlined,
-                            color: marketAccent,
-                            size: 38,
-                          )
-                        : null,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: SizedBox(
+                      width: 112,
+                      height: 112,
+                      child: avatarUrl == null
+                          ? ColoredBox(
+                              color: marketInk,
+                              child: Center(
+                                child: Text(
+                                  name
+                                      .trim()
+                                      .split(RegExp(r'\s+'))
+                                      .where((v) => v.isNotEmpty)
+                                      .take(2)
+                                      .map((v) => v[0])
+                                      .join()
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Color(0xFFE2CC8B),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 28,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Image.network(
+                              avatarUrl!,
+                              fit: BoxFit.cover,
+                              cacheWidth: 336,
+                              errorBuilder: (_, __, ___) => const ColoredBox(
+                                color: marketTint,
+                                child: Icon(
+                                  Icons.business_outlined,
+                                  color: marketAccent,
+                                ),
+                              ),
+                            ),
+                    ),
                   ),
                 ),
               ),

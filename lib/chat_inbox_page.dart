@@ -191,7 +191,32 @@ class _ChatInboxPageState extends State<ChatInboxPage>
     body: Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  uiText(context, 'CONVERSACIONES QUE AVANZAN'),
+                  style: const TextStyle(
+                    color: marketAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  uiText(context, deleted?'Conversaciones eliminadas':'Tus mensajes.'),
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: TextField(
             controller: search,
             onChanged: (_) => setState(() {}),
@@ -296,12 +321,13 @@ class _ChatInboxPageState extends State<ChatInboxPage>
                         '';
                     return Card(
                       key: Key('chat-inbox-${row["id"]}'),
-                      color: marketSurface,
+                      color: marketPaper,
+                      elevation: 0,
                       margin: EdgeInsets.zero,
                       clipBehavior: Clip.antiAlias,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: const BorderSide(color: marketLine),
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide.none,
                       ),
                       child: InkWell(
                         onTap: busy

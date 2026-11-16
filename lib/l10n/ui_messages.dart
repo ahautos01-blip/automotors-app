@@ -1,5 +1,22 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "COMPRA CON CRITERIO": ["CHOOSE WITH CONFIDENCE", "COMPRA AMB CRITERI"],
+  "Tu próximo coche,\nmás cerca.": ["Your next car,\ncloser to you.", "El teu pròxim cotxe,\nmés a prop."],
+  "Encuentra. Compara. Habla con el vendedor.": ["Find. Compare. Talk to the seller.", "Troba. Compara. Parla amb el venedor."],
+  "MÁS ESPACIO PARA TU NEGOCIO": ["MORE ROOM FOR YOUR BUSINESS", "MÉS ESPAI PER AL TEU NEGOCI"],
+  "Tu inventario.\nTu próximo nivel.": ["Your inventory.\nYour next level.", "El teu inventari.\nEl teu pròxim nivell."],
+  "Elige la capacidad que necesitas para publicar y destacar tus vehículos.": ["Choose the capacity you need to list and feature your vehicles.", "Tria la capacitat que necessites per publicar i destacar els vehicles."],
+  "Comparar todos los planes": ["Compare all plans", "Comparar tots els plans"],
+  "TU COCHE, SU SIGUIENTE HISTORIA": ["YOUR CAR, ITS NEXT CHAPTER", "EL TEU COTXE, LA SEVA PRÒXIMA HISTÒRIA"],
+  "Vender empieza\npor presentarlo bien.": ["A great sale starts\nwith a great listing.", "Vendre comença\nper presentar-lo bé."],
+  "Datos claros y fotografías que muestran el estado real.": ["Clear details and photos showing the actual condition.", "Dades clares i fotos que mostren l’estat real."],
+  "Vehículo": ["Vehicle", "Vehicle"],
+  "Fotos": ["Photos", "Fotos"],
+  "Revisión": ["Review", "Revisió"],
+  "Continuar con las fotos": ["Continue to photos", "Continuar amb les fotos"],
+  "CONVERSACIONES QUE AVANZAN": ["KEEP THE CONVERSATION MOVING", "CONVERSES QUE AVANCEN"],
+  "Tus mensajes.": ["Your messages.", "Els teus missatges."],
+
   "Filtros aplicados": ["Applied filters", "Filtres aplicats"],
   "Quitar filtro": ["Remove filter", "Treure filtre"],
   "Recibe avisos de los coches que encajan contigo": ["Get alerts for cars matching your search", "Rep avisos dels cotxes que encaixen amb tu"],

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 const marketPaper = Color(0xFFF6F5F0);
 const marketSurface = Color(0xFFFFFFFF);
 const marketHeroChip = Color(0xFF343C39);
-const marketInk = Color(0xFF22342B);
+const marketInk = Color(0xFF1B3028);
 const marketMuted = Color(0xFF58665D);
-const marketLine = Color(0xFFDEDFD7);
+const marketLine = Color(0xFFE0E3DC);
 const marketTint = Color(0xFFEFEEE7);
 const marketGold = Color(0xFFC7A044);
 const marketAccent = Color(0xFF876B24);
@@ -121,8 +121,8 @@ ThemeData automotorsMarketTheme() => ThemeData(
   ),
   filledButtonTheme: FilledButtonThemeData(
     style: FilledButton.styleFrom(
-      backgroundColor: marketGold,
-      foregroundColor: marketInk,
+      backgroundColor: marketInk,
+      foregroundColor: marketSurface,
       minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
