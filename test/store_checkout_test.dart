@@ -290,7 +290,7 @@ void main() {
       true,
     );
     expect(find.byType(AddCarPage), findsNothing);
-    expect(find.byType(ChoiceChip), findsNWidgets(4));
+    expect(find.descendant(of:find.byKey(const Key('studio-plan-capacity')),matching:find.byType(TextButton)),findsNWidgets(4));
     expect(find.text('PACK 15'), findsOneWidget);
     expect(find.textContaining('PUBLICAR GRATIS'), findsOneWidget);
     expect(find.text('Empezar mi anuncio gratis'), findsNothing);

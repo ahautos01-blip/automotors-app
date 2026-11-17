@@ -52,24 +52,20 @@ class MarketQuickFilters extends StatelessWidget {
         ])
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(uiText(context, item.label)),
+            child: Semantics(
               selected: item.selected,
-              avatar: Icon(
-                item.icon,
-                size: 16,
-                color: item.selected ? marketSurface : marketMuted,
+              child: TextButton(
+                onPressed: item.tap,
+                style: TextButton.styleFrom(
+                  foregroundColor: item.selected ? marketInk : marketMuted,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: const RoundedRectangleBorder(),
+                  side: BorderSide(
+                    color: item.selected ? marketAccent : Colors.transparent,
+                  ),
+                ),
+                child: Text(uiText(context, item.label)),
               ),
-              onSelected: (_) => item.tap(),
-              showCheckmark: false,
-              selectedColor: marketInk,
-              backgroundColor: marketSurface,
-              labelStyle: TextStyle(
-                color: item.selected ? marketSurface : marketInk,
-                fontSize: 12,
-              ),
-              side: BorderSide(color: item.selected ? marketInk : marketLine),
-              shape: const StadiumBorder(),
             ),
           ),
       ],

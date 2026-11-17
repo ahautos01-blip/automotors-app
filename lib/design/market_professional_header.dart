@@ -18,14 +18,14 @@ class MarketProfessionalHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       SizedBox(
-        height: 274,
+        height: 248,
         child: Stack(
           children: [
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 214,
+              height: 204,
               child: Container(
                 key: const Key('professional-cover'),
                 decoration: const BoxDecoration(
@@ -62,22 +62,12 @@ class MarketProfessionalHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 24,
-                      bottom: 22,
-                      child: Container(width: 38, height: 3, color: marketGold),
-                    ),
-                    Positioned(
-                      right: 24,
-                      bottom: 22,
-                      child: Container(width: 38, height: 3, color: marketGold),
-                    ),
                   ],
                 ),
               ),
             ),
             Positioned(
-              top: 154,
+              top: 160,
               left: 0,
               right: 0,
               child: Center(
@@ -85,7 +75,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                   key: const Key('professional-avatar'),
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(18),
                     color: marketPaper,
                     boxShadow: [
                       BoxShadow(
@@ -96,10 +86,10 @@ class MarketProfessionalHeader extends StatelessWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(14),
                     child: SizedBox(
-                      width: 112,
-                      height: 112,
+                      width: 80,
+                      height: 80,
                       child: avatarUrl == null
                           ? ColoredBox(
                               color: marketInk,
@@ -115,7 +105,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                                       .toUpperCase(),
                                   style: const TextStyle(
                                     color: Color(0xFFE2CC8B),
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 28,
                                   ),
                                 ),
@@ -150,10 +140,10 @@ class MarketProfessionalHeader extends StatelessWidget {
               key: const Key('professional-display-name'),
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 27,
+                fontSize: 31,
                 height: 1.12,
                 letterSpacing: -.7,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 color: marketInk,
               ),
             ),
@@ -161,18 +151,14 @@ class MarketProfessionalHeader extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(top: 6, bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: marketTint,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: marketGold.withValues(alpha: .3)),
-              ),
+              decoration: BoxDecoration(color: Colors.transparent),
               child: Text(
                 accountLabel,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: marketAccent,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
                   letterSpacing: .8,
                 ),
               ),

@@ -88,9 +88,9 @@ void main() {
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await tester.pumpWidget(localized(code, const AddCarPage()));
         await tester.pumpAndSettle();
-        expect(find.text(tr('Vehículo')), findsOneWidget);
-        expect(find.text(tr('Fotos')), findsOneWidget);
-        expect(find.text(tr('Revisión')), findsOneWidget);
+        expect(find.text('01  '+tr('Vehículo')), findsOneWidget);
+        expect(find.text('02  '+tr('Fotos')), findsOneWidget);
+        expect(find.text('03  '+tr('Revisión')), findsOneWidget);
         final year = find.byWidgetPredicate(
           (widget) =>
               widget is TextField && widget.decoration?.labelText == tr('Año'),
@@ -116,8 +116,8 @@ void main() {
       await AutomotorsLocaleController.instance.select(code);
       await tester.pumpWidget(localized(code, const PublishOptionsPage()));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.widgetWithText(ChoiceChip,'10'));
-      await tester.tap(find.widgetWithText(ChoiceChip,'10'));
+      await tester.ensureVisible(find.widgetWithText(TextButton,'10'));
+      await tester.tap(find.widgetWithText(TextButton,'10'));
       await tester.pumpAndSettle();
       final benefit = find.text(tr('Publica hasta 10 vehículos'));
       await tester.scrollUntilVisible(

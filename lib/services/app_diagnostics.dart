@@ -56,7 +56,7 @@ class AppDiagnostics {
       await db
           .rpc(
             'record_client_error',
-            params: {'p_category': category, 'p_code': code, 'p_build': 49},
+            params: {'p_category': category, 'p_code': code, 'p_build': 50},
           )
           .timeout(const Duration(seconds: 3));
     } catch (_) {

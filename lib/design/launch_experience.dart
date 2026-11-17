@@ -14,40 +14,51 @@ class LaunchEmptyCatalogue extends StatelessWidget {
   });
   final VoidCallback onPublish, onSaveSearch;
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => ColoredBox(
+    key: const Key('studio-empty-catalogue'),
+    color: marketTint,
     child: Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(
-            Icons.directions_car_outlined,
-            size: 42,
-            color: marketAccent,
+          Text(
+            uiText(context, 'UN NUEVO PUNTO DE ENCUENTRO'),
+            style: const TextStyle(
+              color: marketMuted,
+              fontSize: 10,
+              letterSpacing: 1.2,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           Semantics(
             header: true,
             child: Text(
-              uiText(context, 'Estamos incorporando los primeros vehículos'),
-              style: Theme.of(context).textTheme.titleLarge,
+              uiText(context, 'Las buenas historias\nempiezan con alguien.'),
+              style: const TextStyle(
+                fontFamily: 'Georgia',
+                fontSize: 30,
+                height: 1.15,
+                color: marketInk,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Text(
             uiText(
               context,
-              'El catálogo está empezando. Publica tu coche o guarda una búsqueda para recibir avisos cuando haya anuncios que encajen contigo.',
+              'Estamos preparando nuestra primera selección de vehículos. El tuyo puede ser el primero.',
             ),
+            style: const TextStyle(color: marketMuted, height: 1.6),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: onPublish,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.north_east),
             label: Text(uiText(context, 'Publicar mi coche')),
           ),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
+          TextButton.icon(
             onPressed: onSaveSearch,
             icon: const Icon(Icons.bookmark_add_outlined),
             label: Text(uiText(context, 'Guardar una búsqueda')),

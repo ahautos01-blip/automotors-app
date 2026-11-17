@@ -36,9 +36,9 @@ class MarketVehicleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MarketReveal(
     child: Card(
-      color: marketSurface,
+      color: Colors.transparent,
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
       child: InkWell(
         onTap: onTap,
         child: LayoutBuilder(
@@ -123,7 +123,7 @@ class MarketVehicleCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+                padding: const EdgeInsets.fromLTRB(0, 18, 0, 12),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final compact =
@@ -138,8 +138,8 @@ class MarketVehicleCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: marketInk,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
                             height: 1.2,
                           ),
                         ),
@@ -164,8 +164,8 @@ class MarketVehicleCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: marketInk,
-                        fontSize: compact ? 25 : 22,
-                        fontWeight: FontWeight.w700,
+                        fontSize: compact ? 27 : 24,
+                        fontWeight: FontWeight.w500,
                         letterSpacing: -.7,
                       ),
                     );
@@ -294,7 +294,7 @@ class MarketEditorialCarRow extends StatelessWidget {
                     price,
                     style: const TextStyle(
                       fontSize: 23,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
                       letterSpacing: -.7,
                     ),
                   ),

@@ -156,19 +156,20 @@ class MarketSellerSummary extends StatelessWidget {
         color: marketAccent,
       );
       return Material(
-        color: marketSurface,
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(7),
         child: InkWell(
           onTap: onOpen,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(7),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             child: Row(
               children: [
-                ClipOval(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(9),
                   child: SizedBox(
-                    width: 64,
-                    height: 64,
+                    width: 48,
+                    height: 48,
                     child: ColoredBox(
                       color: marketTint,
                       child: photoUrl == null
@@ -211,7 +212,7 @@ class MarketSellerSummary extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: marketInk,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w500,
                           fontSize: 15,
                         ),
                       ),

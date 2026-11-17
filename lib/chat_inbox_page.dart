@@ -198,17 +198,17 @@ class _ChatInboxPageState extends State<ChatInboxPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  uiText(context, 'CONVERSACIONES QUE AVANZAN'),
+                  uiText(context, 'HABLEMOS DEL SIGUIENTE PASO'),
                   style: const TextStyle(
                     color: marketAccent,
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w500,
                     letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  uiText(context, deleted?'Conversaciones eliminadas':'Tus mensajes.'),
+                  uiText(context, deleted?'Conversaciones eliminadas':'Conversaciones.'),
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
               ],
@@ -326,7 +326,7 @@ class _ChatInboxPageState extends State<ChatInboxPage>
                       margin: EdgeInsets.zero,
                       clipBehavior: Clip.antiAlias,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(7),
                         side: BorderSide.none,
                       ),
                       child: InkWell(
@@ -391,7 +391,7 @@ class _ChatInboxPageState extends State<ChatInboxPage>
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
                                               fontSize: 15,
-                                              fontWeight: FontWeight.w700,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                         ),

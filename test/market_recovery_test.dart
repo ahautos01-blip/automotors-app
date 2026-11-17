@@ -223,8 +223,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Revisar mi anuncio'));
       await settle(tester);
       expect(find.text('Añade al menos una fotografía.'), findsOneWidget);
-      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Vehículo'));
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Vehículo'));
+      await tester.ensureVisible(
+        find.widgetWithText(TextButton, '01  Vehículo'),
+      );
+      await tester.tap(find.widgetWithText(TextButton, '01  Vehículo'));
       await settle(tester);
       final year = find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.labelText == 'Año',
