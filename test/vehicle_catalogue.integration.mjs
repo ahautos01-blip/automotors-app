@@ -10,6 +10,8 @@ const old='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const before=(await db.query('select private.listing_content_hash(to_jsonb(v)) h from vehicle_listings v where id=$1',[old])).rows[0].h;
 await db.exec(await readFile(new URL('../supabase/migrations/20261118141241_catalogue_custom_car_identity.sql',import.meta.url),'utf8'));
 assert.equal((await db.query('select private.listing_content_hash(to_jsonb(v)) h from vehicle_listings v where id=$1',[old])).rows[0].h,before);
+await db.exec(await readFile(new URL('../supabase/migrations/20261118163133_publication_redesign_build53.sql',import.meta.url),'utf8'));
+assert.match((await db.query("select pg_get_functiondef('private.record_client_error(text,text,integer)'::regprocedure) d")).rows[0].d,/51,52,53/);
 const custom='cccccccc-cccc-4ccc-8ccc-cccccccccccc',owner='11111111-1111-4111-8111-111111111111';
 // The shared chat fixture intentionally has no listing INSERT API; add the
 // owner-only insert boundary for this synthetic publication scenario.
