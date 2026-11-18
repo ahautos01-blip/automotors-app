@@ -15,6 +15,7 @@ class LaunchEmptyCatalogue extends StatelessWidget {
   final VoidCallback onPublish, onSaveSearch;
   @override
   Widget build(BuildContext context) => Card(
+    color: marketInk,
     child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -23,31 +24,41 @@ class LaunchEmptyCatalogue extends StatelessWidget {
           const Icon(
             Icons.directions_car_outlined,
             size: 42,
-            color: marketAccent,
+            color: marketGold,
           ),
           const SizedBox(height: 12),
           Semantics(
             header: true,
             child: Text(
               uiText(context, 'Estamos incorporando los primeros vehículos'),
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(color: marketSurface),
             ),
           ),
           const SizedBox(height: 10),
           Text(
             uiText(
               context,
-              'El catálogo está empezando. Publica tu coche o guarda una búsqueda para recibir avisos cuando haya anuncios que encajen contigo.',
+              'Publica tu vehículo o guarda una búsqueda. Te avisaremos cuando haya anuncios que encajen con lo que buscas.',
             ),
+            style: const TextStyle(color: Color(0xFFE1E7DF), height: 1.5),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: marketSurface,
+              foregroundColor: marketInk,
+            ),
             onPressed: onPublish,
             icon: const Icon(Icons.add),
-            label: Text(uiText(context, 'Publicar mi coche')),
+            label: Text(uiText(context, 'Publicar mi vehículo')),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: marketSurface,
+              side: const BorderSide(color: Color(0xFF8D9D92)),
+            ),
             onPressed: onSaveSearch,
             icon: const Icon(Icons.bookmark_add_outlined),
             label: Text(uiText(context, 'Guardar una búsqueda')),

@@ -1,3 +1,4 @@
+import 'design/market_identity.dart';
 import 'design/publication_design.dart';
 import 'services/vehicle_catalogue.dart';
 import 'design/catalogue_dropdown.dart';
@@ -2099,7 +2100,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           children: [
             VehicleCategoryPicker(value:selectedCategory,onChanged:(c){clearHomeFilters();setState((){selectedCategory=c;_homeCategoryFilters={};});}),
             const SizedBox(height:18),
-            MarketEditorialIntro(key:const Key('market-search-hero'),eyebrow:'COMPRA CON CRITERIO',title:'Tu próximo vehículo,\nmás cerca.',subtitle:'Encuentra. Compara. Habla con el vendedor.',photo:cars.where((car)=>car.photos.isNotEmpty).firstOrNull?.photos.firstOrNull),
+            const MarketDiscoveryHeading(key:Key('market-search-hero')),
             const SizedBox(height:14),
             Row(
               children: [
@@ -4361,7 +4362,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        border: const Border(bottom:BorderSide(color:marketLine)),
+        color: marketSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color:marketLine),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4432,11 +4435,11 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       const SizedBox(height: 12),
       Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: const Border(bottom: BorderSide(color: marketLine)),
+          color: marketSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: marketLine),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4486,6 +4489,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        const SizedBox(height: 6),
+        Text(uiText(context,'Datos facilitados por el vendedor'),style:const TextStyle(color:marketMuted,fontSize:12)),
         const SizedBox(height: 9),
         // Spacious two-column overview, with all source values preserved.
         GridView.count(
@@ -5058,7 +5063,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
-      decoration: const BoxDecoration(border:Border(right:BorderSide(color:marketLine))),
+      decoration: BoxDecoration(color:marketSurface,borderRadius:BorderRadius.circular(18),border:Border.all(color:marketLine)),
       child: Column(children: [
         Text(value, style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, color: marketInk)),
         const SizedBox(height: 6),
@@ -5262,40 +5267,16 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
             primary: true,
             physics: const ClampingScrollPhysics(),
             child: Column(children: [
-          if (isProfessional)
-            MarketProfessionalHeader(name: name, accountLabel: uiText(context, displayType), coverUrl: cover, avatarUrl: avatar,
+          MarketProfessionalHeader(name: name, accountLabel: uiText(context, displayType), coverUrl: cover, avatarUrl: avatar,
               location: [profile?['city'], profile?['province']].where((v) => v != null && v.toString().trim().isNotEmpty).join(', ')),
           Padding(
             // Extra clearance prevents clipping under the iOS standalone
             // app's status/navigation area for personal seller profiles.
-            padding: EdgeInsets.fromLTRB(18, isProfessional ? 16 : 36, 18, 14),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
             child: Transform.translate(
               // Only business profiles overlap their cover image.
               offset: Offset.zero,
               child: Column(children: [
-                if (!isProfessional) Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: marketAccent, boxShadow: [BoxShadow(color: marketAccent.withValues(alpha: .22), blurRadius: 14)]),
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundColor: marketSurface,
-                      backgroundImage: avatar == null ? null : NetworkImage(avatar),
-                      onBackgroundImageError: avatar == null ? null : (_, __) {},
-                      child: avatar == null ? const Icon(Icons.person, color: marketAccent, size: 42) : null,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Flexible(child: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: marketInk))),
-                    ]),
-                    const SizedBox(height: 3),
-                    Text(displayType, style: const TextStyle(color: marketMuted, fontSize: 14)),
-                    finalCity(profile),
-                  ])),
-
-                ]),
                 SellerTrustIndicators(professional:isProfessional,emailConfirmed:result['emailConfirmed']==true),
                 if (snapshot.data?['memberSince'] is String) Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -6273,25 +6254,11 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 24), FilledButton.icon(onPressed: saving ? null : saveProfile, style: FilledButton.styleFrom(backgroundColor: marketInk, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)), icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save_outlined), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar perfil"))),
           ]))
         : ListView(padding: const EdgeInsets.all(16), children: [
-            if (isProfessional)
-              MarketProfessionalHeader(name: businessName.text.trim().isNotEmpty ? businessName.text.trim() : name.text, accountLabel: uiText(context, accountType == 'autonomo' ? 'Autónomo' : 'Empresa'), coverUrl: coverUrl, avatarUrl: profileUrl, location: [city.text, province.text].where((v) => v.trim().isNotEmpty).join(', '))
-            else
-            Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), color: panel, border: Border.all(color: marketAccent.withValues(alpha: .35))),
-              clipBehavior: Clip.antiAlias,
-              child: Column(children: [
-                if (coverUrl != null) SizedBox(height: 145, width: double.infinity, child: Image.network(coverUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: marketSurface, alignment: Alignment.center, child: const Icon(Icons.landscape_outlined, color: marketAccent, size: 34)))),
-                Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 20), child: Column(children: [
-                  CircleAvatar(radius: 48, backgroundColor: gold, backgroundImage: profileUrl == null ? null : NetworkImage(profileUrl), child: profileUrl == null ? const Icon(Icons.person, color: Colors.black, size: 42) : null),
-                  const SizedBox(height: 12),
-                  Text(name.text.isEmpty ? email : name.text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 5),
-                  Text(accountType == 'autonomo' ? uiText(context, "AUTÓNOMO") : accountType == 'empresa' ? uiText(context, "EMPRESA") : uiText(context, "PARTICULAR"), style: const TextStyle(color: marketAccent, letterSpacing: 1.3, fontSize: 11, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10),
-                   Text(uiText(context, "Tu identidad en AUTOMOTORS"), style: TextStyle(color: marketMuted, fontSize: 12)),
-                ])),
-              ]),
-            ),
+            MarketProfessionalHeader(
+              name:isProfessional&&businessName.text.trim().isNotEmpty?businessName.text.trim():name.text.isEmpty?email:name.text,
+              accountLabel:uiText(context,accountType=='autonomo'?'Autónomo':accountType=='empresa'?'Empresa':'Particular'),
+              coverUrl:coverUrl,avatarUrl:profileUrl,
+              location:[city.text,province.text].where((v)=>v.trim().isNotEmpty).join(', ')),
             const SizedBox(height: 18),
              Text(uiText(context, "TU INFORMACIÓN"), style: TextStyle(color: marketAccent, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),

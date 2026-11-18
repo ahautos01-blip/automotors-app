@@ -102,7 +102,9 @@ void main() {
                     textTheme: theme.textTheme.apply(
                       fontFamily: 'ProfilePreview',
                     ),
-                    primaryTextTheme: theme.primaryTextTheme.apply(
+                    outlinedButtonTheme:OutlinedButtonThemeData(style:theme.outlinedButtonTheme.style?.copyWith(textStyle:const WidgetStatePropertyAll(TextStyle(fontFamily:'ProfilePreview',fontWeight:FontWeight.w600)))),
+                  textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(textStyle:const TextStyle(fontFamily:'ProfilePreview',fontWeight:FontWeight.w600))),
+                  primaryTextTheme: theme.primaryTextTheme.apply(
                       fontFamily: 'ProfilePreview',
                     ),
                     filledButtonTheme: FilledButtonThemeData(

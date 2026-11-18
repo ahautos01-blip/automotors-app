@@ -77,4 +77,17 @@ void main() {
       },
     );
   }
+  for(final scale in [1.0,2.0]){
+    testWidgets('secondary listing keeps photo, price and independent actions at narrow width scale $scale',(t)async{
+      await t.binding.setSurfaceSize(const Size(320,568));addTearDown(()=>t.binding.setSurfaceSize(null));
+      var opened=0,saved=0;
+      await t.pumpWidget(MaterialApp(theme:automotorsMarketTheme(),builder:(c,w)=>MediaQuery(data:MediaQuery.of(c).copyWith(textScaler:TextScaler.linear(scale)),child:w!),home:Scaffold(body:ListView(children:[
+        MarketEditorialCarRow(title:'Volkswagen Touran',price:'29.990 €',details:'2021 · 87.954 km · Gasolina',favorite:IconButton(tooltip:'Save fixture',onPressed:()=>saved++,icon:const Icon(Icons.favorite_border)),onTap:()=>opened++),
+      ]))));
+      await t.pumpAndSettle();
+      await t.tap(find.byTooltip('Save fixture'));expect(saved,1);expect(opened,0);
+      await t.ensureVisible(find.text('29.990 €'));await t.tap(find.text('29.990 €'));expect(opened,1);
+      expect(t.takeException(),isNull);
+    });
+  }
 }

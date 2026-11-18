@@ -238,80 +238,107 @@ class MarketEditorialCarRow extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: SizedBox(
-                    width: 88,
-                    height: 112,
-                    child: photo == null
-                        ? const ColoredBox(
-                            color: marketTint,
-                            child: Icon(
-                              Icons.directions_car_outlined,
-                              color: marketMuted,
-                            ),
-                          )
-                        : Image.memory(
-                            cacheWidth: 1080,
-                            photo!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, e, s) =>
-                                const Icon(Icons.directions_car_outlined),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked =
+                constraints.maxWidth < 330 ||
+                MediaQuery.textScalerOf(context).scale(1) > 1.3;
+            final image = ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (photo != null)
+                      Image.memory(
+                        photo!,
+                        cacheWidth: 800,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(
+                          color: marketTint,
+                          child: Icon(
+                            Icons.directions_car_outlined,
+                            color: marketMuted,
                           ),
+                        ),
+                      )
+                    else
+                      const ColoredBox(
+                        color: marketTint,
+                        child: Icon(
+                          Icons.directions_car_outlined,
+                          color: marketMuted,
+                          size: 32,
+                        ),
+                      ),
+                    Positioned(top: 4, right: 4, child: favorite),
+                  ],
+                ),
+              ),
+            );
+            final information = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    height: 1.25,
                   ),
                 ),
-                Positioned(top: 0, right: 0, child: favorite),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-                  ),
-                  if (version?.trim().isNotEmpty == true)
-                    Text(
+                if (version?.trim().isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
                       version!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 12, color: marketMuted),
                     ),
-                  const SizedBox(height: 8),
-                  Text(
-                    price,
-                    style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.7,
-                    ),
                   ),
-                  if (status != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: status!,
-                    ),
-                  const SizedBox(height: 5),
-                  Text(
-                    details,
-                    style: const TextStyle(fontSize: 12, color: marketMuted),
+                const SizedBox(height: 10),
+                Text(
+                  price,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.6,
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  details,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: marketMuted,
+                    height: 1.4,
+                  ),
+                ),
+                if (status != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: status!,
+                  ),
+              ],
+            );
+            if (stacked)
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [image, const SizedBox(height: 14), information],
+              );
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 4, child: image),
+                const SizedBox(width: 14),
+                Expanded(flex: 5, child: information),
+              ],
+            );
+          },
         ),
       ),
     ),

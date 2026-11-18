@@ -84,9 +84,12 @@ void main() {
           theme: path == null
               ? theme
               : theme.copyWith(
+                  appBarTheme:theme.appBarTheme.copyWith(titleTextStyle:theme.appBarTheme.titleTextStyle?.copyWith(fontFamily:'CataloguePreview')),
                   textTheme: theme.textTheme.apply(
                     fontFamily: 'CataloguePreview',
                   ),
+                  outlinedButtonTheme:OutlinedButtonThemeData(style:theme.outlinedButtonTheme.style?.copyWith(textStyle:const WidgetStatePropertyAll(TextStyle(fontFamily:'CataloguePreview',fontWeight:FontWeight.w600)))),
+                  textButtonTheme:TextButtonThemeData(style:TextButton.styleFrom(textStyle:const TextStyle(fontFamily:'CataloguePreview',fontWeight:FontWeight.w600))),
                   primaryTextTheme: theme.primaryTextTheme.apply(
                     fontFamily: 'CataloguePreview',
                   ),

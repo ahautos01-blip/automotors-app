@@ -17,7 +17,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
   canvasColor: marketSurface,
   colorScheme:
       ColorScheme.fromSeed(
-        seedColor: marketGold,
+        seedColor: marketInk,
         brightness: Brightness.light,
       ).copyWith(
         primary: marketInk,
@@ -31,7 +31,9 @@ ThemeData automotorsMarketTheme() => ThemeData(
   dividerColor: marketLine,
   visualDensity: VisualDensity.standard,
   materialTapTargetSize: MaterialTapTargetSize.padded,
-  iconButtonTheme: IconButtonThemeData(style:IconButton.styleFrom(minimumSize:const Size(48,48))),
+  iconButtonTheme: IconButtonThemeData(
+    style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+  ),
   iconTheme: const IconThemeData(color: marketInk, size: 20),
   textTheme: const TextTheme(
     headlineLarge: TextStyle(
@@ -88,6 +90,11 @@ ThemeData automotorsMarketTheme() => ThemeData(
   appBarTheme: const AppBarTheme(
     backgroundColor: marketPaper,
     foregroundColor: marketInk,
+    titleTextStyle: TextStyle(
+      color: marketInk,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+    ),
     elevation: 0,
     scrolledUnderElevation: 0,
     centerTitle: false,
@@ -98,6 +105,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(20)),
+      side: BorderSide(color: marketLine),
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
@@ -139,7 +147,11 @@ ThemeData automotorsMarketTheme() => ThemeData(
     ),
   ),
   textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(foregroundColor: marketAccent,minimumSize:const Size(48,48),padding:const EdgeInsets.symmetric(horizontal:16,vertical:12)),
+    style: TextButton.styleFrom(
+      foregroundColor: marketAccent,
+      minimumSize: const Size(48, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    ),
   ),
   tabBarTheme: const TabBarThemeData(
     labelColor: marketInk,

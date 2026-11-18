@@ -1936,4 +1936,11 @@ const Map<String, List<String>> uiMessages = {
   "Muestra su estado real con imágenes claras y bien iluminadas.": ["Show its actual condition with clear, well-lit photos.", "Mostra el seu estat real amb imatges clares i ben il·luminades."],
   "Comprueba los datos y las fotos antes de publicar.": ["Check the details and photos before publishing.", "Comprova les dades i les fotos abans de publicar."],
   "¿Qué vas a vender?": ["What are you selling?", "Què vols vendre?"],
+  "ENCUENTRA. COMPARA. CONECTA.": ["FIND. COMPARE. CONNECT.", "TROBA. COMPARA. CONNECTA."],
+  "Tu próximo vehículo empieza aquí.": ["Your next vehicle starts here.", "El teu pròxim vehicle comença aquí."],
+  "Cargando vendedor…": ["Loading seller…", "Carregant el venedor…"],
+  "Ver anuncios y valoraciones": ["View listings and reviews", "Veure anuncis i valoracions"],
+  "Datos facilitados por el vendedor": ["Details provided by the seller", "Dades facilitades pel venedor"],
+  "El catálogo está empezando. Publica tu vehículo o guarda una búsqueda para recibir avisos cuando haya anuncios que encajen contigo.": ["The catalogue is getting started. List your vehicle or save a search to receive alerts when matching listings appear.", "El catàleg està començant. Publica el teu vehicle o desa una cerca per rebre avisos quan hi hagi anuncis que encaixin amb tu."],
+  "Publica tu vehículo o guarda una búsqueda. Te avisaremos cuando haya anuncios que encajen con lo que buscas.": ["List your vehicle or save a search. We will notify you when matching listings appear.", "Publica el teu vehicle o desa una cerca. T'avisarem quan hi hagi anuncis que encaixin amb el que busques."],
 };

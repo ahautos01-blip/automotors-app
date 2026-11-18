@@ -148,6 +148,7 @@ class MarketSellerSummary extends StatelessWidget {
       final business = row?['business_name']?.toString().trim() ?? '';
       final person = row?['full_name']?.toString().trim() ?? '';
       final name = business.isNotEmpty ? business : person;
+      final waiting = snapshot.connectionState == ConnectionState.waiting;
       final city = row?['city']?.toString().trim() ?? '';
       final path = row?['profile_photo_path']?.toString().trim() ?? '';
       final photoUrl = path.isEmpty ? null : photoUrlForPath?.call(path);
@@ -157,7 +158,10 @@ class MarketSellerSummary extends StatelessWidget {
       );
       return Material(
         color: marketSurface,
-        borderRadius: BorderRadius.circular(18),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: marketLine),
+        ),
         child: InkWell(
           onTap: onOpen,
           borderRadius: BorderRadius.circular(18),
@@ -165,7 +169,8 @@ class MarketSellerSummary extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                ClipOval(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
                   child: SizedBox(
                     width: 64,
                     height: 64,
@@ -205,7 +210,12 @@ class MarketSellerSummary extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         name.isEmpty
-                            ? uiText(context, 'Ver perfil del vendedor')
+                            ? uiText(
+                                context,
+                                waiting
+                                    ? 'Cargando vendedor…'
+                                    : 'Ver perfil del vendedor',
+                              )
                             : name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -228,6 +238,15 @@ class MarketSellerSummary extends StatelessWidget {
                             ),
                           ),
                         ),
+                      const SizedBox(height: 6),
+                      Text(
+                        uiText(context, 'Ver anuncios y valoraciones'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: marketAccent,
+                        ),
+                      ),
                     ],
                   ),
                 ),
