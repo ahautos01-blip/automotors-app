@@ -73,11 +73,6 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('category-motorcycle')));
     expect(selected, VehicleCategory.motorcycle);
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(-300, 0),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('category-boat')));
     expect(selected, VehicleCategory.boat);
   });

@@ -1,3 +1,5 @@
+import 'services/vehicle_catalogue.dart';
+import 'design/catalogue_dropdown.dart';
 import 'services/vehicle_category.dart';
 import 'design/vehicle_categories.dart';
 import 'design/market_editorial.dart';
@@ -1764,8 +1766,14 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     var fuel = selectedFuel;
     var brand = selectedBrand;
     var model = selectedModel;
-    final brands = ['Todas', ...{if (brand != 'Todas') brand, ...cars.map((car) => car.brand)}.toList()..sort()];
-    final models = ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()];
+    final reference=VehicleCatalogue();
+    final referenceBrands=await reference.brands(selectedCategory);
+    if(!mounted)return;
+    final brands=['Todas',...{if(brand!='Todas')brand,...referenceBrands.map((r)=>r['name'].toString()),...cars.where((c)=>c.category==selectedCategory).map((c)=>c.brand)}.toList()..sort()];
+    final current=referenceBrands.where((r)=>r['name']==brand).firstOrNull;
+    final initialModels=current==null?<Map<String,dynamic>>[]:await reference.models(selectedCategory,(current['id'] as num).toInt(),brand);
+    if(!mounted)return;
+    var models=['Todos',...{if(model!='Todos')model,...initialModels.map((r)=>r['name'].toString()),...cars.where((c)=>c.category==selectedCategory&&c.brand==brand).map((c)=>c.model)}.toList()..sort()];
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1801,26 +1809,16 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                    Text(uiText(context, "Encuentra el coche que encaja contigo."),
                     style: TextStyle(color: marketMuted)),
                   const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(isExpanded: true,
-                    value: brands.contains(brand) ? brand : 'Todas',
-                    decoration:  InputDecoration(labelText: uiText(context, "Marca")),
-                    items: brands.map((value) => DropdownMenuItem(value: value, child: Text(value == 'Todas' || value == 'Todos' ? uiText(context, value) : value))).toList(),
-                    onChanged: (value) {
-                      if (value != null) setSheetState(() {
-                        brand = value;
-                        final available = cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet();
-                        if (model != 'Todos' && !available.contains(model)) model = 'Todos';
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(isExpanded: true,
-                    value: (brand == 'Todas' ? cars.map((car) => car.model).toSet() : cars.where((car) => car.brand == brand).map((car) => car.model).toSet()).contains(model) ? model : 'Todos',
-                    decoration:  InputDecoration(labelText: uiText(context, "Modelo")),
-                    items: ['Todos', ...cars.where((car) => brand == 'Todas' || car.brand == brand).map((car) => car.model).toSet().toList()..sort()].map((value) => DropdownMenuItem(value: value, child: Text(value == 'Todas' || value == 'Todos' ? uiText(context, value) : value))).toList(),
-                    onChanged: (value) { if (value != null) setSheetState(() => model = value); },
-                  ),
-                  const SizedBox(height: 12),
+                  CatalogueStringDropdown(label:'Marca',value:brand,allLabel:'Todas',options:brands,onChanged:(value)async{
+                    setSheetState((){brand=value;model='Todos';models=['Todos'];});
+                    final row=referenceBrands.where((r)=>r['name']==value).firstOrNull;
+                    if(row==null)return;
+                    final found=await reference.models(selectedCategory,(row['id'] as num).toInt(),value);
+                    if(sheetContext.mounted&&brand==value)setSheetState(()=>models=['Todos',...found.map((r)=>r['name'].toString())]);
+                  }),
+                  const SizedBox(height:12),
+                  CatalogueStringDropdown(label:'Modelo',value:model,allLabel:'Todos',options:models,onChanged:brand=='Todas'?null:(v)=>setSheetState(()=>model=v)),
+                  const SizedBox(height:12),
                   DropdownButtonFormField<String>(isExpanded: true,
                     value: fuel,
                     decoration:  InputDecoration(labelText: uiText(context, "Combustible")),
@@ -2098,8 +2096,9 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         child: ListView(
           padding: EdgeInsets.fromLTRB(isWide ? 28 : 16, 10, isWide ? 28 : 16, 28),
           children: [
-            MarketEditorialIntro(key:const Key('market-search-hero'),eyebrow:'COMPRA CON CRITERIO',title:'Tu próximo vehículo,\nmás cerca.',subtitle:'Encuentra. Compara. Habla con el vendedor.',photo:cars.where((car)=>car.photos.isNotEmpty).firstOrNull?.photos.firstOrNull),
             VehicleCategoryPicker(value:selectedCategory,onChanged:(c){clearHomeFilters();setState((){selectedCategory=c;_homeCategoryFilters={};});}),
+            const SizedBox(height:18),
+            MarketEditorialIntro(key:const Key('market-search-hero'),eyebrow:'COMPRA CON CRITERIO',title:'Tu próximo vehículo,\nmás cerca.',subtitle:'Encuentra. Compara. Habla con el vendedor.',photo:cars.where((car)=>car.photos.isNotEmpty).firstOrNull?.photos.firstOrNull),
             const SizedBox(height:14),
             Row(
               children: [
@@ -2349,6 +2348,27 @@ class AllVehiclesPage extends StatefulWidget {
 }
 
 class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSearchState<AllVehiclesPage> {
+  final _filterCatalogue=VehicleCatalogue();
+  List<Map<String,dynamic>> _referenceBrands=[];
+  List<String> _referenceModels=[];
+  int _filterGeneration=0,_modelGeneration=0;
+  Future<void> _loadReferenceBrands()async{
+    final generation=++_filterGeneration,requestedCategory=category;
+    final rows=await _filterCatalogue.brands(requestedCategory);
+    if(!mounted||generation!=_filterGeneration||requestedCategory!=category)return;
+    setState(()=>_referenceBrands=rows);
+    if(brand!='Todas')await _loadReferenceModels(brand);
+  }
+  Future<void> _loadReferenceModels(String name)async{
+    final generation=++_modelGeneration,requestedCategory=category;
+    if(mounted)setState(()=>_referenceModels=[]);
+    final row=_referenceBrands.where((r)=>r['name']==name).firstOrNull;
+    if(row==null)return;
+    final found=await _filterCatalogue.models(requestedCategory,(row['id'] as num).toInt(),name);
+    if(!mounted||generation!=_modelGeneration||requestedCategory!=category||brand!=name)return;
+    setState(()=>_referenceModels=found.map((r)=>r['name'].toString()).toList());
+  }
+
   late VehicleCategory category=widget.initialCategory;
   Map<String,dynamic> categoryFilters={};
   final search = TextEditingController();
@@ -2373,7 +2393,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   @override
   void initState() {
     super.initState();
-    _restoreCatalog();
+    _restoreCatalog().then((_)=>_loadReferenceBrands());
     MarketUsage.record('catalogue');
   }
 
@@ -2400,8 +2420,8 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
       categoryFilters=saved['category_filters'] is Map?Map<String,dynamic>.from(saved['category_filters']):{};
       geoCriteria={if(saved.containsKey('locality'))'locality':saved['locality'],if(saved.containsKey('radius_km'))'radius_km':saved['radius_km']};
       search.text = saved['query'] is String ? saved['query'] as String : '';
-      brand = brands.contains(saved['brand']) ? saved['brand'] as String : 'Todas';
-      model = models.contains(saved['model']) ? saved['model'] as String : 'Todos';
+      brand = saved['brand'] is String?saved['brand'] as String:'Todas';
+      model = saved['model'] is String?saved['model'] as String:'Todos';
       fuel = ['Todos', 'Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'GLP', 'GNC'].contains(saved['fuel']) ? saved['fuel'] as String : 'Todos';
       transmission = ['Todas', 'Automático', 'Manual', 'Automático (DSG)'].contains(saved['transmission']) ? saved['transmission'] as String : 'Todas';
       bodyType = {'Todos', 'SUV', ...widget.cars.map((car) => car.bodyType).whereType<String>()}.contains(saved['body_type']) ? saved['body_type'] as String : 'Todos';
@@ -2528,8 +2548,8 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   }
   String euros(double price) => '${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
   String number(int value) => value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.');
-  List<String> get brands => ['Todas', ...widget.cars.where((c)=>c.category==category).map((c) => c.brand).toSet().toList()..sort()];
-  List<String> get models => ['Todos', ...widget.cars.where((c) => c.category==category && (brand == 'Todas' || c.brand == brand)).map((c) => c.model).toSet().toList()..sort()];
+  List<String> get brands => ['Todas',...{if(brand!='Todas')brand,..._referenceBrands.map((r)=>r['name'].toString()),...widget.cars.where((c)=>c.category==category).map((c)=>c.brand)}.toList()..sort()];
+  List<String> get models => ['Todos',...{if(model!='Todos')model,..._referenceModels,...widget.cars.where((c)=>c.category==category&&c.brand==brand).map((c)=>c.model)}.toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
     return c.category==category && category.matches(categoryFilters,c.categoryDetails) && matchesMarketRadius(geoCriteria,c.marketFacts) && matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
@@ -2607,7 +2627,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
           ))
         : null,
       body: Column(children: [
-        Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:VehicleCategoryPicker(value:category,onChanged:(c)=>_updateCatalog((){category=c;categoryFilters={};brand='Todas';model='Todos';transmission='Todas';bodyType='Todos';minKm=0;maxKm=300000;_comparisonIds.clear();}))),
+        Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:VehicleCategoryPicker(dense:true,value:category,onChanged:(c){_modelGeneration++;_updateCatalog((){category=c;categoryFilters={};brand='Todas';model='Todos';_referenceBrands=[];_referenceModels=[];transmission='Todas';bodyType='Todos';minKm=0;maxKm=300000;_comparisonIds.clear();});unawaited(_loadReferenceBrands());})),
         Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:MarketRadiusFilter(criteria:geoCriteria,onChanged:(v)=>_updateCatalog(()=>geoCriteria=v))),
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => _updateCatalog(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); _updateCatalog(() {}); })) : IconButton(tooltip:uiText(context,'Borrar búsqueda'),onPressed: () { search.clear(); _updateCatalog(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
         if (!showFilters && category==VehicleCategory.car) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
@@ -2670,7 +2690,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
           Expanded(child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Column(children: [
-          Row(children: [Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: brand, decoration: InputDecoration(labelText: AppLocalizations.of(context).brand), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => _updateCatalog(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: models.contains(model)?model:'Todos', decoration: InputDecoration(labelText: AppLocalizations.of(context).model), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>_updateCatalog(()=>model=v??'Todos')))]),
+          Row(children:[Expanded(child:CatalogueStringDropdown(label:'Marca',value:brand,allLabel:'Todas',options:brands,onChanged:(v){_updateCatalog((){brand=v;model='Todos';});unawaited(_loadReferenceModels(v));})),const SizedBox(width:10),Expanded(child:CatalogueStringDropdown(label:'Modelo',value:model,allLabel:'Todos',options:models,onChanged:brand=='Todas'?null:(v)=>_updateCatalog(()=>model=v)))]),
           const SizedBox(height:8), DropdownButtonFormField<String>(isExpanded: true, value:fuel, decoration: InputDecoration(labelText: AppLocalizations.of(context).fuel), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(uiText(context, v)))).toList(), onChanged:(v)=>_updateCatalog(()=>fuel=v??'Todos')),
           if(category==VehicleCategory.car) ...[
           const SizedBox(height: 10),
@@ -7226,17 +7246,25 @@ class AddCarPage extends StatefulWidget {
 }
 
 class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
+  final _catalogue=VehicleCatalogue();
+  int _catalogueGeneration=0;
+  String get _brandName=>selectedBrandId==0?declaredBrand.text.trim():brands.where((r)=>r['id']==selectedBrandId).firstOrNull?['name']?.toString()??declaredBrand.text.trim();
+  String get _modelName=>selectedModelId==0?declaredModel.text.trim():models.where((r)=>r['id']==selectedModelId).firstOrNull?['name']?.toString()??declaredModel.text.trim();
   VehicleCategory category=VehicleCategory.car;
   final declaredBrand=TextEditingController(), declaredModel=TextEditingController();
   final categoryControllers=<String,TextEditingController>{for(final c in VehicleCategory.values) for(final k in c.fields.keys) k:TextEditingController()};
   Map<String,num> get categoryDetails=>category.details(categoryControllers.map((k,v)=>MapEntry(k,v.text)));
-  void changeCategory(VehicleCategory c) => _updatePublication(() {
-    category=c;if(!c.fuels.contains(fuel))fuel='Diésel'; _photoGuideCompleted.clear();selectedBrandId=null; selectedModelId=null; selectedEquipment.clear();
+  void changeCategory(VehicleCategory c) {
+    _catalogueGeneration++;
+    _updatePublication(() {
+    category=c;declaredBrand.clear();declaredModel.clear();brands.clear();models.clear();if(!c.fuels.contains(fuel))fuel='Diésel'; _photoGuideCompleted.clear();selectedBrandId=null; selectedModelId=null; selectedEquipment.clear();
     transmission='Manual'; bodyType='Berlina'; etiquetaMedioambiental=null;
     for(final controller in [matricula,vin,doors,seats,emissionsStandard,...categoryControllers.values]) {controller.clear();}
     showMatriculaPublicly=false; showVinPublicly=false;
     if(!c.isRoad){km.text='0'; marketFacts.remove('itv');marketFacts.remove('itv_until');}
-  });
+    });
+    unawaited(loadBrands());
+  }
 
   int _publicationStep=0;
   final _publicationScroll=ScrollController();
@@ -7370,9 +7398,11 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     }
   }
   Future<void> _initializeDraft() async {
-    await loadBrands();
     final saved = _draftOwner == null ? <String, dynamic>{} : await _draftStorage.read(_draftKey);
     if (!mounted || Supabase.instance.client.auth.currentUser?.id != _draftOwner) return;
+    category=VehicleCategory.parse(saved['vehicleCategory']);
+    await loadBrands();
+    if(!mounted)return;
     if (saved.isNotEmpty) {
       category=VehicleCategory.parse(saved['vehicleCategory']);
       marketFacts=saved['marketFacts'] is Map?Map<String,dynamic>.from(saved['marketFacts']):{};
@@ -7382,11 +7412,21 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           if (fields[entry.key] is String) entry.value.text = fields[entry.key] as String;
         }
       }
-      if (saved['brand'] is int && brands.any((brand) => brand['id'] == saved['brand'])) {
-        selectedBrandId = saved['brand'] as int;
-        await loadModels(selectedBrandId!);
-        if (!mounted) return;
-        if (saved['model'] is int && models.any((model) => model['id'] == saved['model'])) selectedModelId = saved['model'] as int;
+      final oldBrand=saved['brand'];
+      final namedBrand=brands.where((row)=>catalogueKey(row['name'].toString())==catalogueKey(declaredBrand.text)).firstOrNull;
+      if(oldBrand is int&&oldBrand>0&&brands.any((row)=>row['id']==oldBrand)) {selectedBrandId=oldBrand;}
+      else if(oldBrand==0){selectedBrandId=0;}
+      else if(namedBrand!=null){selectedBrandId=(namedBrand['id'] as num).toInt();}
+      else if(declaredBrand.text.trim().isNotEmpty){selectedBrandId=0;}
+      if(selectedBrandId!=null){
+        if(selectedBrandId!=0) await loadModels(selectedBrandId!);
+        if(!mounted)return;
+        final oldModel=saved['model'];
+        final namedModel=models.where((row)=>catalogueKey(row['name'].toString())==catalogueKey(declaredModel.text)).firstOrNull;
+        if(oldModel is int&&oldModel>0&&models.any((row)=>row['id']==oldModel)){selectedModelId=oldModel;}
+        else if(oldModel==0){selectedModelId=0;}
+        else if(namedModel!=null){selectedModelId=(namedModel['id'] as num).toInt();}
+        else if(declaredModel.text.trim().isNotEmpty){selectedModelId=0;}
       }
       final allowedFuel = ['Diésel', 'Gasolina', 'Híbrido', 'Eléctrico', 'GLP', 'GNC', 'Sin motor'];
       if (allowedFuel.contains(saved['fuel'])) fuel = saved['fuel'] as String;
@@ -7473,51 +7513,23 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   }
 
   Future<void> loadBrands() async {
-    try {
-      final rows = await Supabase.instance.client
-          .from('vehicle_brands')
-          .select('id, name')
-          .order('name');
-      if (!mounted) return;
-      _updatePublication(() {
-        brands
-          ..clear()
-          ..addAll(List<Map<String, dynamic>>.from(rows));
-        loadingBrands = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      _updatePublication(() => loadingBrands = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiText(context, "No se pudieron cargar las marcas: {0}", [error]))),
-      );
-    }
+    final generation=++_catalogueGeneration,requestedCategory=category;
+    if(mounted)_updatePublication(()=>loadingBrands=true);
+    try{
+      final rows=await _catalogue.brands(requestedCategory);
+      if(!mounted||generation!=_catalogueGeneration||category!=requestedCategory)return;
+      _updatePublication((){brands..clear()..addAll(rows);loadingBrands=false;});
+    }catch(_){if(mounted&&generation==_catalogueGeneration)_updatePublication(()=>loadingBrands=false);}
   }
-
   Future<void> loadModels(int brandId) async {
-    _updatePublication(() {
-      selectedModelId = null;
-      models.clear();
-      loadingModels = true;
-    });
-    try {
-      final rows = await Supabase.instance.client
-          .from('vehicle_models')
-          .select('id, name, brand_id')
-          .eq('brand_id', brandId)
-          .order('name');
-      if (!mounted || selectedBrandId != brandId) return;
-      _updatePublication(() {
-        models.addAll(List<Map<String, dynamic>>.from(rows));
-        loadingModels = false;
-      });
-    } catch (error) {
-      if (!mounted || selectedBrandId != brandId) return;
-      _updatePublication(() => loadingModels = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uiText(context, "No se pudieron cargar los modelos: {0}", [error]))),
-      );
-    }
+    final requestedCategory=category,generation=_catalogueGeneration;
+    final name=brands.where((r)=>r['id']==brandId).firstOrNull?['name']?.toString()??'';
+    _updatePublication((){selectedModelId=null;models.clear();loadingModels=true;});
+    try{
+      final rows=brandId==0?<Map<String,dynamic>>[]:await _catalogue.models(requestedCategory,brandId,name);
+      if(!mounted||generation!=_catalogueGeneration||requestedCategory!=category||selectedBrandId!=brandId)return;
+      _updatePublication((){models..clear()..addAll(rows);loadingModels=false;});
+    }catch(_){if(mounted&&generation==_catalogueGeneration)_updatePublication(()=>loadingModels=false);}
   }
 
   String _normalizeCatalogName(String value) => value
@@ -7774,7 +7786,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       price.text.trim().replaceAll('.', '').replaceAll(',', '.'),
     );
     return [
-      MapEntry('Marca y modelo seleccionados', category==VehicleCategory.car ? selectedBrandId != null && selectedModelId != null : declaredBrand.text.trim().isNotEmpty&&declaredModel.text.trim().isNotEmpty),
+      MapEntry('Marca y modelo seleccionados', selectedBrandId!=null&&selectedModelId!=null&&_brandName.isNotEmpty&&_modelName.isNotEmpty),
       MapEntry('Año válido', yearValue != null && yearValue >= 1886 && yearValue <= DateTime.now().year + 1),
       if(category.isRoad) MapEntry('Kilometraje válido', kmValue != null && kmValue >= 0),
       MapEntry('Precio válido', priceValue != null && priceValue > 0),
@@ -7815,7 +7827,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
 
     final brandId = selectedBrandId;
     final modelId = selectedModelId;
-    if (category==VehicleCategory.car && (brandId == null || modelId == null)) {
+    if (brandId == null || modelId == null || _brandName.isEmpty || _modelName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(content: Text(uiText(context, "Selecciona una marca y un modelo."))),
       );
@@ -7837,8 +7849,8 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       return;
     }
 
-    final selectedBrand = category==VehicleCategory.car ? brands.firstWhere((row)=>(row['id'] as num).toInt()==brandId) : {'name':declaredBrand.text.trim()};
-    final selectedModel = category==VehicleCategory.car ? models.firstWhere((row)=>(row['id'] as num).toInt()==modelId) : {'name':declaredModel.text.trim()};
+    final selectedBrand={'name':_brandName};
+    final selectedModel={'name':_modelName};
 
     _updatePublication(()=>_previewingPublication=true);
     bool? accepted;
@@ -7862,10 +7874,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     try {
       final listing = await supabase.from('vehicle_listings').insert({
         'vehicle_category':category.id,'category_details':categoryDetails,
-        'declared_brand':category==VehicleCategory.car?null:declaredBrand.text.trim(),
-        'declared_model':category==VehicleCategory.car?null:declaredModel.text.trim(),
-        'brand_id': brandId,
-        'model_id': modelId,
+        ...catalogueListingIdentity(category:category,brandId:brandId,modelId:modelId,brand:_brandName,model:_modelName),
         'year': yearValue,
         'km': kmValue,
         'price': priceValue,
@@ -8162,50 +8171,18 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                 ]),
               ),
             const SizedBox(height: 14),
-            DropdownButtonFormField<int>(isExpanded: true,
-              initialValue: selectedBrandId,
-              decoration:  InputDecoration(labelText: uiText(context, "Marca")),
-              hint: Text(loadingBrands ? uiText(context, "Cargando marcas...") : uiText(context, "Selecciona una marca")),
-              items: brands.map((row) {
-                final id = (row['id'] as num).toInt();
-                return DropdownMenuItem<int>(
-                  value: id,
-                  child: Text(row['name'].toString()),
-                );
-              }).toList(),
-              validator: (value) => value == null ? uiText(context, 'Selecciona una marca') : null,
-              onChanged: loadingBrands ? null : (value) {
-                if (value == null) return;
-                _updatePublication(() => selectedBrandId = value);
-                loadModels(value);
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(isExpanded: true,
-              key: ValueKey('models-$selectedBrandId'),
-              initialValue: selectedModelId,
-              decoration:  InputDecoration(labelText: uiText(context, "Modelo")),
-              hint: Text(selectedBrandId == null
-                  ? uiText(context, "Primero selecciona una marca")
-                  : loadingModels ? uiText(context, "Cargando modelos...") : uiText(context, "Selecciona un modelo")),
-              items: models.map((row) {
-                final id = (row['id'] as num).toInt();
-                return DropdownMenuItem<int>(
-                  value: id,
-                  child: Text(row['name'].toString()),
-                );
-              }).toList(),
-              validator: (value) => value == null ? uiText(context, 'Selecciona un modelo') : null,
-              onChanged: selectedBrandId == null || loadingModels
-                  ? null
-                  : (value) => _updatePublication(() => selectedModelId = value),
-            ),
-            const SizedBox(height: 12),
             ],
-            if(category!=VehicleCategory.car) ...[
-              buildTextField('Marca',declaredBrand),buildTextField('Modelo',declaredModel),
-              VehicleCategoryFields(category:category,controllers:categoryControllers),
-            ],
+            CatalogueDropdown(key:ValueKey('publication-brand-${category.id}-$selectedBrandId'),label:'Marca',hint:'Selecciona una marca',otherLabel:'Otra marca (escribir)',value:selectedBrandId,options:brands,loading:loadingBrands,onChanged:publishing?null:(id){
+              _updatePublication((){selectedBrandId=id;selectedModelId=null;declaredBrand.clear();declaredModel.clear();});
+              if(id!=0){declaredBrand.text=_brandName;unawaited(loadModels(id));}else{_updatePublication((){models.clear();selectedModelId=0;loadingModels=false;});}
+            }),
+            const SizedBox(height:12),
+            if(selectedBrandId==0)buildTextField('Escribe la marca',declaredBrand),
+            CatalogueDropdown(key:ValueKey('publication-model-${category.id}-$selectedBrandId-$selectedModelId'),label:'Modelo',hint:selectedBrandId==null?'Primero selecciona una marca':'Selecciona un modelo',otherLabel:'Otro modelo (escribir)',value:selectedModelId,options:models,loading:loadingModels,onChanged:selectedBrandId==null||publishing?null:(id){_updatePublication((){selectedModelId=id;declaredModel.clear();});if(id!=0)declaredModel.text=_modelName;}),
+            const SizedBox(height:12),
+            if(selectedModelId==0)buildTextField('Escribe el modelo',declaredModel),
+            if(_catalogue.serverUnavailable) TextButton.icon(onPressed:loadingBrands?null:loadBrands,icon:const Icon(Icons.refresh),label:Text(uiText(context,'Catálogo guardado. Volver a cargar'))),
+            if(category!=VehicleCategory.car) VehicleCategoryFields(category:category,controllers:categoryControllers),
             buildTextField('Año', year, numeric: true),
             if(category.isRoad) buildTextField('Kilómetros', km, numeric: true),
             buildTextField('Precio en euros', price, numeric: true),

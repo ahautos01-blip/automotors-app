@@ -50,3 +50,6 @@ app.*.map.json
 
 # Generated Flutter localization output (rebuilt by flutter pub get)
 /lib/l10n/app_localizations*.dart
+
+# Public catalogue refresh cache (only the reviewed bundled data is shipped).
+/tool/catalog-cache/

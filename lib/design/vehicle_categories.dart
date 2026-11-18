@@ -7,10 +7,12 @@ import 'market_theme.dart';
 class VehicleCategoryPicker extends StatelessWidget {
   final VehicleCategory value;
   final ValueChanged<VehicleCategory>? onChanged;
+  final bool dense;
   const VehicleCategoryPicker({
     super.key,
     required this.value,
     required this.onChanged,
+    this.dense = false,
   });
   static IconData icon(VehicleCategory c) => switch (c) {
     VehicleCategory.car => Icons.directions_car_outlined,
@@ -19,27 +21,77 @@ class VehicleCategoryPicker extends StatelessWidget {
     VehicleCategory.boat => Icons.sailing_outlined,
   };
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        for (final c in VehicleCategory.values)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              key: ValueKey('category-${c.id}'),
-              selected: c == value,
-              avatar: Icon(
-                icon(c),
-                size: 20,
-                color: c == value ? marketAccent : marketMuted,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, size) {
+      final columns = size.maxWidth >= 700 ? 4 : 2;
+      final width = (size.maxWidth - 10 * (columns - 1)) / columns;
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      return Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final c in VehicleCategory.values)
+            SizedBox(
+              width: width,
+              height: (dense ? 62 : 94) * scale.clamp(1, 2),
+              child: Semantics(
+                button: true,
+                selected: c == value,
+                label: uiText(context, c.label),
+                excludeSemantics: true,
+                enabled: onChanged != null,
+                onTap: onChanged == null ? null : () => onChanged!(c),
+                child: Material(
+                  color: c == value ? marketInk : marketSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    key: ValueKey('category-${c.id}'),
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: onChanged == null ? null : () => onChanged!(c),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: c == value ? marketGold : marketLine,
+                          width: c == value ? 2 : 1,
+                        ),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: dense ? 6 : 12,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            icon(c),
+                            size: dense ? 20 : 30,
+                            color: c == value ? marketGold : marketInk,
+                          ),
+                          SizedBox(height: dense ? 3 : 8),
+                          Flexible(
+                            child: Text(
+                              uiText(context, c.label),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: dense ? 12 : 15,
+                                fontWeight: FontWeight.w800,
+                                color: c == value ? marketSurface : marketInk,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              label: Text(uiText(context, c.label)),
-              onSelected: onChanged == null ? null : (_) => onChanged!(c),
             ),
-          ),
-      ],
-    ),
+        ],
+      );
+    },
   );
 }
 
