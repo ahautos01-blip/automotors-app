@@ -8,7 +8,7 @@ const marketMuted = Color(0xFF58665D);
 const marketLine = Color(0xFFE0E3DC);
 const marketTint = Color(0xFFEFEEE7);
 const marketGold = Color(0xFFC7A044);
-const marketAccent = Color(0xFF765B1E);
+const marketAccent = Color(0xFF876B24);
 
 ThemeData automotorsMarketTheme() => ThemeData(
   useMaterial3: true,
@@ -31,36 +31,34 @@ ThemeData automotorsMarketTheme() => ThemeData(
   dividerColor: marketLine,
   visualDensity: VisualDensity.standard,
   materialTapTargetSize: MaterialTapTargetSize.padded,
-  iconButtonTheme: IconButtonThemeData(
-    style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
-  ),
+  iconButtonTheme: IconButtonThemeData(style:IconButton.styleFrom(minimumSize:const Size(48,48))),
   iconTheme: const IconThemeData(color: marketInk, size: 20),
   textTheme: const TextTheme(
     headlineLarge: TextStyle(
       fontSize: 36,
       height: 1.08,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w700,
       letterSpacing: -1.5,
       color: marketInk,
     ),
     headlineMedium: TextStyle(
       fontSize: 30,
       height: 1.12,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w700,
       letterSpacing: -1.1,
       color: marketInk,
     ),
     titleLarge: TextStyle(
       fontSize: 22,
       height: 1.2,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w700,
       letterSpacing: -.5,
       color: marketInk,
     ),
     titleMedium: TextStyle(
       fontSize: 16,
       height: 1.3,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w600,
       color: marketInk,
     ),
     bodyLarge: TextStyle(fontSize: 16, height: 1.5, color: marketInk),
@@ -68,7 +66,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
     bodySmall: TextStyle(fontSize: 12, height: 1.4, color: marketMuted),
     labelLarge: TextStyle(
       fontSize: 14,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w600,
       color: marketInk,
     ),
   ),
@@ -99,20 +97,26 @@ ThemeData automotorsMarketTheme() => ThemeData(
     elevation: 0,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(9)),
+      borderRadius: BorderRadius.all(Radius.circular(20)),
     ),
   ),
-  inputDecorationTheme: const InputDecorationTheme(
-    filled: false,
-    hintStyle: TextStyle(color: marketMuted),
-    labelStyle: TextStyle(color: marketMuted),
-    contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 16),
-    border: UnderlineInputBorder(borderSide: BorderSide(color: marketLine)),
-    enabledBorder: UnderlineInputBorder(
-      borderSide: BorderSide(color: marketLine),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: marketSurface,
+    hintStyle: const TextStyle(color: marketMuted),
+    labelStyle: const TextStyle(color: marketMuted),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: marketLine),
     ),
-    focusedBorder: UnderlineInputBorder(
-      borderSide: BorderSide(color: marketAccent, width: 1.5),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: marketLine),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: marketAccent, width: 1.5),
     ),
   ),
   filledButtonTheme: FilledButtonThemeData(
@@ -121,8 +125,8 @@ ThemeData automotorsMarketTheme() => ThemeData(
       foregroundColor: marketSurface,
       minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w500),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
@@ -131,21 +135,17 @@ ThemeData automotorsMarketTheme() => ThemeData(
       side: const BorderSide(color: marketLine),
       minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
   ),
   textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(
-      foregroundColor: marketAccent,
-      minimumSize: const Size(48, 48),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    ),
+    style: TextButton.styleFrom(foregroundColor: marketAccent,minimumSize:const Size(48,48),padding:const EdgeInsets.symmetric(horizontal:16,vertical:12)),
   ),
   tabBarTheme: const TabBarThemeData(
     labelColor: marketInk,
     unselectedLabelColor: marketMuted,
     indicatorColor: marketAccent,
-    labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
     dividerColor: marketLine,
   ),
@@ -173,6 +173,6 @@ ThemeData automotorsMarketTheme() => ThemeData(
     backgroundColor: marketInk,
     contentTextStyle: const TextStyle(color: marketSurface),
     behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
   ),
 );

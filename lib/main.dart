@@ -1,3 +1,5 @@
+import 'services/vehicle_category.dart';
+import 'design/vehicle_categories.dart';
 import 'design/market_editorial.dart';
 import 'design/active_market_filters.dart';
 import 'design/market_activity_page.dart';
@@ -94,7 +96,7 @@ const gold = marketGold;
 const black = marketPaper;
 const panel = marketSurface;
 
-const buyerListingProjection = 'market_facts, id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
+const buyerListingProjection = 'vehicle_category,declared_brand,declared_model,category_details,market_facts, id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
 
 final _vehiclePhotoCache = ListingPhotoCache();
 final _localMarketState = LocalMarketState();
@@ -830,6 +832,10 @@ class _LoginPageState extends State<LoginPage> {
 
 
 class Car {
+  final VehicleCategory category;
+  final Map<String,dynamic> categoryDetails;
+  String get usageLabel => category.isRoad ? '$km km' : categoryDetails['engine_hours']==null ? 'Horas no indicadas' : '${categoryDetails["engine_hours"]} h de motor';
+  String get summary => '$year · $usageLabel · $fuel';
   final String brand;
   final String model;
   final int year;
@@ -874,6 +880,8 @@ class Car {
   final DateTime? listedAt;
 
   const Car({
+    this.category = VehicleCategory.car,
+    this.categoryDetails = const {},
     required this.brand,
     required this.model,
     required this.year,
@@ -926,8 +934,10 @@ class Car {
     final brandData = raw['vehicle_brands'];
     final modelData = raw['vehicle_models'];
     return Car(
-        brand: brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca',
-        model: modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo',
+        category: VehicleCategory.parse(raw['vehicle_category']),
+        categoryDetails: raw['category_details'] is Map ? Map<String,dynamic>.from(raw['category_details']) : {},
+        brand: raw['declared_brand']?.toString() ?? (brandData is Map ? (brandData['name']?.toString() ?? 'Marca') : 'Marca'),
+        model: raw['declared_model']?.toString() ?? (modelData is Map ? (modelData['name']?.toString() ?? 'Modelo') : 'Modelo'),
         year: (raw['year'] as num?)?.toInt() ?? 0,
         km: (raw['km'] as num?)?.toInt() ?? 0,
         price: (raw['price'] as num?)?.toDouble() ?? 0,
@@ -1197,10 +1207,12 @@ class VehicleComparisonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <List<String>>[
+      ['Categoría', ...cars.map((c)=>c.category.label)],
+      for(final category in VehicleCategory.values) for(final field in category.fields.entries) if(cars.any((c)=>c.category==category)) [field.value,...cars.map((c)=>c.category==category ? _value(c.categoryDetails[field.key]) : 'No indicado')],
       ['Modelo', ...cars.map((c) => '${c.brand} ${c.model}')],
       ['Precio', ...cars.map((c) => _price(c.price))],
       ['Año', ...cars.map((c) => _value(c.year == 0 ? null : c.year))],
-      ['Kilometraje', ...cars.map((c) => '${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
+      if(cars.every((c)=>c.category.isRoad)) ['Kilometraje', ...cars.map((c) => '${c.km.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} km')],
       ['Combustible', ...cars.map((c) => _value(c.fuel))],
       ['Potencia', ...cars.map((c) => _value(c.cv, ' CV'))],
       ['Cilindrada', ...cars.map((c) => c.cilindradaCc == null ? 'No indicado' : '${c.cilindradaCc} cc')],
@@ -1211,14 +1223,14 @@ class VehicleComparisonPage extends StatelessWidget {
       ['Normativa de emisiones', ...cars.map((c) => _value(c.emissionsStandard))],
       ['Versión', ...cars.map((c) => _value(c.version))],
       ['Mantenimiento', ...cars.map((c) => marketMaintenance[c.marketFacts['maintenance']]??'No informado')],
-      ['ITV', ...cars.map((c) => marketItv[c.marketFacts['itv']]??'No informado')],
+      if(cars.every((c)=>c.category.isRoad)) ['ITV', ...cars.map((c) => marketItv[c.marketFacts['itv']]??'No informado')],
       ['Garantía', ...cars.map((c) => marketWarranty[c.marketFacts['warranty']]??'No informado')],
       ['Localidad', ...cars.map((c) => MarketLocality.fromJson(c.marketFacts['locality'])?.label??'No informado')],
-      ['Cambio', ...cars.map((c) => _value(c.transmission))],
-      ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
-      ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
+      if(cars.every((c)=>c.category.isRoad)) ['Cambio', ...cars.map((c) => _value(c.transmission))],
+      if(cars.every((c)=>c.category.isRoad)) ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
+      if(cars.every((c)=>c.category.isRoad)) ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
       ['Color', ...cars.map((c) => _value(c.color))],
-      ['Puertas', ...cars.map((c) => _value(c.doors))],
+      if(cars.every((c)=>c.category.isRoad)) ['Puertas', ...cars.map((c) => _value(c.doors))],
       ['Plazas', ...cars.map((c) => _value(c.seats))],
       ['Equipamiento', ...cars.map((c) => c.equipment.isEmpty ? 'No indicado' : c.equipment.map((item) => uiText(context, item)).join(', '))],
     ];
@@ -1404,6 +1416,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePage> {
+  VehicleCategory selectedCategory=VehicleCategory.car;
+  Map<String,dynamic> _homeCategoryFilters={};
   Map<String,dynamic> _homeGeo={};
   final searchController = TextEditingController();
   final searchFocusNode = FocusNode();
@@ -1580,6 +1594,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   List<Car> get filteredCars {
     final query = searchController.text.toLowerCase().trim();
     return cars.where((car) {
+      if(car.category != selectedCategory || !car.category.matches(_homeCategoryFilters,car.categoryDetails)) return false;
       final matchesSearch =
           matchesVehicleSearch(query, [car.brand, car.model, car.version, car.fuel, car.transmission, car.bodyType]);
       final matchesBrand = selectedBrand == 'Todas' || car.brand == selectedBrand;
@@ -1625,6 +1640,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         return value != null && value.isFinite ? value : null;
       }
       setState(() {
+        selectedCategory=VehicleCategory.parse(criteria['vehicle_category']);
+        _homeCategoryFilters=criteria['category_filters'] is Map?Map<String,dynamic>.from(criteria['category_filters']):{};
         _homeGeo={if(criteria.containsKey('locality'))'locality':criteria['locality'],if(criteria.containsKey('radius_km'))'radius_km':criteria['radius_km']};
         searchController.text = criteria['query']?.toString() ?? '';
         selectedBrand = criteria['brand']?.toString() ?? 'Todas';
@@ -1665,6 +1682,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         'name': name,
         'notify_new_listings':notifyNew,
         'criteria': {
+          'vehicle_category':selectedCategory.id,
+          'category_filters':_homeCategoryFilters,
           ..._homeGeo,
           'brand': selectedBrand,
           'model': selectedModel,
@@ -1700,8 +1719,9 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     }
   }
 
-  void clearHomeFilters()=>setState((){searchController.clear();_homeGeo={};selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();});
+  void clearHomeFilters()=>setState((){_homeCategoryFilters={};searchController.clear();_homeGeo={};selectedBrand='Todas';selectedModel='Todos';selectedFuel='Todos';minPrice=null;maxPrice=null;minYear=null;maxYear=null;minKm=null;maxKm=null;selectedTransmission='Todas';selectedBodyType='Todos';selectedLabel='Todas';selectedColor='';minCv=null;maxCv=null;minCc=null;maxDoors=null;minSeats=null;selectedEquipmentFilters.clear();});
   List<MapEntry<String,VoidCallback>> get activeHomeFilters=>[
+    if(_homeCategoryFilters.isNotEmpty)MapEntry(uiText(context,'Datos técnicos adicionales'),()=>setState(()=>_homeCategoryFilters={})),
     if(_homeGeo.isNotEmpty)MapEntry(MarketLocality.fromJson(_homeGeo['locality'])?.label??uiText(context,'Localidad'),()=>setState(()=>_homeGeo={})),
     if(selectedBrand!='Todas')MapEntry(selectedBrand,()=>setState((){selectedBrand='Todas';selectedModel='Todos';})),
     if(selectedModel!='Todos')MapEntry(selectedModel,()=>setState(()=>selectedModel='Todos')),
@@ -1718,6 +1738,11 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
   ];
 
   Future<void> openFilters() async {
+    if(selectedCategory!=VehicleCategory.car){
+      await Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>AllVehiclesPage(cars:List.of(cars),initialCategory:selectedCategory,onOpenCar:openCarDetails)));
+      return;
+    }
+
     final minPriceController =
         TextEditingController(text: minPrice?.toStringAsFixed(0) ?? '');
     final maxPriceController =
@@ -1966,7 +1991,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
   Future<void> openAddCar() async {
     final car=await Navigator.push<Car>(context,MaterialPageRoute(builder:(_)=>const PublishOptionsPage()));
-    if(car!=null && mounted)setState(()=>cars.insert(0,car));
+    if(car!=null && mounted)setState((){selectedCategory=car.category;cars.insert(0,car);});
   }
 
   Future<void> openCarDetails(Car car) async {
@@ -2071,9 +2096,10 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         color: marketAccent,
         onRefresh: loadCars,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(isWide ? 28 : 24, 18, isWide ? 28 : 24, 28),
+          padding: EdgeInsets.fromLTRB(isWide ? 28 : 16, 10, isWide ? 28 : 16, 28),
           children: [
-            const MarketEditorialIntro(key:Key('market-search-hero'),plain:true,eyebrow:'COCHES CON HISTORIA. LA TUYA EMPIEZA AQUÍ.',title:'El próximo\nes el tuyo.',subtitle:'Un lugar para encontrarlo.\nUna forma más sencilla de venderlo.'),
+            MarketEditorialIntro(key:const Key('market-search-hero'),eyebrow:'COMPRA CON CRITERIO',title:'Tu próximo vehículo,\nmás cerca.',subtitle:'Encuentra. Compara. Habla con el vendedor.',photo:cars.where((car)=>car.photos.isNotEmpty).firstOrNull?.photos.firstOrNull),
+            VehicleCategoryPicker(value:selectedCategory,onChanged:(c){clearHomeFilters();setState((){selectedCategory=c;_homeCategoryFilters={};});}),
             const SizedBox(height:14),
             Row(
               children: [
@@ -2114,10 +2140,13 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                           tooltip: appText('Borrar búsqueda', 'Clear search'), icon: const Icon(Icons.close_rounded),
                           onPressed: () { controller.clear(); setState(() {}); },
                         ),
-                        filled: false,
+                        filled: true,
                         fillColor: marketSurface,
                         contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                        border: const UnderlineInputBorder(borderSide: BorderSide(color: marketInk)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                     optionsViewBuilder: (context, onSelected, options) => Align(
@@ -2180,7 +2209,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             const SizedBox(height:16),
             ActiveMarketFilters(filters:activeHomeFilters,onClear:clearHomeFilters),
             MarketRadiusFilter(criteria:_homeGeo,onChanged:(v)=>setState(()=>_homeGeo=v)),
-            MarketQuickFilters(
+            if(selectedCategory==VehicleCategory.car) MarketQuickFilters(
               automatic: selectedTransmission == 'Automático', suv: selectedBodyType == 'SUV',
               electric: selectedFuel == 'Eléctrico', budget: maxPrice == 20000,
               onAutomatic: () => setState(() => selectedTransmission = selectedTransmission == 'Automático' ? 'Todas' : 'Automático'),
@@ -2189,13 +2218,13 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               onBudget: () => setState(() { maxPrice = maxPrice == 20000 ? null : 20000; if (maxPrice != null && minPrice != null && minPrice! > maxPrice!) minPrice = null; }),
             ),
             const SizedBox(height: 24),
-            if (loadingCars || cars.isNotEmpty) Row(
+            Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                  Expanded(child: Text(searchController.text.trim().isNotEmpty || activeFilterCount > 0 ? AppLocalizations.of(context).vehiclesFound(filtered.length) : uiText(context, "Últimos vehículos"), style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700))),
                 TextButton(onPressed: () => Navigator.push<void>(context,
                   MaterialPageRoute(builder: (_) => AllVehiclesPage(
-                    cars: List<Car>.from(filtered), onOpenCar: openCarDetails))),
+                    cars: List<Car>.from(cars), initialCategory:selectedCategory, onOpenCar: openCarDetails))),
                   child:  Text(uiText(context, "Ver todos  →"), style: TextStyle(color: marketAccent, fontWeight: FontWeight.w700))),
               ],
             ),
@@ -2204,12 +2233,12 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
               const MarketLoadingCard()
             else if (filtered.isNotEmpty) ...[
               Align(alignment:Alignment.centerLeft,child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:540),child:SizedBox(height: (MediaQuery.sizeOf(context).width-32).clamp(288,540)*.75+185*MediaQuery.textScalerOf(context).scale(1),child:MarketVehicleCard(
-                title:'${filtered.first.brand} ${filtered.first.model}',price:euros(filtered.first.price),details:'${filtered.first.year} · ${_formatCompactKm(filtered.first.km)} · ${uiText(context,filtered.first.fuel)}',
+                title:'${filtered.first.brand} ${filtered.first.model}',price:euros(filtered.first.price),details:filtered.first.summary,
                 version:filtered.first.version,photoCount:filtered.first.photoCount,photo:filtered.first.photos.firstOrNull,favorite:SaveVehicleButton(car:filtered.first),
                 status:filtered.first.status=='reserved' ? _VehicleStatusBadge(status:filtered.first.status) : null,onTap:()=>openCarDetails(filtered.first),
               )))),
               for(final car in filtered.skip(1).take(3)) Padding(padding:const EdgeInsets.only(top:12),child:MarketEditorialCarRow(
-                title:'${car.brand} ${car.model}',price:euros(car.price),details:'${car.year} · ${_formatCompactKm(car.km)} · ${uiText(context,car.fuel)}',version:car.version,photo:car.photos.firstOrNull,favorite:SaveVehicleButton(car:car),status:car.status=='reserved' ? _VehicleStatusBadge(status:car.status) : null,onTap:()=>openCarDetails(car),
+                title:'${car.brand} ${car.model}',price:euros(car.price),details:car.summary,version:car.version,photo:car.photos.firstOrNull,favorite:SaveVehicleButton(car:car),status:car.status=='reserved' ? _VehicleStatusBadge(status:car.status) : null,onTap:()=>openCarDetails(car),
               )),
             ],
             if(!loadingCars && catalogueFailed)MarketEmptyState(icon:Icons.wifi_off_outlined,title:'No se pudo cargar el catálogo',message:'Comprueba la conexión y vuelve a intentarlo.',actionLabel:'Reintentar',onAction:loadCars),
@@ -2236,7 +2265,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(18),
-              decoration: const BoxDecoration(border: Border(top: BorderSide(color: marketLine))),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), border: Border.all(color: marketAccent.withValues(alpha: .6)), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFFAF9F6)])),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                  Text(uiText(context, "¿Tienes un vehículo?"), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 5),
@@ -2253,7 +2282,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: marketSurface,
-        indicatorColor: marketTint,
+        indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (index) async {
@@ -2313,12 +2342,15 @@ class AllVehiclesPage extends StatefulWidget {
   final List<Car> cars;
   final ValueChanged<Car> onOpenCar;
   final LocalMarketState? localState;
-  const AllVehiclesPage({super.key, required this.cars, required this.onOpenCar, this.localState});
+  final VehicleCategory initialCategory;
+  const AllVehiclesPage({super.key, required this.cars, required this.onOpenCar, this.localState,this.initialCategory=VehicleCategory.car});
   @override
   State<AllVehiclesPage> createState() => _AllVehiclesPageState();
 }
 
 class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSearchState<AllVehiclesPage> {
+  late VehicleCategory category=widget.initialCategory;
+  Map<String,dynamic> categoryFilters={};
   final search = TextEditingController();
   String brand = 'Todas';
   String model = 'Todos';
@@ -2358,11 +2390,14 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   Future<void> _restoreCatalog() async {
     final saved = await _catalogStorage.read(_catalogKey);
     if (!mounted || _catalogEdited || saved.isEmpty) return;
+    if(VehicleCategory.parse(saved['vehicle_category'])!=widget.initialCategory)return;
     int number(String key, int fallback, int maximum) {
       final value = saved[key];
       return value is num && value.isFinite ? value.toInt().clamp(0, maximum) : fallback;
     }
     setState(() {
+      category=VehicleCategory.parse(saved['vehicle_category']??widget.initialCategory.id);
+      categoryFilters=saved['category_filters'] is Map?Map<String,dynamic>.from(saved['category_filters']):{};
       geoCriteria={if(saved.containsKey('locality'))'locality':saved['locality'],if(saved.containsKey('radius_km'))'radius_km':saved['radius_km']};
       search.text = saved['query'] is String ? saved['query'] as String : '';
       brand = brands.contains(saved['brand']) ? saved['brand'] as String : 'Todas';
@@ -2382,6 +2417,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
 
   bool savingSearch = false;
   Map<String, dynamic> get catalogCriteria => {
+    'vehicle_category':category.id,'category_filters':categoryFilters,
     ...geoCriteria,
     'query': search.text.trim(),
     'brand': brand,
@@ -2390,9 +2426,9 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
     'transmission': transmission,
     'body_type': bodyType,
     'min_price': minPrice,
-    'max_price': maxPrice,
-    'min_km': minKm,
-    'max_km': maxKm,
+    if(category==VehicleCategory.car||maxPrice!=200000) 'max_price': maxPrice,
+    if(category.isRoad) 'min_km': minKm,
+    if(category.isRoad&&(category==VehicleCategory.car||maxKm!=300000)) 'max_km': maxKm,
     if (minCv != 0 || maxCv != 1000) ...{'min_cv': minCv, 'max_cv': maxCv},
     if (minYear != 1990 || maxYear != DateTime.now().year + 1) ...{
       'min_year': minYear,
@@ -2465,6 +2501,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   void _clearComparison() => _updateCatalog(() => _comparisonIds.clear());
 
   void _resetFilters() {
+    categoryFilters={};
     _updateCatalog(() {
       search.clear();
       geoCriteria={};
@@ -2491,15 +2528,15 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
   }
   String euros(double price) => '${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')} €';
   String number(int value) => value.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.');
-  List<String> get brands => ['Todas', ...widget.cars.map((c) => c.brand).toSet().toList()..sort()];
-  List<String> get models => ['Todos', ...widget.cars.where((c) => brand == 'Todas' || c.brand == brand).map((c) => c.model).toSet().toList()..sort()];
+  List<String> get brands => ['Todas', ...widget.cars.where((c)=>c.category==category).map((c) => c.brand).toSet().toList()..sort()];
+  List<String> get models => ['Todos', ...widget.cars.where((c) => c.category==category && (brand == 'Todas' || c.brand == brand)).map((c) => c.model).toSet().toList()..sort()];
   List<Car> get results => widget.cars.where((c) {
     final q = search.text.trim().toLowerCase();
-    return matchesMarketRadius(geoCriteria,c.marketFacts) && matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
+    return c.category==category && category.matches(categoryFilters,c.categoryDetails) && matchesMarketRadius(geoCriteria,c.marketFacts) && matchesVehicleSearch(q, [c.brand, c.model, c.version, c.fuel, c.transmission, c.bodyType]) &&
       (brand == 'Todas' || c.brand == brand) && (model == 'Todos' || c.model == model) &&
       matchesVehicleTransmission(c.transmission, transmission) && (bodyType == 'Todos' || normalizeVehicleSearch(c.bodyType ?? '') == normalizeVehicleSearch(bodyType)) &&
       (fuel == 'Todos' || c.fuel.toLowerCase() == fuel.toLowerCase()) &&
-      c.price >= minPrice && c.price <= maxPrice && c.km >= minKm && c.km <= maxKm &&
+      c.price >= minPrice && (category!=VehicleCategory.car&&maxPrice==200000 || c.price <= maxPrice) && (!category.isRoad || c.km >= minKm && (category!=VehicleCategory.car&&maxKm==300000 || c.km <= maxKm)) &&
       ((minCv == 0 && maxCv == 1000) || (c.cv != null && c.cv! >= minCv && c.cv! <= maxCv)) &&
       ((minYear == 1990 && maxYear == DateTime.now().year + 1) || (c.year != 0 && c.year >= minYear && c.year <= maxYear));
   }).toList()..sort((a, b) {
@@ -2570,9 +2607,10 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
           ))
         : null,
       body: Column(children: [
+        Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:VehicleCategoryPicker(value:category,onChanged:(c)=>_updateCatalog((){category=c;categoryFilters={};brand='Todas';model='Todos';transmission='Todas';bodyType='Todos';minKm=0;maxKm=300000;_comparisonIds.clear();}))),
         Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:MarketRadiusFilter(criteria:geoCriteria,onChanged:(v)=>_updateCatalog(()=>geoCriteria=v))),
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8), child: TextField(controller: search, onSubmitted: rememberVehicleSearch, onChanged: (_) => _updateCatalog(() {}), decoration: InputDecoration(hintText: AppLocalizations.of(context).searchVehicleHint, prefixIcon: const Icon(Icons.search), suffixIcon: search.text.isEmpty ? IconButton(tooltip: uiText(context, 'Búsquedas recientes'), icon: const Icon(Icons.history_rounded), onPressed: () => openVehicleSearchHistory((query) { search.text = query; FocusScope.of(context).unfocus(); _updateCatalog(() {}); })) : IconButton(tooltip:uiText(context,'Borrar búsqueda'),onPressed: () { search.clear(); _updateCatalog(() {}); }, icon: const Icon(Icons.close)), filled: true, fillColor: panel, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14))))),
-        if (!showFilters) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
+        if (!showFilters && category==VehicleCategory.car) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: MarketQuickFilters(
           automatic: transmission == 'Automático', suv: bodyType == 'SUV',
           electric: fuel == 'Eléctrico', budget: maxPrice == 20000,
           onAutomatic: () => _updateCatalog(() => transmission = transmission == 'Automático' ? 'Todas' : 'Automático'),
@@ -2611,11 +2649,12 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
             onChanged: (value) => _updateCatalog(() => sortOrder = value ?? 'featured'),
           ),
         ),
-        if (!showFilters && (transmission != 'Todas' || bodyType != 'Todos' || brand != 'Todas' || model != 'Todos' || fuel != 'Todos' || minPrice != 0 || maxPrice != 200000 || minKm != 0 || maxKm != 300000 || minCv != 0 || maxCv != 1000 || minYear != 1990 || maxYear != DateTime.now().year + 1))
+        if (!showFilters && (categoryFilters.isNotEmpty || transmission != 'Todas' || bodyType != 'Todos' || brand != 'Todas' || model != 'Todos' || fuel != 'Todos' || minPrice != 0 || maxPrice != 200000 || minKm != 0 || maxKm != 300000 || minCv != 0 || maxCv != 1000 || minYear != 1990 || maxYear != DateTime.now().year + 1))
           SizedBox(height: 48, child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
+              if(categoryFilters.isNotEmpty) InputChip(label:Text(uiText(context,'Datos técnicos adicionales')),onDeleted:()=>_updateCatalog(()=>categoryFilters={})),
               if (transmission != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, transmission)), onDeleted: () => _updateCatalog(() => transmission = 'Todas'))),
               if (bodyType != 'Todos') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(uiText(context, bodyType)), onDeleted: () => _updateCatalog(() => bodyType = 'Todos'))),
               if (brand != 'Todas') Padding(padding: const EdgeInsets.only(right: 8), child: InputChip(label: Text(brand), onDeleted: () => _updateCatalog(() { brand = 'Todas'; model = 'Todos'; }))),
@@ -2633,6 +2672,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
             child: Column(children: [
           Row(children: [Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: brand, decoration: InputDecoration(labelText: AppLocalizations.of(context).brand), items: brands.map((v) => DropdownMenuItem(value:v, child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v, overflow:TextOverflow.ellipsis))).toList(), onChanged: (v) => _updateCatalog(() { brand=v??'Todas'; if (!models.contains(model)) model='Todos'; }))), const SizedBox(width:10), Expanded(child: DropdownButtonFormField<String>(isExpanded: true, value: models.contains(model)?model:'Todos', decoration: InputDecoration(labelText: AppLocalizations.of(context).model), items: models.map((v)=>DropdownMenuItem(value:v,child:Text(v == 'Todas' || v == 'Todos' ? uiText(context, v) : v,overflow:TextOverflow.ellipsis))).toList(), onChanged:(v)=>_updateCatalog(()=>model=v??'Todos')))]),
           const SizedBox(height:8), DropdownButtonFormField<String>(isExpanded: true, value:fuel, decoration: InputDecoration(labelText: AppLocalizations.of(context).fuel), items: const ['Todos','Diésel','Gasolina','Híbrido','Eléctrico','GLP','GNC'].map((v)=>DropdownMenuItem(value:v,child:Text(uiText(context, v)))).toList(), onChanged:(v)=>_updateCatalog(()=>fuel=v??'Todos')),
+          if(category==VehicleCategory.car) ...[
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(key: ValueKey('catalog-transmission-$transmission'), isExpanded: true, initialValue: transmission,
             decoration: InputDecoration(labelText: uiText(context, 'Transmisión')),
@@ -2643,9 +2683,11 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
             decoration: InputDecoration(labelText: uiText(context, 'Carrocería')),
             items: {'Todos', 'SUV', ...widget.cars.map((car) => car.bodyType).whereType<String>().where((value) => value.trim().isNotEmpty)}.map((value) => DropdownMenuItem(value: value, child: Text(uiText(context, value)))).toList(),
             onChanged: (value) => _updateCatalog(() => bodyType = value ?? 'Todos')),
+          ],
+          VehicleCategoryFilters(category:category,value:categoryFilters,onChanged:(v)=>_updateCatalog(()=>categoryFilters=v)),
           const SizedBox(height:8), priceRange(),
-          rangeField(AppLocalizations.of(context).minMileage, minKm, 0, 300000, (v)=>_updateCatalog(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
-          rangeField(AppLocalizations.of(context).maxMileage, maxKm, 0, 300000, (v)=>_updateCatalog(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
+          if(category.isRoad) rangeField(AppLocalizations.of(context).minMileage, minKm, 0, 300000, (v)=>_updateCatalog(() { minKm=v; if (maxKm < minKm) maxKm=minKm; })),
+          if(category.isRoad) rangeField(AppLocalizations.of(context).maxMileage, maxKm, 0, 300000, (v)=>_updateCatalog(() { maxKm=v; if (minKm > maxKm) minKm=maxKm; })),
           rangeField(AppLocalizations.of(context).minPower, minCv, 0, 1000, (v)=>_updateCatalog(() { minCv=v; if (maxCv < minCv) maxCv=minCv; })),
           rangeField(AppLocalizations.of(context).maxPower, maxCv, 0, 1000, (v)=>_updateCatalog(() { maxCv=v; if (minCv > maxCv) minCv=maxCv; })),
           rangeField(AppLocalizations.of(context).minYear, minYear, 1990, DateTime.now().year+1, (v)=>_updateCatalog(() { minYear=v; if (maxYear < minYear) maxYear=minYear; })),
@@ -2695,7 +2737,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
               final isCompared = _comparisonIds.contains(compareId);
               return MarketVehicleCard(
                 title: '${car.brand} ${car.model}', price: euros(car.price),
-                details: '${car.year} · ${number(car.km)} km · ${uiText(context, car.fuel)}',
+                details: car.summary,
                 version: car.version, photoCount: car.photoCount, photo: car.photos.isEmpty ? null : car.photos.first,
                 favorite: SaveVehicleButton(car: car),
                 comparison: Material(color: marketSurface, borderRadius: BorderRadius.circular(12),
@@ -3061,7 +3103,7 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
   }
 
   String criteriaSummary(Map<String, dynamic> criteria) {
-    final parts = <String>[];
+    final parts = <String>[VehicleCategory.parse(criteria['vehicle_category']).label];
     for (final key in ['brand', 'model', 'fuel', 'transmission', 'body_type']) {
       final value = criteria[key]?.toString();
       if (value != null && value.isNotEmpty &&
@@ -3615,7 +3657,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
                       : '${car.brand} ${car.model}',
                   details: car == null
                       ? ''
-                      : '${car.year} · ${car.km} km · ${uiText(context, car.fuel)}',
+                      : car.summary,
                   price: car?.price ?? 0,
                   referencePrice: item['reference_price'] as num?,
                   photo: car?.photos.firstOrNull,
@@ -3918,7 +3960,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       if (car.version?.trim().isNotEmpty == true) car.version!.trim(),
       'Precio: $priceText',
       if (car.year > 0) 'Año: ${car.year}',
-      'Kilómetros: ${_formatKm(car.km)} km',
+      car.category.isRoad ? 'Kilómetros: ${_formatKm(car.km)} km' : car.usageLabel,
       '',
       if (hasListingId)
         'Ver ficha completa en AUTOMOTORS: $shareUri'
@@ -4022,7 +4064,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       await SharePlus.instance.share(
         ShareParams(title: title, text: summary,
           files: [XFile.fromData(await listingShareCard(title:title,price:priceText,
-            details:'${car.year} · ${_formatKm(car.km)} km · ${car.fuel}',link:shareUri.toString(),
+            details:car.summary,link:shareUri.toString(),
             photo:car.photos.firstOrNull),mimeType:'image/png',name:'automotors-anuncio.png')],
           fileNameOverrides:['automotors-anuncio.png']),
       );
@@ -4042,7 +4084,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       if (car.version?.trim().isNotEmpty == true) 'Versión: ${car.version}',
       'Precio: $priceText',
       if (car.year > 0) 'Año: ${car.year}',
-      'Kilómetros: ${_formatKm(car.km)} km',
+      car.category.isRoad ? 'Kilómetros: ${_formatKm(car.km)} km' : car.usageLabel,
       if (car.cv != null) 'Potencia: ${car.cv} CV',
       if (car.cilindradaCc != null) 'Cilindrada: ${car.cilindradaCc} cc',
       if (car.transmission?.trim().isNotEmpty == true) 'Transmisión: ${car.transmission}',
@@ -4122,7 +4164,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       height: height,
       decoration: BoxDecoration(
         color: marketSurface,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: marketLine),
       ),
       clipBehavior: Clip.antiAlias,
@@ -4360,9 +4402,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
       Text(
         '${car.brand} ${car.model}',
         style: const TextStyle(
-          fontSize: 32,
+          fontSize: 27,
           height: 1.15,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w700,
         ),
       ),
       _listingStatusChip(),
@@ -4384,7 +4426,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 color: marketInk.withValues(alpha: 0.68),
                 fontSize: 11,
                 letterSpacing: 1.2,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 3),
@@ -4392,9 +4434,9 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
               priceText,
               style: const TextStyle(
                 color: marketInk,
-                fontSize: 38,
+                fontSize: 34,
                 height: 1.1,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -4435,7 +4477,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           children: [
             if (car.year > 0)
               _quickSpec(Icons.calendar_today_outlined, '${car.year}'),
-            _quickSpec(Icons.speed_rounded, uiText(context, "{0} km", [_formatKm(car.km)])),
+            _quickSpec(Icons.speed_rounded, car.usageLabel),
             if (car.fuel.trim().isNotEmpty)
               _quickSpec(Icons.local_gas_station_outlined, car.fuel),
             if (car.cv != null)
@@ -4489,7 +4531,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
           ),
         ],
         const SizedBox(height: 18),
-        MarketFactsView(facts:car.marketFacts),
+        MarketFactsView(facts:car.marketFacts,roadInspection:car.category.isRoad),
         if (car.description.trim().isNotEmpty) ...[
           Container(
             width: double.infinity,
@@ -4510,6 +4552,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
         ],
         const SizedBox(height:20),
         MarketDetailSection(sectionKey:const Key('listing-technical-details'),title:'Ficha técnica',icon:Icons.tune_rounded,children:[
+        for(final field in car.category.fields.entries) if(car.categoryDetails[field.key]!=null) _technicalRow(VehicleCategoryPicker.icon(car.category),uiText(context,field.value),'${car.categoryDetails[field.key]}'),
         Card(
           color: panel,
           margin: EdgeInsets.zero,
@@ -4543,8 +4586,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
                 const Divider(height: 1, color: marketLine),
                 _technicalRow(
                   Icons.speed,
-                  uiText(context, "Kilómetros"),
-                  uiText(context, "{0} km", [_formatKm(car.km)]),
+                  uiText(context, car.category.isRoad ? 'Kilómetros' : 'Horas de motor'),
+                  car.usageLabel,
                 ),
                 const Divider(height: 1, color: marketLine),
                 _technicalRow(
@@ -4876,12 +4919,12 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       aboutUs = about?['about_us']?.toString() ?? '';
     } catch (_) {}
     final listings = await supabase.from('vehicle_listings')
-        .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+        .select('vehicle_category,declared_brand,declared_model,category_details,id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
         .inFilter('status', ['published', 'reserved'])
         .order('created_at', ascending: false);
     final soldListings = await supabase.from('vehicle_listings')
-        .select('id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+        .select('vehicle_category,declared_brand,declared_model,category_details,id, status, year, km, price, fuel, phone, etiqueta_medioambiental, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
         .eq('owner_id', widget.ownerId)
         .eq('status', 'sold')
         .order('created_at', ascending: false);
@@ -4996,7 +5039,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
       decoration: const BoxDecoration(border:Border(right:BorderSide(color:marketLine))),
       child: Column(children: [
-        Text(value, style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w500, color: marketInk)),
+        Text(value, style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, color: marketInk)),
         const SizedBox(height: 6),
         Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center),
       ]),
@@ -5007,7 +5050,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
     child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 5),
-      decoration: const BoxDecoration(),
+      decoration: BoxDecoration(color: marketSurface, borderRadius: BorderRadius.circular(18), border: Border.all(color: marketLine)),
       child: Column(children: [value, const SizedBox(height: 6), Text(uiText(context, label), style: const TextStyle(fontSize: 12, color: marketMuted), textAlign: TextAlign.center)]),
     ),
   );
@@ -5019,9 +5062,9 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-          decoration: const BoxDecoration(),
+          decoration: BoxDecoration(color: marketSurface, borderRadius: BorderRadius.circular(24), border: Border.all(color: marketLine)),
           child: Column(children: [
-            Icon(sold ? Icons.handshake_outlined : Icons.directions_car_outlined, color: marketMuted, size: 24),
+            Container(padding: const EdgeInsets.all(18), decoration: const BoxDecoration(shape: BoxShape.circle, color: marketTint), child: Icon(sold ? Icons.handshake_outlined : Icons.directions_car_outlined, color: marketAccent, size: 32)),
             const SizedBox(height: 18),
             Text(sold ? uiText(context, "Este vendedor todavía no tiene vehículos vendidos.") : uiText(context, "Este vendedor no tiene anuncios disponibles."), textAlign: TextAlign.center, style: const TextStyle(color: marketMuted, fontSize: 15, height: 1.5)),
           ]),
@@ -5043,8 +5086,8 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
         ),
         itemBuilder: (context, index) {
           final listing = rows[index];
-          final brand = listing['vehicle_brands'];
-          final model = listing['vehicle_models'];
+          final brand = listing['declared_brand']!=null ? {'name':listing['declared_brand']} : listing['vehicle_brands'];
+          final model = listing['declared_model']!=null ? {'name':listing['declared_model']} : listing['vehicle_models'];
           final title = '${brand is Map ? brand['name'] ?? 'Marca' : 'Marca'} ${model is Map ? model['name'] ?? 'Modelo' : 'Modelo'}';
           final photo = listing['_firstPhotoBytes'];
           final price = (listing['price'] as num?)?.toDouble() ?? 0;
@@ -5097,7 +5140,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: marketInk)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "{0} · {1} km", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0)]), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketMuted, fontSize: 11)),
+                    Text('${listing['year']??''} · ${Car.fromListing(listing).usageLabel}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketMuted, fontSize: 11)),
                     const SizedBox(height: 7),
                     Text(euros(price), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: marketAccent, fontSize: 15, fontWeight: FontWeight.w700)),
                     if (isOwnProfile && !sold) ...[
@@ -5341,14 +5384,14 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       selected: selectedProfileTab == index,
       button: true,
       child: InkWell(
-      borderRadius: BorderRadius.zero,
+      borderRadius: BorderRadius.circular(14),
       onTap: () => setState(() => selectedProfileTab = index),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 3),
-        decoration: BoxDecoration(border:Border(bottom:BorderSide(color:selectedProfileTab==index?marketAccent:Colors.transparent,width:2))),
+        decoration: BoxDecoration(color: selectedProfileTab == index ? marketInk : marketTint, borderRadius: BorderRadius.circular(14)),
         child: Text(uiText(context, label), maxLines: 2, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: selectedProfileTab == index ? marketInk : marketMuted)),
+          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketSurface : marketMuted)),
       ),
     ),
     ),
@@ -5574,7 +5617,7 @@ class _GaragePageState extends State<GaragePage> {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
     final rows = await supabase.from('vehicle_listings').select(
-      'id,status,year,km,price,fuel,phone,description,equipment,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
+      'vehicle_category,declared_brand,declared_model,category_details,id,status,year,km,price,fuel,phone,description,equipment,cv,cilindrada_cc,etiqueta_medioambiental,vin,owner_id,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)'
     ).eq('owner_id', user.id).order('created_at', ascending: false);
     final listings=List<Map<String,dynamic>>.from(rows);
     try {
@@ -5594,8 +5637,8 @@ class _GaragePageState extends State<GaragePage> {
   void refreshListings() => setState(() => listingsFuture = loadMyListings());
 
   String listingName(Map<String, dynamic> listing) {
-    final b = listing['vehicle_brands'];
-    final m = listing['vehicle_models'];
+    final b = listing['declared_brand']!=null ? {'name':listing['declared_brand']} : listing['vehicle_brands'];
+    final m = listing['declared_model']!=null ? {'name':listing['declared_model']} : listing['vehicle_models'];
     return '${b is Map ? b['name'] ?? 'Marca' : 'Marca'} ${m is Map ? m['name'] ?? 'Modelo' : 'Modelo'}';
   }
 
@@ -5847,7 +5890,7 @@ class _GaragePageState extends State<GaragePage> {
                   Expanded(child: InkWell(onTap: () => openDetails(listing), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(listingName(listing), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 5),
-                    Text(uiText(context, "{0} · {1} km · {2}", [listing['year'] ?? '', ((listing['km'] as num?)?.toInt() ?? 0), euros(price)]), style: const TextStyle(color: marketMuted)),
+                    Text('${listing['year']??''} · ${Car.fromListing(listing).usageLabel} · ${euros(price)}', style: const TextStyle(color: marketMuted)),
                     const SizedBox(height: 5),
                     Text(uiText(context, "Estado: {0}", [uiText(context, isReserved ? 'Reservado' : isSold ? 'Vendido' : status == 'draft' || status == 'paused' ? 'Pausado' : status == 'published' ? 'Publicado' : status)]), style: TextStyle(color: isReserved ? const Color(0xFF155B91) : isSold ? const Color(0xFF216E39) : marketMuted)),
                     if(listingContentStateMessage(listing['content_check_state']?.toString()).isNotEmpty)
@@ -6293,6 +6336,8 @@ class EditListingPage extends StatefulWidget {
 }
 
 class _EditListingPageState extends State<EditListingPage> {
+  VehicleCategory category=VehicleCategory.car;
+  final categoryControllers=<String,TextEditingController>{for(final c in VehicleCategory.values) for(final k in c.fields.keys) k:TextEditingController()};
   final supabase = Supabase.instance.client;
   Map<String,dynamic> marketFacts={};
   final formKey = GlobalKey<FormState>();
@@ -6324,16 +6369,18 @@ class _EditListingPageState extends State<EditListingPage> {
   @override
   void initState() { super.initState(); load(); }
   @override
-  void dispose() { year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); version.dispose(); transmission.dispose(); bodyType.dispose(); color.dispose(); doors.dispose(); seats.dispose(); emissionsStandard.dispose(); super.dispose(); }
+  void dispose() { for(final c in categoryControllers.values){c.dispose();} year.dispose(); km.dispose(); price.dispose(); phone.dispose(); description.dispose(); matricula.dispose(); cv.dispose(); cilindrada.dispose(); vin.dispose(); version.dispose(); transmission.dispose(); bodyType.dispose(); color.dispose(); doors.dispose(); seats.dispose(); emissionsStandard.dispose(); super.dispose(); }
 
   Future<void> load() async {
     try {
-      final row = await supabase.from('vehicle_listings').select('market_facts,id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment,vehicle_photos(id)').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
+      final row = await supabase.from('vehicle_listings').select('vehicle_category,declared_brand,declared_model,category_details,market_facts,id,status,year,km,price,fuel,phone,description,matricula,show_matricula_publicly,cv,cilindrada_cc,etiqueta_medioambiental,vin,show_vin_publicly,version,transmission,body_type,color,doors,seats,emissions_standard,equipment,vehicle_photos(id)').eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id).single();
       if (row['status']?.toString() == 'sold') {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Un vehículo vendido no se puede editar."))));
         if (mounted) Navigator.pop(context, false);
         return;
       }
+      category=VehicleCategory.parse(row['vehicle_category']);
+      final details=row['category_details'];if(details is Map){for(final e in categoryControllers.entries){e.value.text=details[e.key]?.toString()??'';}}
       marketFacts=row['market_facts'] is Map?Map<String,dynamic>.from(row['market_facts']):{};
       existingPhotoCount=(row['vehicle_photos'] as List?)?.length??0;
       year.text = '${row['year'] ?? ''}'; km.text = '${row['km'] ?? ''}'; price.text = '${row['price'] ?? ''}'; phone.text = '${row['phone'] ?? ''}'; description.text = '${row['description'] ?? ''}'; matricula.text = '${row['matricula'] ?? ''}'; cv.text = '${row['cv'] ?? ''}'; cilindrada.text = '${row['cilindrada_cc'] ?? ''}'; vin.text = '${row['vin'] ?? ''}';
@@ -6362,7 +6409,7 @@ class _EditListingPageState extends State<EditListingPage> {
     if (y == null || k == null || p == null || p <= 0) { ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(uiText(context, "Revisa año, kilómetros y precio.")))); return; }
     setState(() => saving = true);
     try {
-      await supabase.from('vehicle_listings').update({'market_facts':marketFacts.isEmpty?null:marketFacts,'status':'draft','year': y, 'km': k, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': label, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
+      await supabase.from('vehicle_listings').update({'category_details':category.details(categoryControllers.map((k,v)=>MapEntry(k,v.text))),'market_facts':marketFacts.isEmpty?null:marketFacts,'status':'draft','year': y, 'km': category.isRoad?k:0, 'price': p, 'fuel': fuel, 'phone': phone.text.replaceAll(RegExp(r'[^0-9]'), ''), 'description': description.text.trim(), 'matricula': matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(), 'show_matricula_publicly': showMatriculaPublicly, 'show_vin_publicly': showVinPublicly, 'cv': int.tryParse(cv.text.trim()), 'cilindrada_cc': int.tryParse(cilindrada.text.trim()), 'etiqueta_medioambiental': category.isRoad?label:null, 'vin': vin.text.trim().isEmpty ? null : vin.text.trim().toUpperCase(), 'version': version.text.trim().isEmpty ? null : version.text.trim(), 'transmission': transmission.text.trim().isEmpty ? null : transmission.text.trim(), 'body_type': bodyType.text.trim().isEmpty ? null : bodyType.text.trim(), 'color': color.text.trim().isEmpty ? null : color.text.trim(), 'doors': int.tryParse(doors.text.trim()), 'seats': int.tryParse(seats.text.trim()), 'emissions_standard': emissionsStandard.text.trim().isEmpty ? null : emissionsStandard.text.trim(), 'equipment': selectedEquipment.toList()}).eq('id', widget.listingId).eq('owner_id', supabase.auth.currentUser!.id);
       var saveMessage='Anuncio actualizado.';
       final previousStatus=current['status']?.toString();
       if(previousStatus=='published'||previousStatus=='reserved') {
@@ -6397,18 +6444,19 @@ class _EditListingPageState extends State<EditListingPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
-    textField('Año', year, numeric: true, required: true), textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
-    DropdownButtonFormField<String>(isExpanded: true, value: ['Diésel','Gasolina','Híbrido','Eléctrico'].contains(fuel) ? fuel : 'Diésel', decoration:  InputDecoration(labelText: uiText(context, "Combustible")), items:  [DropdownMenuItem(value:'Diésel',child:Text(uiText(context, "Diésel"))),DropdownMenuItem(value:'Gasolina',child:Text(uiText(context, "Gasolina"))),DropdownMenuItem(value:'Híbrido',child:Text(uiText(context, "Híbrido"))),DropdownMenuItem(value:'Eléctrico',child:Text(uiText(context, "Eléctrico")))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
-    textField('Teléfono de contacto', phone), textField('Versión', version), textField('Transmisión', transmission), textField('Carrocería', bodyType), textField('Color exterior', color), textField('Puertas', doors, numeric: true), textField('Plazas', seats, numeric: true), textField('Norma de emisiones', emissionsStandard), textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), textField('VIN / número de bastidor', vin),
-    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar matrícula en el anuncio público")), subtitle:  Text(uiText(context, "Si lo desactivas, solo se conservará para la gestión del anuncio.")), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
-    CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar VIN / bastidor en el anuncio público")), subtitle:  Text(uiText(context, "Es opcional; por privacidad se mantiene oculto si no lo activas.")), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
+    Text(uiText(context,category.label)),VehicleCategoryFields(category:category,controllers:categoryControllers),
+    textField('Año', year, numeric: true, required: true), if(category.isRoad) textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
+    DropdownButtonFormField<String>(isExpanded: true, value: category.fuels.contains(fuel) ? fuel : 'Diésel', decoration:  InputDecoration(labelText: uiText(context, "Combustible")), items: [for(final f in category.fuels) DropdownMenuItem(value:f,child:Text(uiText(context,f)))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
+    textField('Teléfono de contacto', phone), textField('Versión', version), if(category.isRoad) textField('Transmisión', transmission), if(category.isRoad) textField('Carrocería', bodyType), textField('Color exterior', color), if(category.isRoad) textField('Puertas', doors, numeric: true), if(category.isRoad) textField('Plazas', seats, numeric: true), if(category.isRoad) textField('Norma de emisiones', emissionsStandard), if(category.isRoad) textField('Matrícula', matricula), textField('Potencia (CV)', cv, numeric: true), textField('Cilindrada (cc)', cilindrada, numeric: true), if(category.isRoad) textField('VIN / número de bastidor', vin),
+    if(category.isRoad) CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar matrícula en el anuncio público")), subtitle:  Text(uiText(context, "Si lo desactivas, solo se conservará para la gestión del anuncio.")), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => setState(() => showMatriculaPublicly = value ?? false)),
+    if(category.isRoad) CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar VIN / bastidor en el anuncio público")), subtitle:  Text(uiText(context, "Es opcional; por privacidad se mantiene oculto si no lo activas.")), value: showVinPublicly, activeColor: gold, onChanged: (value) => setState(() => showVinPublicly = value ?? false)),
      Padding(padding: EdgeInsets.only(bottom: 8), child: Text(uiText(context, "Equipamiento"), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-    ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(uiText(context, item)), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
-    DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
+    if(category==VehicleCategory.car) ...['Asientos deportivos','Asientos calefactables','Asientos ventilados','Volante multifunción','Climatizador bizona','Navegador','Apple CarPlay / Android Auto','Sensores de aparcamiento','Cámara trasera','Control de crucero','Control de crucero adaptativo','Faros LED','Faros Matrix / adaptativos','Techo solar','Tapicería de cuero','Portón eléctrico','Acceso y arranque sin llave','Detector de ángulo muerto','Mantenimiento en servicio oficial'].map((item) => CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text(uiText(context, item)), value: selectedEquipment.contains(item), activeColor: gold, onChanged: (checked) => setState(() { if (checked == true) { selectedEquipment.add(item); } else { selectedEquipment.remove(item); } }))),
+    if(category.isRoad) DropdownButtonFormField<String>(isExpanded: true, value: environmentalLabels.contains(label) ? label : 'Sin etiqueta', decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")), items: environmentalLabels.map((v) => DropdownMenuItem(value: v, child: Text(uiText(context, v)))).toList(), onChanged: (v) => setState(() => label = v)),
     Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
     const SupportLinks(),
-    ListingPreparation(photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty,marketFacts:marketFacts),
-    MarketFactsForm(value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
+    ListingPreparation(roadInspection:category.isRoad,photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty,marketFacts:marketFacts),
+    MarketFactsForm(roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: marketInk, foregroundColor: Colors.white), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
@@ -6535,7 +6583,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     try {
       final raw = await supabase
           .from('vehicle_listings')
-          .select('id, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
+          .select('vehicle_category,declared_brand,declared_model,category_details,id, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, owner_id, status, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)')
           .eq('id', listingId)
           .maybeSingle();
       if (raw == null || !['published', 'reserved'].contains(raw['status']?.toString())) {
@@ -7063,9 +7111,9 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
         children: [
 
-          const MarketEditorialIntro(eyebrow:'AUTOMOTORS PARA PROFESIONALES',title:'Más espacio.\nMás posibilidades.',subtitle:'El escaparate que acompaña a tu negocio.'),
+          const MarketEditorialIntro(plain:true,eyebrow:'MÁS ESPACIO PARA TU NEGOCIO',title:'Tu inventario.\nTu próximo nivel.',subtitle:'Elige la capacidad que necesitas para publicar y destacar tus vehículos.'),
           const SizedBox(height:20),
-          Wrap(key:const Key('studio-plan-capacity'),spacing:16,runSpacing:8,children:[for(final entry in packs.asMap().entries) Semantics(selected:_selectedPack==entry.key,child:TextButton(onPressed:_purchaseService.isStartingPurchase?null:()=>setState(()=>_selectedPack=entry.key),style:TextButton.styleFrom(foregroundColor:_selectedPack==entry.key?marketInk:marketMuted,shape:const RoundedRectangleBorder(),side:BorderSide(color:_selectedPack==entry.key?marketAccent:Colors.transparent)),child:Text(const ['10','15','20','PRO'][entry.key])))]),
+          Wrap(spacing:8,runSpacing:8,children:[for(final entry in packs.asMap().entries) ChoiceChip(tooltip:entry.value.title,label:Text(const ['10','15','20','PRO'][entry.key]),selected:_selectedPack==entry.key,showCheckmark:false,onSelected:_purchaseService.isStartingPurchase?null:(_)=>setState(()=>_selectedPack=entry.key))]),
           const SizedBox(height:20),
           for (final pack in [packs[_selectedPack]]) ...[
             _PublishPackCard(
@@ -7137,19 +7185,24 @@ class _PublishPackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical:24,horizontal:4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: marketSurface, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: marketAccent.withValues(alpha:.45), width: 1),
+        boxShadow: data.popular ? [BoxShadow(color: marketAccent.withValues(alpha: .14), blurRadius: 16)] : null,
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? marketAccent : marketInk, fontSize: 17, fontWeight: FontWeight.w500)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: marketMuted, fontSize: 12))]),),
+          Icon(data.icon, color: marketAccent, size: 32), const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(data.title, style: TextStyle(color: data.popular ? marketAccent : marketInk, fontSize: 17, fontWeight: FontWeight.w700)), const SizedBox(height: 4), Text(data.subtitle, style: const TextStyle(color: marketMuted, fontSize: 12))]),),
         ]),
         const SizedBox(height: 10),
-        Text(data.price, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8), Padding(padding: EdgeInsets.zero, child: Text(data.cars, style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w500))),
-        const Padding(padding:EdgeInsets.symmetric(vertical:20),child:Divider(height:1)),
+        Text(data.price, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8), Padding(padding: EdgeInsets.zero, child: Text(data.cars, style: const TextStyle(color: marketAccent, fontWeight: FontWeight.w700))),
+        const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(bottom:12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: marketAccent, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: marketMuted, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), child: busy ? Row(mainAxisAlignment:MainAxisAlignment.center,children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)),const SizedBox(width:10),Flexible(child:Text(uiText(context,'Abriendo pago de Apple…')))]) : Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w500)))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), child: busy ? Row(mainAxisAlignment:MainAxisAlignment.center,children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)),const SizedBox(width:10),Flexible(child:Text(uiText(context,'Abriendo pago de Apple…')))]) : Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
         if (onPublish != null) ...[
           const SizedBox(height: 8),
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
@@ -7173,6 +7226,18 @@ class AddCarPage extends StatefulWidget {
 }
 
 class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
+  VehicleCategory category=VehicleCategory.car;
+  final declaredBrand=TextEditingController(), declaredModel=TextEditingController();
+  final categoryControllers=<String,TextEditingController>{for(final c in VehicleCategory.values) for(final k in c.fields.keys) k:TextEditingController()};
+  Map<String,num> get categoryDetails=>category.details(categoryControllers.map((k,v)=>MapEntry(k,v.text)));
+  void changeCategory(VehicleCategory c) => _updatePublication(() {
+    category=c;if(!c.fuels.contains(fuel))fuel='Diésel'; _photoGuideCompleted.clear();selectedBrandId=null; selectedModelId=null; selectedEquipment.clear();
+    transmission='Manual'; bodyType='Berlina'; etiquetaMedioambiental=null;
+    for(final controller in [matricula,vin,doors,seats,emissionsStandard,...categoryControllers.values]) {controller.clear();}
+    showMatriculaPublicly=false; showVinPublicly=false;
+    if(!c.isRoad){km.text='0'; marketFacts.remove('itv');marketFacts.remove('itv_until');}
+  });
+
   int _publicationStep=0;
   final _publicationScroll=ScrollController();
   void _selectPublicationStep(int next){
@@ -7263,12 +7328,14 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   late final String? _draftOwner;
   String get _draftKey => 'automotors.publication-draft.v1.$_draftOwner';
   Map<String, TextEditingController> get _draftFields => {
+    'declaredBrand':declaredBrand,'declaredModel':declaredModel,...categoryControllers,
     'year': year, 'km': km, 'price': price, 'phone': phone,
     'description': description, 'matricula': matricula, 'vin': vin,
     'cv': cv, 'cilindradaCc': cilindradaCc, 'version': version,
     'doors': doors, 'seats': seats, 'color': color, 'emissionsStandard': emissionsStandard,
   };
   Map<String, dynamic> _draftSnapshot() => {
+    'vehicleCategory':category.id,
     'fields': _draftFields.map((key, value) => MapEntry(key, value.text)),
     'brand': selectedBrandId, 'model': selectedModelId,
     'fuel': fuel, 'transmission': transmission, 'body': bodyType,
@@ -7307,6 +7374,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     final saved = _draftOwner == null ? <String, dynamic>{} : await _draftStorage.read(_draftKey);
     if (!mounted || Supabase.instance.client.auth.currentUser?.id != _draftOwner) return;
     if (saved.isNotEmpty) {
+      category=VehicleCategory.parse(saved['vehicleCategory']);
       marketFacts=saved['marketFacts'] is Map?Map<String,dynamic>.from(saved['marketFacts']):{};
       final fields = saved['fields'];
       if (fields is Map) {
@@ -7320,12 +7388,12 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
         if (!mounted) return;
         if (saved['model'] is int && models.any((model) => model['id'] == saved['model'])) selectedModelId = saved['model'] as int;
       }
-      final allowedFuel = ['Diésel', 'Gasolina', 'Híbrido', 'Eléctrico', 'GLP', 'GNC'];
+      final allowedFuel = ['Diésel', 'Gasolina', 'Híbrido', 'Eléctrico', 'GLP', 'GNC', 'Sin motor'];
       if (allowedFuel.contains(saved['fuel'])) fuel = saved['fuel'] as String;
       if (['Manual', 'Automático', 'Automático (DSG)'].contains(saved['transmission'])) transmission = saved['transmission'] as String;
       if (['Berlina','Compacto','SUV','Familiar','Coupé','Cabrio','Monovolumen','Furgoneta','Pickup'].contains(saved['body'])) bodyType = saved['body'] as String;
       if (['Sin etiqueta','B','C','ECO','0'].contains(saved['label'])) etiquetaMedioambiental = saved['label'] as String;
-      if(saved['photoGuide'] is List) _photoGuideCompleted.addAll((saved['photoGuide'] as List).whereType<String>().where(photoGuideShots.containsKey));
+      if(saved['photoGuide'] is List) _photoGuideCompleted.addAll((saved['photoGuide'] as List).whereType<String>().where((key)=>const {'front','rear','sides','seats','dashboard','boot','details','damage','engine','tyres','cab','load','hull','helm','interior','equipment'}.contains(key)));
       if (saved['equipment'] is List) selectedEquipment.addAll((saved['equipment'] as List).whereType<String>());
       showMatriculaPublicly = saved['showPlate'] == true;
       showVinPublicly = saved['showVin'] == true;
@@ -7671,6 +7739,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             return uiText(context, 'Completa este campo');
           }
           if (text.isEmpty) return null;
+          if(controller==declaredBrand && text.length>80 || controller==declaredModel && text.length>100) return uiText(context,'El texto es demasiado largo');
 
           if (numeric) {
             if (label.startsWith('Precio')) {
@@ -7705,9 +7774,9 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       price.text.trim().replaceAll('.', '').replaceAll(',', '.'),
     );
     return [
-      MapEntry('Marca y modelo seleccionados', selectedBrandId != null && selectedModelId != null),
+      MapEntry('Marca y modelo seleccionados', category==VehicleCategory.car ? selectedBrandId != null && selectedModelId != null : declaredBrand.text.trim().isNotEmpty&&declaredModel.text.trim().isNotEmpty),
       MapEntry('Año válido', yearValue != null && yearValue >= 1886 && yearValue <= DateTime.now().year + 1),
-      MapEntry('Kilometraje válido', kmValue != null && kmValue >= 0),
+      if(category.isRoad) MapEntry('Kilometraje válido', kmValue != null && kmValue >= 0),
       MapEntry('Precio válido', priceValue != null && priceValue > 0),
       MapEntry('Al menos 5 fotografías', photos.length >= 5),
       MapEntry('Descripción detallada', description.text.trim().length >= 80),
@@ -7717,7 +7786,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
     ];
   }
 
-  Widget buildListingQualityCard() => ListingPreparation(photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty,checks:listingQualityChecks,marketFacts:marketFacts);
+  Widget buildListingQualityCard() => ListingPreparation(roadInspection:category.isRoad,photoCount:photos.length,description:description,hasEquipment:selectedEquipment.isNotEmpty,checks:listingQualityChecks,marketFacts:marketFacts);
 
   Future<void> publishCar() async {
     if (publishing || _previewingPublication || vehicleLookupBusy || !formKey.currentState!.validate()) return;
@@ -7746,7 +7815,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
 
     final brandId = selectedBrandId;
     final modelId = selectedModelId;
-    if (brandId == null || modelId == null) {
+    if (category==VehicleCategory.car && (brandId == null || modelId == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(content: Text(uiText(context, "Selecciona una marca y un modelo."))),
       );
@@ -7768,20 +7837,16 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       return;
     }
 
-    final selectedBrand = brands.firstWhere(
-      (row) => (row['id'] as num).toInt() == brandId,
-    );
-    final selectedModel = models.firstWhere(
-      (row) => (row['id'] as num).toInt() == modelId,
-    );
+    final selectedBrand = category==VehicleCategory.car ? brands.firstWhere((row)=>(row['id'] as num).toInt()==brandId) : {'name':declaredBrand.text.trim()};
+    final selectedModel = category==VehicleCategory.car ? models.firstWhere((row)=>(row['id'] as num).toInt()==modelId) : {'name':declaredModel.text.trim()};
 
     _updatePublication(()=>_previewingPublication=true);
     bool? accepted;
     try {accepted=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>PublicationPreviewPage(
       title:'${selectedBrand['name']} ${selectedModel['name']} ${version.text.trim()}'.trim(),price:'${priceValue.toStringAsFixed(priceValue==priceValue.roundToDouble()?0:2).replaceAll('.',',')} €',
-      details:{'Año':'$yearValue','Kilómetros':'$kmValue','Combustible':fuel,'Cambio':transmission,'Carrocería':bodyType,'Etiqueta medioambiental':etiquetaMedioambiental??'',
+      details:{'Categoría':category.label,...{for(final field in category.fields.entries) if(categoryDetails[field.key]!=null) field.value:'${categoryDetails[field.key]}'},'Año':'$yearValue',if(category.isRoad)'Kilómetros':'$kmValue','Combustible':fuel,if(category==VehicleCategory.car)'Cambio':transmission,if(category==VehicleCategory.car)'Carrocería':bodyType,if(category.isRoad)'Etiqueta medioambiental':etiquetaMedioambiental??'',
         'Color':color.text.trim(),'CV':cv.text.trim(),'Cilindrada (cc)':cilindradaCc.text.trim(),'Puertas':doors.text.trim(),'Plazas':seats.text.trim(),'Normativa de emisiones':emissionsStandard.text.trim(),
-        'Mantenimiento':marketMaintenance[marketFacts['maintenance']]??'No informado','ITV':marketItv[marketFacts['itv']]??'No informado','Garantía':marketWarranty[marketFacts['warranty']]??'No informado','Caducidad ITV':marketFacts['itv_until']?.toString()??'No informado','Defectos conocidos':marketFacts['defects']?.toString()??'No informado','Localidad':MarketLocality.fromJson(marketFacts['locality'])?.label??'No informado',
+        'Mantenimiento':marketMaintenance[marketFacts['maintenance']]??'No informado',if(category.isRoad)'ITV':marketItv[marketFacts['itv']]??'No informado','Garantía':marketWarranty[marketFacts['warranty']]??'No informado',if(category.isRoad)'Caducidad ITV':marketFacts['itv_until']?.toString()??'No informado','Defectos conocidos':marketFacts['defects']?.toString()??'No informado','Localidad':MarketLocality.fromJson(marketFacts['locality'])?.label??'No informado',
         ...publicationIdentifiers(showPlate:showMatriculaPublicly,showVin:showVinPublicly,plate:matricula.text,vin:vin.text),if(phoneValue.isNotEmpty)'Teléfono':phoneValue},
       description:description.text.trim(),photos:List.of(photos),equipment:selectedEquipment.toList(),
     )));
@@ -7796,6 +7861,9 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
 
     try {
       final listing = await supabase.from('vehicle_listings').insert({
+        'vehicle_category':category.id,'category_details':categoryDetails,
+        'declared_brand':category==VehicleCategory.car?null:declaredBrand.text.trim(),
+        'declared_model':category==VehicleCategory.car?null:declaredModel.text.trim(),
         'brand_id': brandId,
         'model_id': modelId,
         'year': yearValue,
@@ -7809,8 +7877,8 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
         'cv': int.tryParse(cv.text.trim()),
         'cilindrada_cc': int.tryParse(cilindradaCc.text.trim()),
         'version': version.text.trim().isEmpty ? null : version.text.trim(),
-        'transmission': transmission,
-        'body_type': bodyType,
+        'transmission': category==VehicleCategory.car?transmission:null,
+        'body_type': category==VehicleCategory.car?bodyType:null,
         'doors': int.tryParse(doors.text.trim()),
         'seats': int.tryParse(seats.text.trim()),
         'color': color.text.trim().isEmpty ? null : color.text.trim(),
@@ -7870,6 +7938,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       Navigator.pop(
         context,
         Car(
+          category:category,categoryDetails:categoryDetails,
           brand: selectedBrand['name'].toString(),
           model: selectedModel['name'].toString(),
           year: yearValue,
@@ -7936,6 +8005,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    declaredBrand.dispose();declaredModel.dispose();for(final c in categoryControllers.values){c.dispose();}
     _publicationScroll.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _draftTimer?.cancel();
@@ -7994,7 +8064,8 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           controller:_publicationScroll,
           padding: const EdgeInsets.all(16),
           children: [
-            const MarketEditorialIntro(plain:true,eyebrow:'DALE SU SIGUIENTE CAPÍTULO',title:'Tu coche.\nBien presentado.',subtitle:'Tres pasos para enseñarlo como merece.'),
+            VehicleCategoryPicker(value:category,onChanged:publishing||_publicationStep!=0?null:changeCategory),
+            const MarketEditorialIntro(plain:true,eyebrow:'TU VEHÍCULO, SU SIGUIENTE HISTORIA',title:'Vender empieza\npor presentarlo bien.',subtitle:'Datos claros y fotografías que muestran el estado real.'),
             MarketPublicationSteps(current:_publicationStep,onSelect:_selectPublicationStep,enabled:!publishing&&!_previewingPublication),
             Offstage(offstage:_publicationStep!=0,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
 
@@ -8008,6 +8079,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             ),
             const Divider(color: Color(0xFFE4E5DF)),
             const SizedBox(height: 12),
+            if(category==VehicleCategory.car) ...[
             if (loadingVehicleLookupAccess)
                Card(
                 color: panel,
@@ -8129,28 +8201,30 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                   : (value) => _updatePublication(() => selectedModelId = value),
             ),
             const SizedBox(height: 12),
+            ],
+            if(category!=VehicleCategory.car) ...[
+              buildTextField('Marca',declaredBrand),buildTextField('Modelo',declaredModel),
+              VehicleCategoryFields(category:category,controllers:categoryControllers),
+            ],
             buildTextField('Año', year, numeric: true),
-            buildTextField('Kilómetros', km, numeric: true),
+            if(category.isRoad) buildTextField('Kilómetros', km, numeric: true),
             buildTextField('Precio en euros', price, numeric: true),
             DropdownButtonFormField<String>(isExpanded: true,
               initialValue: fuel,
               decoration:  InputDecoration(labelText: uiText(context, "Combustible")),
-              items:  [
-                DropdownMenuItem(value: 'Diésel', child: Text(uiText(context, "Diésel"))),
-                DropdownMenuItem(value: 'Gasolina', child: Text(uiText(context, "Gasolina"))),
-                DropdownMenuItem(value: 'Híbrido', child: Text(uiText(context, "Híbrido"))),
-                DropdownMenuItem(value: 'Eléctrico', child: Text(uiText(context, "Eléctrico"))),
-              ],
+              items: [for(final f in category.fuels) DropdownMenuItem(value:f,child:Text(uiText(context,f)))],
               onChanged: (value) { if (value != null) _updatePublication(() => fuel = value); },
             ),
             const SizedBox(height: 12),
+            if(category.isRoad) ...[
             buildTextField('Matrícula (opcional)', matricula, requiredField: false),
             buildTextField('VIN / número de bastidor (opcional)', vin, requiredField: false),
             CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar matrícula en el anuncio público")), subtitle:  Text(uiText(context, "Si no lo marcas, la matrícula quedará oculta a los visitantes.")), value: showMatriculaPublicly, activeColor: gold, onChanged: (value) => _updatePublication(() => showMatriculaPublicly = value ?? false)),
             CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, title:  Text(uiText(context, "Mostrar VIN / bastidor en el anuncio público")), subtitle:  Text(uiText(context, "Opcional. Por privacidad, estará oculto si no lo activas.")), value: showVinPublicly, activeColor: gold, onChanged: (value) => _updatePublication(() => showVinPublicly = value ?? false)),
+            ],
             buildTextField('Potencia en CV (opcional)', cv, numeric: true, requiredField: false),
-            buildTextField('Cilindrada en cc (opcional)', cilindradaCc, numeric: true, requiredField: false),
-            DropdownButtonFormField<String>(isExpanded: true,
+            if(category!=VehicleCategory.motorcycle) buildTextField('Cilindrada en cc (opcional)', cilindradaCc, numeric: true, requiredField: false),
+            if(category.isRoad) DropdownButtonFormField<String>(isExpanded: true,
               initialValue: etiquetaMedioambiental,
               decoration:  InputDecoration(labelText: uiText(context, "Etiqueta medioambiental")),
               items: environmentalLabels.map((label) => DropdownMenuItem<String>(
@@ -8164,7 +8238,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
               onChanged: (value) => _updatePublication(() => etiquetaMedioambiental = value),
             ),
             const SizedBox(height: 20),
-            ExpansionTile(
+            if(category==VehicleCategory.car) ExpansionTile(
               key: const Key('optional-vehicle-specifications'),
               maintainState: true,
               tilePadding: EdgeInsets.zero,
@@ -8231,12 +8305,12 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
-            MarketFactsForm(value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
+            MarketFactsForm(roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
 
             ])),
             Offstage(offstage:_publicationStep!=1,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-            PhotoGuideChecklist(completed:_photoGuideCompleted,onChanged:(value)=>_updatePublication((){_photoGuideCompleted..clear()..addAll(value);})),
+            PhotoGuideChecklist(category:category,completed:_photoGuideCompleted,onChanged:(value)=>_updatePublication((){_photoGuideCompleted..clear()..addAll(value);})),
             Text(
               uiText(context, "Fotografías del vehículo ({0}/15)", [photos.length]),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -8312,11 +8386,11 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
               ListenableBuilder(listenable:Listenable.merge(_draftFields.values.toList()),builder:(_,__)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                 Text(uiText(context,'Revisión'),style:Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height:12),
-                Text('${year.text} · ${km.text} km · ${price.text} €',style:Theme.of(context).textTheme.titleMedium),
+                Text('${year.text} · ${category.isRoad?'${km.text} km':'${categoryControllers['engine_hours']?.text??''} h de motor'} · ${price.text} €',style:Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height:18),
                 buildListingQualityCard(),
                 const SizedBox(height:18),
-                MarketFactsView(facts:marketFacts),
+                MarketFactsView(roadInspection:category.isRoad,facts:marketFacts),
               ])),
               const SizedBox(height:16),
               Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),

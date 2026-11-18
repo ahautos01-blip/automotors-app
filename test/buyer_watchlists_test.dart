@@ -384,9 +384,9 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
-      await t.tap(find.widgetWithText(TextButton, 'Automático'));
+      await t.tap(find.widgetWithText(FilterChip, 'Automático'));
       await t.pumpAndSettle();
-      await t.tap(find.widgetWithText(TextButton, 'SUV'));
+      await t.tap(find.widgetWithText(FilterChip, 'SUV'));
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), 'VW automatico');
       await t.tap(find.byTooltip('Guardar búsqueda'));

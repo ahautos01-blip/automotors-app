@@ -8,13 +8,14 @@ List<String> listingSuggestions({
   required String description,
   required bool hasEquipment,
   Map<String, dynamic> marketFacts = const {},
+  bool roadInspection=true,
 }) {
   final text = description.toLowerCase();
   return [
     if (photoCount < 5) 'Añade al menos cinco fotos variadas del vehículo.',
     if (description.trim().length < 80)
       'Describe el estado, el uso y los desperfectos conocidos.',
-    if (marketFacts['itv'] == null &&
+    if (roadInspection && marketFacts['itv'] == null &&
         !RegExp(r'itv|inspecci[oó]n|inspection|inspecci[oó]').hasMatch(text))
       'Indica la fecha o el estado de la ITV, si lo conoces.',
     if (marketFacts['maintenance'] == null &&
@@ -25,6 +26,7 @@ List<String> listingSuggestions({
 }
 
 class ListingPreparation extends StatelessWidget {
+  final bool roadInspection;
   final int photoCount;
   final TextEditingController description;
   final bool hasEquipment;
@@ -37,6 +39,7 @@ class ListingPreparation extends StatelessWidget {
     required this.hasEquipment,
     this.checks,
     this.marketFacts = const {},
+    this.roadInspection=true,
   });
   @override
   Widget build(BuildContext context) =>
@@ -44,6 +47,7 @@ class ListingPreparation extends StatelessWidget {
         valueListenable: description,
         builder: (context, value, _) {
           final tips = listingSuggestions(
+            roadInspection:roadInspection,
             photoCount: photoCount,
             description: value.text,
             hasEquipment: hasEquipment,

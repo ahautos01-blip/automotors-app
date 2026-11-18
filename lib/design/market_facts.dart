@@ -209,10 +209,12 @@ class MarketRadiusFilter extends StatelessWidget {
 }
 
 class MarketFactsForm extends StatefulWidget {
+  final bool roadInspection;
   final Map<String, dynamic> value;
   final ValueChanged<Map<String, dynamic>> onChanged;
   const MarketFactsForm({
     super.key,
+    this.roadInspection = true,
     required this.value,
     required this.onChanged,
   });
@@ -256,7 +258,7 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
     children: [
       for (final section in [
         ('maintenance', 'Mantenimiento', marketMaintenance),
-        ('itv', 'ITV', marketItv),
+        if(widget.roadInspection) ('itv', 'ITV', marketItv),
         ('warranty', 'Garantía', marketWarranty),
       ])
         Padding(
@@ -277,7 +279,7 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
             onChanged: (v) => change(section.$1, v),
           ),
         ),
-      TextFormField(
+      if(widget.roadInspection) TextFormField(
         controller: date,
         maxLength: 10,
         decoration: InputDecoration(
@@ -334,8 +336,9 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
 }
 
 class MarketFactsView extends StatelessWidget {
+  final bool roadInspection;
   final Map<String, dynamic> facts;
-  const MarketFactsView({super.key, required this.facts});
+  const MarketFactsView({super.key, required this.facts, this.roadInspection = true});
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.symmetric(vertical: 16),
@@ -357,8 +360,8 @@ class MarketFactsView extends StatelessWidget {
             'Mantenimiento',
             marketMaintenance[facts['maintenance']] ?? 'No informado',
           ),
-          ('ITV', marketItv[facts['itv']] ?? 'No informado'),
-          (
+          if(roadInspection) ('ITV', marketItv[facts['itv']] ?? 'No informado'),
+          if(roadInspection) (
             'Caducidad ITV',
             facts['itv_until']?.toString().isNotEmpty == true
                 ? facts['itv_until'].toString()
@@ -396,7 +399,7 @@ class MarketFactsView extends StatelessWidget {
         Text(
           uiText(
             context,
-            'Información declarada por el vendedor. Comprueba el historial, la ITV y las condiciones de garantía antes de comprar.',
+            roadInspection ? 'Información declarada por el vendedor. Comprueba el historial, la ITV y las condiciones de garantía antes de comprar.' : 'Información declarada por el vendedor. Comprueba el historial, las inspecciones y las condiciones de garantía antes de comprar.',
           ),
           style: Theme.of(context).textTheme.bodySmall,
         ),

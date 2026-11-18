@@ -29,8 +29,8 @@ void main() {
                     child: Column(
                       children: [
                         const MarketEditorialIntro(
-                          eyebrow: 'COCHES CON HISTORIA. LA TUYA EMPIEZA AQUÍ.',
-                          title: 'El próximo\nes el tuyo.',
+                          eyebrow: 'COMPRA CON CRITERIO',
+                          title: 'Tu próximo coche,\nmás cerca.',
                           subtitle:
                               'Encuentra. Compara. Habla con el vendedor.',
                         ),
@@ -54,14 +54,7 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('home-plans-highlight')));
         expect(opened, true);
-        final chip = find.widgetWithText(
-          TextButton,
-          locale == 'es'
-              ? '03  Revisión'
-              : locale == 'en'
-              ? '03  Review'
-              : '03  Revisió',
-        );
+        final chip = find.byType(ChoiceChip).last;
         await tester.ensureVisible(chip);
         await tester.tap(chip);
         expect(selected, 2);

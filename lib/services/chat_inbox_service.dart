@@ -47,14 +47,14 @@ class ChatInboxService {
             final listing = await client
                 .from('vehicle_listings')
                 .select(
-                  'vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)',
+                  'declared_brand,declared_model,vehicle_brands(name),vehicle_models(name),vehicle_photos(storage_path,position)',
                 )
                 .eq('id', listingId)
                 .maybeSingle();
             final detail = <String, dynamic>{};
             if (listing != null) {
-              final brand = listing['vehicle_brands'],
-                  model = listing['vehicle_models'];
+              final brand = listing['declared_brand']!=null ? {'name':listing['declared_brand']} : listing['vehicle_brands'];
+              final model = listing['declared_model']!=null ? {'name':listing['declared_model']} : listing['vehicle_models'];
               final title =
                   '${brand is Map ? brand['name'] ?? '' : ''} ${model is Map ? model['name'] ?? '' : ''}'
                       .trim();

@@ -91,15 +91,15 @@ class SellerTrustIndicators extends StatelessWidget {
     runSpacing: 8,
     children: [
       if (emailConfirmed)
-        TextButton.icon(
+        ActionChip(
           onPressed: () => _showDetails(context),
-          icon: const Icon(Icons.mark_email_read_outlined, size: 18),
+          avatar: const Icon(Icons.mark_email_read_outlined, size: 18),
           label: Text(uiText(context, 'Correo confirmado')),
         ),
       if (professional)
-        TextButton.icon(
+        ActionChip(
           onPressed: () => _showDetails(context),
-          icon: const Icon(Icons.business_outlined, size: 18),
+          avatar: const Icon(Icons.business_outlined, size: 18),
           label: Text(uiText(context, 'Perfil profesional')),
         ),
     ],

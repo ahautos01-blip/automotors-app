@@ -81,7 +81,7 @@ void main() {
       await tester.ensureVisible(actions.first);
       await tester.tap(actions.first);
       expect(publishes, 1);
-      final save = find.byType(TextButton);
+      final save = find.byType(OutlinedButton);
       await tester.ensureVisible(save.first);
       await tester.tap(save.first);
       expect(saves, 1);

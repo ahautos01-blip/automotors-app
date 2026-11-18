@@ -20,7 +20,7 @@ class MarketEditorialIntro extends StatelessWidget {
   final bool plain;
   @override
   Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(plain ? 0 : 9),
+    borderRadius: BorderRadius.circular(plain ? 0 : 20),
     child: Stack(
       children: [
         if (photo != null)
@@ -58,7 +58,7 @@ class MarketEditorialIntro extends StatelessWidget {
                 style: TextStyle(
                   color: plain ? marketAccent : const Color(0xFFE2CC8B),
                   fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 1.6,
                 ),
               ),
@@ -67,10 +67,8 @@ class MarketEditorialIntro extends StatelessWidget {
                 uiText(context, title),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: plain ? marketInk : Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontSize: plain ? 42 : 34,
-                  letterSpacing: -1.5,
-                  height: 1.08,
+                  fontWeight: FontWeight.w700,
+                  height: 1.13,
                 ),
               ),
               if (subtitle != null) ...[
@@ -114,29 +112,25 @@ class MarketPublicationSteps extends StatelessWidget {
           'Fotos',
           'Revisión',
         ].asMap().entries)
-          Semantics(
+          ChoiceChip(
             selected: current == entry.key,
-            child: TextButton(
-              onPressed: enabled ? () => onSelect(entry.key) : null,
-              style: TextButton.styleFrom(
-                foregroundColor: current == entry.key ? marketInk : marketMuted,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 14,
-                ),
-                shape: const RoundedRectangleBorder(),
-                side: BorderSide(
-                  color: current == entry.key
-                      ? marketAccent
-                      : Colors.transparent,
-                ),
-              ),
+            showCheckmark: false,
+            avatar: CircleAvatar(
+              radius: 11,
+              backgroundColor: current == entry.key
+                  ? marketSurface
+                  : marketTint,
               child: Text(
-                '${entry.key + 1}'.padLeft(2, '0') +
-                    '  ' +
-                    uiText(context, entry.value),
+                '${entry.key + 1}',
+                style: const TextStyle(fontSize: 11, color: marketInk),
               ),
             ),
+            label: Text(uiText(context, entry.value)),
+            selectedColor: marketInk,
+            labelStyle: TextStyle(
+              color: current == entry.key ? marketSurface : marketInk,
+            ),
+            onSelected: enabled ? (_) => onSelect(entry.key) : null,
           ),
       ],
     ),

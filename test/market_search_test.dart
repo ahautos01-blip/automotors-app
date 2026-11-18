@@ -74,7 +74,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('3 vehículos'), findsOneWidget);
     for (final entry in [('Automático', 2), ('SUV', 1), ('Eléctrico', 0)]) {
-      final chip = find.widgetWithText(TextButton, entry.$1);
+      final chip = find.widgetWithText(FilterChip, entry.$1);
       await tester.ensureVisible(chip);
       await tester.pumpAndSettle();
       await tester.tap(chip);

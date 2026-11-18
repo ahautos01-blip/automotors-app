@@ -34,7 +34,7 @@ class MarketUsage {
         return;
       }
       await db
-          .rpc('record_market_usage', params: {'p_stage': stage, 'p_build': 50})
+          .rpc('record_market_usage', params: {'p_stage': stage, 'p_build': 51})
           .timeout(const Duration(seconds: 3));
     } catch (_) {
       /* Optional measurement cannot block the app. */

@@ -115,7 +115,7 @@ void main() {
         await tester.tap(find.byType(ExpansionTile));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.descendant(of:find.byType(SellerTrustIndicators),matching:find.byType(TextButton)), findsNWidgets(2));
+        expect(find.byType(ActionChip), findsNWidgets(2));
       },
     );
   testWidgets('no unperformed identity or email verification is claimed', (

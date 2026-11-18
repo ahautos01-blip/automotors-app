@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:automotors_base/main.dart';
 import 'package:automotors_base/services/local_market_state.dart';
+import 'package:automotors_base/services/vehicle_category.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -223,10 +224,8 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Revisar mi anuncio'));
       await settle(tester);
       expect(find.text('Añade al menos una fotografía.'), findsOneWidget);
-      await tester.ensureVisible(
-        find.widgetWithText(TextButton, '01  Vehículo'),
-      );
-      await tester.tap(find.widgetWithText(TextButton, '01  Vehículo'));
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Vehículo'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Vehículo'));
       await settle(tester);
       final year = find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.labelText == 'Año',
@@ -242,4 +241,34 @@ void main() {
       await settle(tester);
     },
   );
+  testWidgets('boat draft resumes without automotive catalog or mileage validation', (tester) async {
+    storage=LocalMarketState();
+    await storage.write('automotors.publication-draft.v1.$owner', {
+      'vehicleCategory':'boat',
+      'fields':{'declaredBrand':'Beneteau','declaredModel':'Oceanis','year':'2022','km':'0','price':'24990','phone':'612345678','length_m':'12.5','engine_hours':'400'},
+    });
+    await tester.binding.setSurfaceSize(const Size(390,844));
+    addTearDown(()=>tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(app(AddCarPage(localState:storage)));await settle(tester);
+    expect(find.text('Embarcaciones'),findsOneWidget);
+    expect(find.byKey(const ValueKey('category-field-length_m')),findsOneWidget);
+    expect(find.byWidgetPredicate((w)=>w is TextField && w.decoration?.labelText=='Kilómetros'),findsNothing);
+    await tester.tap(find.widgetWithText(FilledButton,'Continuar con las fotos'));await settle(tester);
+    expect(find.text('Seleccionar fotografías'),findsOneWidget);
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox());await settle(tester);
+  });
+
+  testWidgets('boat catalog excludes cars and includes boats above the car price ceiling', (tester) async {
+    storage=LocalMarketState();
+    await tester.binding.setSurfaceSize(const Size(430,932));addTearDown(()=>tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(app(AllVehiclesPage(initialCategory:VehicleCategory.boat,localState:storage,onOpenCar:(_){},cars:const [
+      Car(brand:'Beneteau',model:'Oceanis',year:2022,km:0,price:350000,fuel:'Diésel',description:'',phone:'',category:VehicleCategory.boat,categoryDetails:{'length_m':12.5,'engine_hours':400}),
+      Car(brand:'VW',model:'Golf',year:2022,km:1000,price:20000,fuel:'Diésel',description:'',phone:''),
+    ])));await settle(tester);
+    expect(find.text('Beneteau Oceanis'),findsOneWidget);expect(find.text('VW Golf'),findsNothing);
+    expect(find.textContaining('400 h de motor'),findsOneWidget);expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox());await settle(tester);
+  });
+
 }
