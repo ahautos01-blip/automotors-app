@@ -54,7 +54,7 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('home-plans-highlight')));
         expect(opened, true);
-        final chip = find.byType(ChoiceChip).last;
+        final chip = find.byKey(const ValueKey('publication-step-2'));
         await tester.ensureVisible(chip);
         await tester.tap(chip);
         expect(selected, 2);

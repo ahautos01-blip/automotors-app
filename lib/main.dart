@@ -1,3 +1,4 @@
+import 'design/publication_design.dart';
 import 'services/vehicle_catalogue.dart';
 import 'design/catalogue_dropdown.dart';
 import 'services/vehicle_category.dart';
@@ -7022,6 +7023,15 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
     }
   }
 
+  Future<void> _purchaseSelectedPlan() async {
+    if(_purchaseService.isStartingPurchase)return;
+    if(Supabase.instance.client.auth.currentUser==null){
+      if(!await requireAutomotorsLogin(context)||!mounted)return;
+    }
+    final productId=const ['automotors_pack_10','automotors_pack_15','automotors_pack_20','automotors_pro_monthly_199'][_selectedPack];
+    await _purchaseService.purchaseSubscription(productId);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _loadVerifiedPlans();
@@ -7056,9 +7066,7 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
     super.dispose();
   }
 
-  static const Color _gold = marketAccent;
   static const Color _bg = marketPaper;
-  static const Color _panel = Color(0xFFFFFFFF);
 
   bool get _usesSpanishAppStoreCatalog => kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
 
@@ -7115,26 +7123,37 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
         title: Text(uiText(context,'Packs y suscripción'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
-      bottomNavigationBar: !widget.allowPublication?null:SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(color: _panel, border: Border(top: BorderSide(color: Color(0xFFE4E5DF)))),
-          child: OutlinedButton.icon(
-            onPressed: _openingPublication ? null : () => _openPublication(),
-            icon: const Icon(Icons.sell_outlined), label: Text(appText('PUBLICAR GRATIS  →', 'LIST FOR FREE  →')),
-            style: OutlinedButton.styleFrom(foregroundColor: _gold, side: const BorderSide(color: _gold, width: 1.6), padding: const EdgeInsets.symmetric(vertical: 15), textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          ),
-        ),
-      ),
+      bottomNavigationBar: SafeArea(top:false,child:Container(
+        padding:const EdgeInsets.fromLTRB(16,10,16,8),
+        decoration:const BoxDecoration(color:marketSurface,border:Border(top:BorderSide(color:marketLine))),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          FilledButton(onPressed:_purchaseService.isStartingPurchase?null:_purchaseSelectedPlan,
+            child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_purchaseService.isStartingPurchase?uiText(context,'Abriendo pago de Apple…'):appText('Elegir ${packs[_selectedPack].title}','Choose ${packs[_selectedPack].title}')))),
+          if(widget.allowPublication) TextButton(onPressed:_openingPublication?null:()=>_openPublication(),child:Text(appText('PUBLICAR GRATIS  →','LIST FOR FREE  →'))),
+        ]),
+      )),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
         children: [
 
-          const MarketEditorialIntro(plain:true,eyebrow:'MÁS ESPACIO PARA TU NEGOCIO',title:'Tu inventario.\nTu próximo nivel.',subtitle:'Elige la capacidad que necesitas para publicar y destacar tus vehículos.'),
+          const PublicationHeading(title:'Elige cómo quieres vender',subtitle:'Compara capacidad y visibilidad. Encuentra el plan que encaja con tu inventario.'),
           const SizedBox(height:20),
-          Wrap(spacing:8,runSpacing:8,children:[for(final entry in packs.asMap().entries) ChoiceChip(tooltip:entry.value.title,label:Text(const ['10','15','20','PRO'][entry.key]),selected:_selectedPack==entry.key,showCheckmark:false,onSelected:_purchaseService.isStartingPurchase?null:(_)=>setState(()=>_selectedPack=entry.key))]),
-          const SizedBox(height:20),
+          LayoutBuilder(builder:(context,constraints){
+            final columns=constraints.maxWidth>=700?4:2;
+            final width=(constraints.maxWidth-(columns-1)*10)/columns;
+            return Wrap(spacing:10,runSpacing:10,children:[for(final entry in packs.asMap().entries)
+              SizedBox(width:width,child:PublicationPlanChoice(
+                key:ValueKey('publish-plan-${entry.key}'),
+                name:const ['PACK 10','PACK 15','PACK 20','PRO'][entry.key],
+                price:entry.value.price,capacity:entry.value.cars,
+                recommended:entry.value.popular,selected:_selectedPack==entry.key,
+                onTap:_purchaseService.isStartingPurchase?null:()=>setState(()=>_selectedPack=entry.key),
+              )),
+            ]);
+          }),
+          const SizedBox(height:24),
+          Text(uiText(context,'Tu plan incluye'),style:const TextStyle(fontSize:19,fontWeight:FontWeight.w800)),
+          const SizedBox(height:12),
           for (final pack in [packs[_selectedPack]]) ...[
             _PublishPackCard(
               data: pack,
@@ -7147,19 +7166,8 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
                     'PACK 10' => 'automotors_pack_10', 'PACK 15' => 'automotors_pack_15',
                     'PACK 20' => 'automotors_pack_20', _ => 'automotors_pro_monthly_199',
                   }) : null,
-              onSelect: _purchaseService.isStartingPurchase ? null : () async {
-                if (Supabase.instance.client.auth.currentUser == null) {
-                  if (!await requireAutomotorsLogin(context) || !mounted) return;
-                }
-                final productId = switch (pack.title) {
-                  'PACK 10' => 'automotors_pack_10',
-                  'PACK 15' => 'automotors_pack_15',
-                  'PACK 20' => 'automotors_pack_20',
-                  'AUTOMOTORS PRO' => 'automotors_pro_monthly_199',
-                  _ => '',
-                };
-                if (productId.isNotEmpty) await _purchaseService.purchaseSubscription(productId);
-              },
+              showPurchaseButton:false,
+              onSelect: _purchaseService.isStartingPurchase ? null : _purchaseSelectedPlan,
             ),
             const SizedBox(height: 14),
           ],
@@ -7198,9 +7206,10 @@ class _PublishPackData {
 class _PublishPackCard extends StatelessWidget {
   final _PublishPackData data;
   final bool busy;
+  final bool showPurchaseButton;
   final VoidCallback? onSelect;
   final VoidCallback? onPublish;
-  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish, this.busy=false});
+  const _PublishPackCard({required this.data, required this.onSelect, this.onPublish, this.busy=false,this.showPurchaseButton=true});
   static const Color gold = marketInk;
   @override
   Widget build(BuildContext context) {
@@ -7222,7 +7231,7 @@ class _PublishPackCard extends StatelessWidget {
         const SizedBox(height: 10),
         for (final benefit in data.benefits) Padding(padding: const EdgeInsets.only(bottom:12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.check_rounded, color: marketAccent, size: 18), const SizedBox(width: 7), Expanded(child: Text(uiText(context, benefit), style: const TextStyle(color: marketMuted, fontSize: 13)))])),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), child: busy ? Row(mainAxisAlignment:MainAxisAlignment.center,children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)),const SizedBox(width:10),Flexible(child:Text(uiText(context,'Abriendo pago de Apple…')))]) : Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
+        if(showPurchaseButton) SizedBox(width: double.infinity, child: FilledButton(onPressed: onSelect, style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)), child: busy ? Row(mainAxisAlignment:MainAxisAlignment.center,children:[const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)),const SizedBox(width:10),Flexible(child:Text(uiText(context,'Abriendo pago de Apple…')))]) : Text(appText('Elegir ${data.title}', 'Choose ${data.title}'), style: const TextStyle(fontWeight: FontWeight.w700)))),
         if (onPublish != null) ...[
           const SizedBox(height: 8),
           SizedBox(width: double.infinity, child: OutlinedButton.icon(
@@ -8073,9 +8082,17 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           controller:_publicationScroll,
           padding: const EdgeInsets.all(16),
           children: [
-            VehicleCategoryPicker(value:category,onChanged:publishing||_publicationStep!=0?null:changeCategory),
-            const MarketEditorialIntro(plain:true,eyebrow:'TU VEHÍCULO, SU SIGUIENTE HISTORIA',title:'Vender empieza\npor presentarlo bien.',subtitle:'Datos claros y fotografías que muestran el estado real.'),
             MarketPublicationSteps(current:_publicationStep,onSelect:_selectPublicationStep,enabled:!publishing&&!_previewingPublication),
+            PublicationHeading(
+              title:const ['Empecemos por tu vehículo','Las fotos marcan la diferencia','Tu anuncio, listo para revisar'][_publicationStep],
+              subtitle:const ['Completa los datos principales. Puedes guardar y continuar después.','Muestra su estado real con imágenes claras y bien iluminadas.','Comprueba los datos y las fotos antes de publicar.'][_publicationStep],
+            ),
+            if(_publicationStep==0) ...[
+              Text(uiText(context,'¿Qué vas a vender?'),style:const TextStyle(fontWeight:FontWeight.w700,fontSize:16)),
+              const SizedBox(height:12),
+              VehicleCategoryPicker(value:category,dense:true,onChanged:publishing?null:changeCategory),
+              const SizedBox(height:20),
+            ],
             Offstage(offstage:_publicationStep!=0,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
 
             Align(
@@ -8089,6 +8106,12 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             const Divider(color: Color(0xFFE4E5DF)),
             const SizedBox(height: 12),
             if(category==VehicleCategory.car) ...[
+              ExpansionTile(key:const Key('publication-autofill'),tilePadding:EdgeInsets.zero,
+                leading:const Icon(Icons.auto_fix_high_rounded,color:marketAccent),
+                title:Text(uiText(context,'Rellenar ficha automáticamente')),
+                subtitle:Text(uiText(context,'Opcional')),
+                children:[
+
             if (loadingVehicleLookupAccess)
                Card(
                 color: panel,
@@ -8170,6 +8193,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
                   )),
                 ]),
               ),
+            ]),
             const SizedBox(height: 14),
             ],
             CatalogueDropdown(key:ValueKey('publication-brand-${category.id}-$selectedBrandId'),label:'Marca',hint:'Selecciona una marca',otherLabel:'Otra marca (escribir)',value:selectedBrandId,options:brands,loading:loadingBrands,onChanged:publishing?null:(id){

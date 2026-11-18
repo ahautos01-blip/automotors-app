@@ -116,8 +116,8 @@ void main() {
       await AutomotorsLocaleController.instance.select(code);
       await tester.pumpWidget(localized(code, const PublishOptionsPage()));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.widgetWithText(ChoiceChip,'10'));
-      await tester.tap(find.widgetWithText(ChoiceChip,'10'));
+      await tester.ensureVisible(find.byKey(const ValueKey('publish-plan-0')));
+      await tester.tap(find.byKey(const ValueKey('publish-plan-0')));
       await tester.pumpAndSettle();
       final benefit = find.text(tr('Publica hasta 10 vehículos'));
       await tester.scrollUntilVisible(

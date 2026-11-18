@@ -102,36 +102,78 @@ class MarketPublicationSteps extends StatelessWidget {
   final bool enabled;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 20),
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    padding: const EdgeInsets.only(top: 4, bottom: 16),
+    child: Column(
       children: [
-        for (final entry in const [
-          'Vehículo',
-          'Fotos',
-          'Revisión',
-        ].asMap().entries)
-          ChoiceChip(
-            selected: current == entry.key,
-            showCheckmark: false,
-            avatar: CircleAvatar(
-              radius: 11,
-              backgroundColor: current == entry.key
-                  ? marketSurface
-                  : marketTint,
-              child: Text(
-                '${entry.key + 1}',
-                style: const TextStyle(fontSize: 11, color: marketInk),
+        Row(
+          children: [
+            for (final entry in const [
+              'Vehículo',
+              'Fotos',
+              'Revisión',
+            ].asMap().entries)
+              Expanded(
+                child: TextButton(
+                  key: ValueKey('publication-step-${entry.key}'),
+                  onPressed: enabled ? () => onSelect(entry.key) : null,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: entry.key <= current ? marketInk : marketTint,
+                        ),
+                        child: entry.key < current
+                            ? const Icon(
+                                Icons.check,
+                                size: 17,
+                                color: Colors.white,
+                              )
+                            : Text(
+                                '${entry.key + 1}',
+                                style: TextStyle(
+                                  color: entry.key == current
+                                      ? Colors.white
+                                      : marketMuted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        uiText(context, entry.value),
+                        style: TextStyle(
+                          color: entry.key == current ? marketInk : marketMuted,
+                          fontWeight: entry.key == current
+                              ? FontWeight.w800
+                              : FontWeight.w400,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            label: Text(uiText(context, entry.value)),
-            selectedColor: marketInk,
-            labelStyle: TextStyle(
-              color: current == entry.key ? marketSurface : marketInk,
-            ),
-            onSelected: enabled ? (_) => onSelect(entry.key) : null,
+          ],
+        ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: (current + 1) / 3,
+            minHeight: 3,
+            backgroundColor: marketLine,
+            color: marketGold,
           ),
+        ),
       ],
     ),
   );
