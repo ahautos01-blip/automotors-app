@@ -47,12 +47,11 @@ def main():
   category,kind,mid,brand=job
   endpoint=f'GetModelsForMakeIdYear/makeId/{mid}/vehicletype/{kind}?format=json'
   try:
-   cached=(CACHE/f'{kind}-{mid}.json').exists()
    cached=CACHE/f'{kind}-{mid}.json'
    was_cached=cached.exists()
    data=fetch(endpoint,cached)
    names={r['Model_Name'].strip() for r in data['Results'] if int(r.get('Make_ID',mid))==mid and isinstance(r.get('Model_Name'),str) and 0<len(r['Model_Name'].strip())<=100}
-   if not cached:time.sleep(.25)
+   if not was_cached:time.sleep(.25)
    return category,brand,names,None
   except Exception as error:return category,brand,set(),str(error)
  with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
