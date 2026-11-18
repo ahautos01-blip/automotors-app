@@ -1918,4 +1918,10 @@ const Map<String, List<String>> uiMessages = {
         "Purchase received, but access remains locked until server verification.",
         "Compra rebuda, però l’accés continua bloquejat fins a verificar-la al servidor.",
       ],
+  "Selecciona una opción": ["Select an option", "Selecciona una opció"],
+  "Buscar por nombre": ["Search by name", "Cerca pel nom"],
+  "Otra marca (escribir)": ["Other make (enter name)", "Una altra marca (escriu-la)"],
+  "Otro modelo (escribir)": ["Other model (enter name)", "Un altre model (escriu-lo)"],
+  "No hay coincidencias. Puedes escribir otra opción.": ["No matches. You can enter another option.", "No hi ha coincidències. Pots escriure una altra opció."],
+  "No hay coincidencias.": ["No matches.", "No hi ha coincidències."],
 };

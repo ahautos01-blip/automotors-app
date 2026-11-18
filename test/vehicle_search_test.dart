@@ -14,6 +14,8 @@ void main() {
       isTrue,
     );
     expect(matchesVehicleSearch('VOLKSWAGEN diesel', ['VW', 'Diésel']), isTrue);
+    expect(matchesVehicleSearch('skoda', ['Škoda']), isTrue);
+    expect(matchesVehicleSearch('zubr', ['Żubr']), isTrue);
     expect(
       matchesVehicleSearch('touran electrico', [
         'Volkswagen',

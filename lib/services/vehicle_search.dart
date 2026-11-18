@@ -9,7 +9,10 @@ String normalizeVehicleSearch(String value) {
     'o': 'òóôöõ',
     'u': 'ùúûü',
     'n': 'ñ',
-    'c': 'ç',
+    'c': 'çćč',
+    's': 'šś',
+    'z': 'žźż',
+    'l': 'ł',
   };
   for (final entry in groups.entries) {
     result = result.replaceAll(RegExp('[${entry.value}]'), entry.key);
