@@ -2,6 +2,27 @@ import 'dart:typed_data';
 
 typedef ListingPhotoDownload = Future<Uint8List> Function(String path);
 
+/// Keep catalogue order and avoid opening a connection for every listing at once.
+Future<List<List<Uint8List>>> loadListingCovers(
+  List<List<String>> paths,
+  ListingPhotoDownload download, {
+  bool Function()? isCurrent,
+  void Function(int start, List<List<Uint8List>> photos)? onBatch,
+}) async {
+  final result = <List<Uint8List>>[];
+  for (var start = 0; start < paths.length; start += 3) {
+    if (isCurrent != null && !isCurrent()) break;
+    final end = (start + 3).clamp(0, paths.length);
+    final batch = await Future.wait([
+      for (var i = start; i < end; i++) loadListingCover(paths[i], download),
+    ]);
+    if (isCurrent != null && !isCurrent()) break;
+    result.addAll(batch);
+    onBatch?.call(start, batch);
+  }
+  return result;
+}
+
 Future<List<Uint8List>> loadListingCover(
   List<String> paths,
   ListingPhotoDownload download,

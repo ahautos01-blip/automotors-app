@@ -15,6 +15,10 @@ assert.match((await db.query("select pg_get_functiondef('private.record_client_e
 await db.exec(await readFile(new URL('../supabase/migrations/20261118175853_national_identity_build54.sql',import.meta.url),'utf8'));
 assert.match((await db.query("select pg_get_functiondef('private.record_client_error(text,text,integer)'::regprocedure) d")).rows[0].d,/51,52,53,54/);
 const custom='cccccccc-cccc-4ccc-8ccc-cccccccccccc',owner='11111111-1111-4111-8111-111111111111';
+await db.exec(await readFile(new URL('../supabase/migrations/20261119191112_ios_interaction_build55.sql',import.meta.url),'utf8'));
+for (const signature of ['private.record_client_error(text,text,integer)', 'private.record_market_usage(text,integer)']) {
+ assert.match((await db.query('select pg_get_functiondef($1::regprocedure) d',[signature])).rows[0].d,/53,54,55/);
+}
 // The shared chat fixture intentionally has no listing INSERT API; add the
 // owner-only insert boundary for this synthetic publication scenario.
 await db.exec("grant insert on vehicle_listings to authenticated;create policy catalogue_owner_insert on vehicle_listings for insert to authenticated with check(owner_id=auth.uid())");

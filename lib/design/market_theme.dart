@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 const marketPaper = Color(0xFFF6F5F0);
 const marketSurface = Color(0xFFFFFFFF);
@@ -13,6 +14,11 @@ const marketAccent = Color(0xFF876B24);
 ThemeData automotorsMarketTheme() => ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
+  cupertinoOverrideTheme: const CupertinoThemeData(
+    primaryColor: marketInk,
+    scaffoldBackgroundColor: marketPaper,
+    barBackgroundColor: Color(0xEBFFFFFF),
+  ),
   scaffoldBackgroundColor: marketPaper,
   canvasColor: marketSurface,
   colorScheme:
@@ -31,6 +37,14 @@ ThemeData automotorsMarketTheme() => ThemeData(
   dividerColor: marketLine,
   visualDensity: VisualDensity.standard,
   materialTapTargetSize: MaterialTapTargetSize.padded,
+  // MaterialPageRoute keeps the native interactive back gesture on iPhone.
+  pageTransitionsTheme: const PageTransitionsTheme(
+    builders: {
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+    },
+  ),
   iconButtonTheme: IconButtonThemeData(
     style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
   ),
@@ -162,6 +176,8 @@ ThemeData automotorsMarketTheme() => ThemeData(
     dividerColor: marketLine,
   ),
   navigationBarTheme: NavigationBarThemeData(
+    elevation: 0,
+    height: 72,
     backgroundColor: marketSurface,
     indicatorColor: marketTint,
     iconTheme: WidgetStateProperty.resolveWith(

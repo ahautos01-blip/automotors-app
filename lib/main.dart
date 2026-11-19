@@ -45,6 +45,7 @@ import 'services/vehicle_search.dart';
 import 'design/market_details.dart';
 import 'design/market_vehicle_card.dart';
 import 'design/market_theme.dart';
+import 'design/market_glass.dart';
 import 'services/listing_photo_loader.dart';
 import 'services/content_publication_service.dart';
 import 'community_moderation_page.dart';
@@ -1530,6 +1531,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           .order('created_at', ascending: false);
 
       final loadedCars = <Car>[];
+      final catalogueRows = List<Map<String, dynamic>>.from(rows);
+      final cataloguePhotoPaths = <List<String>>[];
       final featuredIds = <String>{};
       try {
         final promotions = await supabase.rpc('get_featured_vehicle_ids');
@@ -1540,7 +1543,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
       } catch (_) {
         // Si las promociones no están disponibles, mostramos los anuncios con normalidad.
       }
-      for (final raw in List<Map<String, dynamic>>.from(rows)) {
+      for (final raw in catalogueRows) {
         final photoData = raw['vehicle_photos'];
         final photoRows = photoData is List
             ? List<Map<String, dynamic>>.from(photoData)
@@ -1550,9 +1553,9 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
         final photoPaths = photoRows.map((p) => p['storage_path']?.toString() ?? '')
             .where((p) => p.isNotEmpty).toList();
-        final photoBytes = await loadListingCover(photoPaths, downloadVehiclePhoto);
+        cataloguePhotoPaths.add(photoPaths);
 
-        loadedCars.add(Car.fromListing(raw, photos: photoBytes, photoPaths: photoPaths,
+        loadedCars.add(Car.fromListing(raw, photos: [], photoPaths: photoPaths,
           isFeatured: featuredIds.contains(raw['id']?.toString())));
       }
 
@@ -1564,6 +1567,22 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
         loadingCars = false;
         catalogueFailed=false;
       });
+      // Show searchable listings immediately; hydrate covers in small batches.
+      await loadListingCovers(cataloguePhotoPaths, downloadVehiclePhoto,
+        isCurrent: () => mounted && generation == _carLoadGeneration,
+        onBatch: (start, batch) {
+          setState(() {
+            for (var offset = 0; offset < batch.length; offset++) {
+              final index = start + offset;
+              final raw = catalogueRows[index];
+              loadedCars[index] = Car.fromListing(raw,
+                photos: batch[offset], photoPaths: cataloguePhotoPaths[index],
+                isFeatured: featuredIds.contains(raw['id']?.toString()));
+            }
+            cars..clear()..addAll(loadedCars);
+          });
+        });
+      if (!mounted || generation != _carLoadGeneration) return;
       final sharedListingId = Uri.base.queryParameters['listing'];
       if (sharedListingId != null && sharedListingId.isNotEmpty) {
         Car? sharedCar;
@@ -2037,6 +2056,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     ].where((active) => active).length;
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: black,
         titleSpacing: 18,
@@ -2281,8 +2301,8 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: marketSurface,
+      bottomNavigationBar: MarketGlassNavigation(child: NavigationBar(
+        backgroundColor: Colors.transparent,
         indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -2321,7 +2341,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
           NavigationDestination(icon: const MarketPublishIcon(), selectedIcon: const MarketPublishIcon(), label: uiText(context,'Publicar')),
           NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: AppLocalizations.of(context).profile),
         ],
-      ),
+      )),
     );
   }
 
