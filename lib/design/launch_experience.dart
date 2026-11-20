@@ -1,3 +1,4 @@
+import 'market_chrome.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -113,7 +114,7 @@ class PublicationPreviewPage extends StatelessWidget {
   final List<String> equipment;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(uiText(context, 'Vista previa del anuncio'))),
+    appBar: MarketAppBar(title: Text(uiText(context, 'Vista previa del anuncio'))),
     body: ListView(
       padding: const EdgeInsets.all(16),
       children: [

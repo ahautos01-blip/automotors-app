@@ -1,3 +1,4 @@
+import 'market_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -51,7 +52,7 @@ class _MarketUsagePageState extends State<MarketUsagePage> {
   );
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Uso de la app')),
       actions: [
         IconButton(

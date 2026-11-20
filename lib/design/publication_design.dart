@@ -24,17 +24,21 @@ class PublicationPlanChoice extends StatelessWidget {
     selected: selected,
     child: Material(
       color: selected ? marketInk : marketSurface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(26),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
+        borderRadius: BorderRadius.circular(26),
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(26),
             border: Border.all(
               color: selected ? marketGold : marketLine,
-              width: selected ? 2 : 1,
+              width: selected ? 1.5 : .5,
             ),
           ),
           child: Column(

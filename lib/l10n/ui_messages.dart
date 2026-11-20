@@ -1,5 +1,6 @@
 /// App-owned interface messages: English and Catalan.
 const Map<String, List<String>> uiMessages = {
+  "Busca un vehículo y contacta con el vendedor desde su ficha.": ["Find a vehicle and contact the seller from its listing.", "Busca un vehicle i contacta amb el venedor des de la seva fitxa."],
   "COMPRA CON CRITERIO": ["CHOOSE WITH CONFIDENCE", "COMPRA AMB CRITERI"],
   "Tu próximo coche,\nmás cerca.": ["Your next car,\ncloser to you.", "El teu pròxim cotxe,\nmés a prop."],
   "Encuentra. Compara. Habla con el vendedor.": ["Find. Compare. Talk to the seller.", "Troba. Compara. Parla amb el venedor."],

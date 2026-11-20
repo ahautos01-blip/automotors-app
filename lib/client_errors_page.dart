@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -17,7 +18,7 @@ class _ClientErrorsPageState extends State<ClientErrorsPage> {
       );
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Incidencias técnicas')),
       actions: [
         IconButton(

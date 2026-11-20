@@ -19,7 +19,7 @@ class MarketProfessionalHeader extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     clipBehavior: Clip.antiAlias,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(30),
       side: const BorderSide(color: marketLine),
     ),
     child: Column(
@@ -104,7 +104,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(30),
                       child: SizedBox(
                         width: 112,
                         height: 112,
@@ -174,7 +174,7 @@ class MarketProfessionalHeader extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: marketTint,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: marketGold.withValues(alpha: .3)),
                 ),
                 child: Text(

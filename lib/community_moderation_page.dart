@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'design/market_usage.dart';
 import 'client_errors_page.dart';
 import 'design/moderation_overview.dart';
@@ -142,7 +143,7 @@ class _CommunityModerationPageState extends State<CommunityModerationPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Administración')),
       actions: [
         IconButton(tooltip:uiText(context,'Uso de la app'),onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>const MarketUsagePage())),icon:const Icon(Icons.insights_outlined)),
@@ -389,7 +390,7 @@ class _CommunityReportPageState extends State<CommunityReportPage> {
   Widget build(BuildContext context) {
     final data = detail;
     return Scaffold(
-      appBar: AppBar(title: Text(uiText(context, 'Revisar denuncia'))),
+      appBar: MarketAppBar(title: Text(uiText(context, 'Revisar denuncia'))),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : failed || data == null

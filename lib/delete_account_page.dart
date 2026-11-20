@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -94,7 +95,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   Widget build(BuildContext context) => PopScope(
     canPop: !busy,
     child: Scaffold(
-      appBar: AppBar(title: Text(uiText(context, 'Eliminar mi cuenta'))),
+      appBar: MarketAppBar(title: Text(uiText(context, 'Eliminar mi cuenta'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

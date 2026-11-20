@@ -99,6 +99,8 @@ void main() {
             theme: previewPath == null
                 ? theme
                 : theme.copyWith(
+                    appBarTheme: theme.appBarTheme.copyWith(titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(fontFamily:'ProfilePreview')),
+                    chipTheme: theme.chipTheme.copyWith(labelStyle: theme.chipTheme.labelStyle?.copyWith(fontFamily:'ProfilePreview')),
                     textTheme: theme.textTheme.apply(
                       fontFamily: 'ProfilePreview',
                     ),

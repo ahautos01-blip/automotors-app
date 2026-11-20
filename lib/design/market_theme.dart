@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
-const marketPaper = Color(0xFFF6F5F0);
+const marketPaper = Color(0xFFF4F5F3);
 const marketSurface = Color(0xFFFFFFFF);
 const marketHeroChip = Color(0xFF343C39);
 const marketInk = Color(0xFF1B3028);
@@ -46,7 +46,11 @@ ThemeData automotorsMarketTheme() => ThemeData(
     },
   ),
   iconButtonTheme: IconButtonThemeData(
-    style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+    style: IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      backgroundColor: marketInk.withValues(alpha: .06),
+      shape: const CircleBorder(),
+    ),
   ),
   iconTheme: const IconThemeData(color: marketInk, size: 20),
   textTheme: const TextTheme(
@@ -87,18 +91,25 @@ ThemeData automotorsMarketTheme() => ThemeData(
     ),
   ),
   listTileTheme: const ListTileThemeData(
-    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 6),
     iconColor: marketMuted,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(22)),
+    ),
   ),
   dialogTheme: DialogThemeData(
-    backgroundColor: marketPaper,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    backgroundColor: marketSurface,
+    surfaceTintColor: Colors.transparent,
+    elevation: 12,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
   ),
   bottomSheetTheme: const BottomSheetThemeData(
-    backgroundColor: marketPaper,
+    backgroundColor: marketSurface,
+    surfaceTintColor: Colors.transparent,
+    modalBarrierColor: Color(0x441B3028),
     showDragHandle: true,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
     ),
   ),
   appBarTheme: const AppBarTheme(
@@ -115,29 +126,31 @@ ThemeData automotorsMarketTheme() => ThemeData(
   ),
   cardTheme: const CardThemeData(
     color: marketSurface,
-    elevation: 0,
+    surfaceTintColor: Colors.transparent,
+    elevation: 1,
+    shadowColor: Color(0x141B3028),
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(20)),
-      side: BorderSide(color: marketLine),
+      borderRadius: BorderRadius.all(Radius.circular(26)),
+      side: BorderSide(color: Color(0xFFE8EBE5), width: .5),
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: marketSurface,
+    fillColor: const Color(0xFFF0F2EE),
     hintStyle: const TextStyle(color: marketMuted),
     labelStyle: const TextStyle(color: marketMuted),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(15),
-      borderSide: const BorderSide(color: marketLine),
+      borderRadius: BorderRadius.circular(20),
+      borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(15),
-      borderSide: const BorderSide(color: marketLine),
+      borderRadius: BorderRadius.circular(20),
+      borderSide: BorderSide.none,
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(20),
       borderSide: const BorderSide(color: marketAccent, width: 1.5),
     ),
   ),
@@ -147,7 +160,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
       foregroundColor: marketSurface,
       minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: const StadiumBorder(),
       textStyle: const TextStyle(fontWeight: FontWeight.w700),
     ),
   ),
@@ -157,7 +170,7 @@ ThemeData automotorsMarketTheme() => ThemeData(
       side: const BorderSide(color: marketLine),
       minimumSize: const Size(48, 48),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: const StadiumBorder(),
     ),
   ),
   textButtonTheme: TextButtonThemeData(
@@ -173,8 +186,40 @@ ThemeData automotorsMarketTheme() => ThemeData(
     indicatorColor: marketAccent,
     labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-    dividerColor: marketLine,
+    dividerColor: Colors.transparent,
+    indicatorSize: TabBarIndicatorSize.tab,
+    indicator: BoxDecoration(
+      color: marketSurface,
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x141B3028),
+          blurRadius: 8,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
   ),
+  chipTheme: ChipThemeData(
+    backgroundColor: marketSurface,
+    selectedColor: marketTint,
+    side: const BorderSide(color: marketLine, width: .5),
+    shape: const StadiumBorder(),
+    labelStyle: const TextStyle(
+      color: marketInk,
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+  ),
+  popupMenuTheme: PopupMenuThemeData(
+    color: marketSurface,
+    surfaceTintColor: Colors.transparent,
+    elevation: 12,
+    shadowColor: marketInk.withValues(alpha: .12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  ),
+  progressIndicatorTheme: const ProgressIndicatorThemeData(color: marketAccent),
   navigationBarTheme: NavigationBarThemeData(
     elevation: 0,
     height: 72,

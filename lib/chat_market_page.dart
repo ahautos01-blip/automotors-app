@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -304,7 +305,7 @@ class _ChatMarketPageState extends State<ChatMarketPage>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Ofertas y citas')),
       actions: [
         IconButton(

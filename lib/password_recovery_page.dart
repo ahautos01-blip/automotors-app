@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -102,7 +103,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   Widget build(BuildContext context) {
     String t(String value) => uiText(context, value);
     return Scaffold(
-      appBar: AppBar(title: Text(t('Recuperar contraseña'))),
+      appBar: MarketAppBar(title: Text(t('Recuperar contraseña'))),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

@@ -108,6 +108,8 @@ void main() {
               theme: path == null
                   ? theme
                   : theme.copyWith(
+                      appBarTheme: theme.appBarTheme.copyWith(titleTextStyle: theme.appBarTheme.titleTextStyle?.copyWith(fontFamily:'CataloguePreview')),
+                      chipTheme: theme.chipTheme.copyWith(labelStyle: theme.chipTheme.labelStyle?.copyWith(fontFamily:'CataloguePreview')),
                       textTheme: theme.textTheme.apply(
                         fontFamily: 'CataloguePreview',
                       ),

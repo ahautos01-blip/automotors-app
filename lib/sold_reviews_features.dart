@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'l10n/ui_text.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -172,7 +173,7 @@ class _BuyerPurchaseReviewPageState extends State<BuyerPurchaseReviewPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title:  Text(uiText(context, "Valora tu compra"))),
+    appBar: MarketAppBar(title:  Text(uiText(context, "Valora tu compra"))),
     body: FutureBuilder<Map<String, dynamic>?>(
       future: purchase,
       builder: (context, snapshot) {

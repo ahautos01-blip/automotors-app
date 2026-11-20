@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'design/market_theme.dart';
+import 'design/market_details.dart';
 import 'l10n/ui_text.dart';
 import 'services/chat_inbox_service.dart';
 
@@ -166,7 +168,7 @@ class _ChatInboxPageState extends State<ChatInboxPage>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(
         uiText(context, deleted ? 'Conversaciones eliminadas' : 'Mis mensajes'),
       ),
@@ -282,21 +284,19 @@ class _ChatInboxPageState extends State<ChatInboxPage>
                 query: search.text,
               );
               if (rows.isEmpty)
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Text(
-                      uiText(
-                        context,
-                        search.text.trim().isNotEmpty
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [Card(child: MarketEmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: search.text.trim().isNotEmpty
                             ? 'No hay conversaciones que coincidan con tu búsqueda.'
                             : deleted
                             ? 'No tienes conversaciones eliminadas.'
                             : 'Todavía no tienes conversaciones',
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                    message: 'Busca un vehículo y contacta con el vendedor desde su ficha.',
+                    actionLabel: 'Actualizar mensajes',
+                    onAction: () => unawaited(refresh().catchError((Object _) {})),
+                  ))],
                 );
               return RefreshIndicator(
                 onRefresh: () => refresh().catchError((Object _) {}),

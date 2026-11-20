@@ -1,3 +1,4 @@
+import 'market_chrome.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -68,7 +69,7 @@ class _MarketComparisonViewState extends State<MarketComparisonView> {
         .where((field) => !differencesOnly || field.differs)
         .toList();
     return Scaffold(
-      appBar: AppBar(title: Text(uiText(context, 'Comparar vehículos'))),
+      appBar: MarketAppBar(title: Text(uiText(context, 'Comparar vehículos'))),
       body: SafeArea(
         top: false,
         child: Column(

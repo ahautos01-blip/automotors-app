@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -92,7 +93,7 @@ class AutomotorsSupportPage extends StatelessWidget {
   final String? initialSection;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(uiText(context, 'Ayuda y privacidad'))),
+    appBar: MarketAppBar(title: Text(uiText(context, 'Ayuda y privacidad'))),
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [

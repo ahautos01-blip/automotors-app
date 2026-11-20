@@ -84,6 +84,7 @@ void main() {
           theme: path == null
               ? theme
               : theme.copyWith(
+                  chipTheme: theme.chipTheme.copyWith(labelStyle: theme.chipTheme.labelStyle?.copyWith(fontFamily:'CataloguePreview')),
                   appBarTheme:theme.appBarTheme.copyWith(titleTextStyle:theme.appBarTheme.titleTextStyle?.copyWith(fontFamily:'CataloguePreview')),
                   textTheme: theme.textTheme.apply(
                     fontFamily: 'CataloguePreview',

@@ -1,3 +1,4 @@
+import 'market_chrome.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -101,7 +102,7 @@ class _MarketActivityPageState extends State<MarketActivityPage>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Mi actividad')),
       actions: [
         IconButton(

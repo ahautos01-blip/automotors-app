@@ -1,3 +1,4 @@
+import 'design/market_chrome.dart';
 import 'design/market_identity.dart';
 import 'design/publication_design.dart';
 import 'services/vehicle_catalogue.dart';
@@ -623,7 +624,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(uiText(context, "Cuenta AUTOMOTORS"))),
+      appBar: MarketAppBar(title: Text(uiText(context, "Cuenta AUTOMOTORS"))),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -1136,7 +1137,7 @@ class _VehicleSearchResultsPageState extends State<VehicleSearchResultsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title:  Text(uiText(context, "Resultados de búsqueda")),
       actions: [
         if (_selectedForComparison.isNotEmpty)
@@ -2057,7 +2058,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
 
     return Scaffold(
       extendBody: true,
-      appBar: AppBar(
+      appBar: MarketAppBar(
         backgroundColor: black,
         titleSpacing: 18,
         title: Row(
@@ -2613,7 +2614,7 @@ class _AllVehiclesPageState extends State<AllVehiclesPage> with MarketRecentSear
     final found = results;
     return Scaffold(
       backgroundColor: marketPaper,
-      appBar: AppBar(
+      appBar: MarketAppBar(
         backgroundColor: marketSurface,
         title: Text(AppLocalizations.of(context).viewVehicles, maxLines:1,overflow:TextOverflow.ellipsis,style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
@@ -2918,7 +2919,7 @@ class _VehicleSearchAlertsPageState extends State<VehicleSearchAlertsPage> {
   Widget build(BuildContext context) {
     final unread = alerts.where((a) => a['read_at'] == null).length;
     return Scaffold(
-      appBar: AppBar(
+      appBar: MarketAppBar(
         title: Text(uiText(context, "Notificaciones")),
         actions: [
           IconButton(
@@ -3170,7 +3171,7 @@ class _SavedSearchesPageState extends State<SavedSearchesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title:  Text(uiText(context, "Búsquedas guardadas")), actions: [
+      appBar: MarketAppBar(title:  Text(uiText(context, "Búsquedas guardadas")), actions: [
         IconButton(tooltip: uiText(context, "Actualizar"), onPressed: loadSearches, icon: const Icon(Icons.refresh_rounded, color: marketAccent)),
       ]),
       body: loading
@@ -3642,7 +3643,7 @@ class _SavedVehiclesPageState extends State<SavedVehiclesPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title: Text(uiText(context, 'Mis favoritos')),
       actions: [
         IconButton(
@@ -4752,8 +4753,7 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   Widget _contactBar(BuildContext context) {
     return Container(
       key: const Key('vehicle-contact-bar'),
-      decoration: BoxDecoration(color: panel,
-        border: Border(top: BorderSide(color: marketInk.withValues(alpha: .10)))),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: SafeArea(top: false,
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -4807,8 +4807,8 @@ class _CarDetailsPageState extends State<CarDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: _contactBar(context),
-      appBar: AppBar(
+      bottomNavigationBar: MarketActionDock(child: _contactBar(context)),
+      appBar: MarketAppBar(
         title: Text('${car.brand} ${car.model}'),
         actions: [
           if (car.listingId?.isNotEmpty == true)
@@ -5212,7 +5212,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: marketPaper,
-    appBar: AppBar(
+    appBar: MarketAppBar(
       backgroundColor: marketPaper,
       foregroundColor: marketAccent,
       automaticallyImplyLeading: true,
@@ -5411,9 +5411,10 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 3),
-        decoration: BoxDecoration(color: selectedProfileTab == index ? marketInk : marketTint, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: selectedProfileTab == index ? marketSurface : marketTint, borderRadius: BorderRadius.circular(18),
+          boxShadow: selectedProfileTab == index ? [BoxShadow(color:marketInk.withValues(alpha:.08),blurRadius:8,offset:const Offset(0,2))] : null),
         child: Text(uiText(context, label), maxLines: 2, textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketSurface : marketMuted)),
+          style: TextStyle(fontSize: 11, fontWeight: selectedProfileTab == index ? FontWeight.w700 : FontWeight.w500, color: selectedProfileTab == index ? marketInk : marketMuted)),
       ),
     ),
     ),
@@ -5464,7 +5465,7 @@ class _FullScreenGalleryPageState extends State<FullScreenGalleryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
+      appBar: MarketAppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(widget.title),
@@ -5521,7 +5522,7 @@ class PersonalAreaPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     return Scaffold(
-      appBar: AppBar(
+      appBar: MarketAppBar(
         title: Row(children: [
           const AutomotorsBrandMark(size: 30),
           const SizedBox(width: 10),
@@ -5801,7 +5802,7 @@ class _GaragePageState extends State<GaragePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
+    appBar: MarketAppBar(
       title:  Text(uiText(context, "Gestiona tu garaje")),
       actions: [IconButton(onPressed: refreshListings, tooltip: uiText(context, "Actualizar anuncios"), icon: const Icon(Icons.refresh_rounded, color: marketAccent))],
     ),
@@ -6246,7 +6247,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final profileUrl = profilePhotoPath == null ? null : supabase.storage.from('profile-photos').getPublicUrl(profilePhotoPath!);
     final coverUrl = coverPhotoPath == null ? null : supabase.storage.from('profile-photos').getPublicUrl(coverPhotoPath!);
     return Scaffold(
-      appBar: AppBar(
+      appBar: MarketAppBar(
         title: Row(children: [const AutomotorsBrandMark(size: 30), const SizedBox(width: 10),  Text(uiText(context, "Mi perfil"))]),
         actions: [if (!loading) IconButton(tooltip: editing ? uiText(context, "Cancelar edición") : uiText(context, "Editar perfil"), icon: Icon(editing ? Icons.close : Icons.edit_outlined, color: marketAccent), onPressed: () => setState(() => editing = !editing))],
       ),
@@ -6451,7 +6452,7 @@ class _EditListingPageState extends State<EditListingPage> {
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
+  Widget build(BuildContext context) => Scaffold(appBar: MarketAppBar(title:  Text(uiText(context, "Editar anuncio"))), body: loading ? const Center(child: CircularProgressIndicator(color: marketAccent)) : Form(key: formKey, child: ListView(padding: const EdgeInsets.all(16), children: [
     Text(uiText(context,category.label)),VehicleCategoryFields(category:category,controllers:categoryControllers),
     textField('Año', year, numeric: true, required: true), if(category.isRoad) textField('Kilómetros', km, numeric: true, required: true), textField('Precio (€)', price, numeric: true, required: true),
     DropdownButtonFormField<String>(isExpanded: true, value: category.fuels.contains(fuel) ? fuel : 'Diésel', decoration:  InputDecoration(labelText: uiText(context, "Combustible")), items: [for(final f in category.fuels) DropdownMenuItem(value:f,child:Text(uiText(context,f)))], onChanged: (v) { if (v != null) setState(() => fuel = v); }),
@@ -6705,7 +6706,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final currentUserId = supabase.auth.currentUser?.id;
     return Scaffold(
-      appBar: AppBar(
+      appBar: MarketAppBar(
         actions: [
           IconButton(tooltip:uiText(context,'Ofertas y citas'),onPressed:!chatSafety.canMessage?null:()=>openMarketOffers(),icon:const Icon(Icons.event_available_outlined)),
           IconButton(
@@ -6876,7 +6877,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           if (isChatBuyer != null)
             MarketChatActions(enabled: chatSafety.canMessage && !sending,
               isBuyer: isChatBuyer!, onCompose: _composeSuggestion),
-          SafeArea(
+          MarketActionDock(
             child: Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               decoration: const BoxDecoration(
@@ -7104,15 +7105,15 @@ class _PublishOptionsPageState extends State<PublishOptionsPage> with WidgetsBin
     ];
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(
+      appBar: MarketAppBar(
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(tooltip:uiText(context,'Volver'),icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
         title: Text(uiText(context,'Packs y suscripción'), style: const TextStyle(fontWeight: FontWeight.w700)),
         centerTitle: true,
       ),
-      bottomNavigationBar: SafeArea(top:false,child:Container(
+      bottomNavigationBar: MarketActionDock(top:false,child:Container(
         padding:const EdgeInsets.fromLTRB(16,10,16,8),
-        decoration:const BoxDecoration(color:marketSurface,border:Border(top:BorderSide(color:marketLine))),
+        decoration:const BoxDecoration(color:Colors.transparent),
         child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           FilledButton(onPressed:_purchaseService.isStartingPurchase?null:_purchaseSelectedPlan,
             child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(_purchaseService.isStartingPurchase?uiText(context,'Abriendo pago de Apple…'):appText('Elegir ${packs[_selectedPack].title}','Choose ${packs[_selectedPack].title}')))),
@@ -8038,7 +8039,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: MarketAppBar(
         title: Text(AppLocalizations.of(context).publishVehicle, style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(tooltip: uiText(context, 'Guardar borrador'), onPressed: publishing || _restoringDraft ? null : _saveDraft, icon: const Icon(Icons.save_outlined)),
@@ -8046,7 +8047,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             icon: const Icon(Icons.workspace_premium_rounded, color: marketAccent)),
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: MarketActionDock(
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: const BoxDecoration(

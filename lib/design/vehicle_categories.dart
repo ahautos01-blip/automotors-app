@@ -43,17 +43,21 @@ class VehicleCategoryPicker extends StatelessWidget {
                 onTap: onChanged == null ? null : () => onChanged!(c),
                 child: Material(
                   color: c == value ? marketInk : marketSurface,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(26),
                   child: InkWell(
                     key: ValueKey('category-${c.id}'),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(26),
                     onTap: onChanged == null ? null : () => onChanged!(c),
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
                           color: c == value ? marketGold : marketLine,
-                          width: c == value ? 2 : 1,
+                          width: c == value ? 1.5 : .5,
                         ),
                       ),
                       padding: EdgeInsets.symmetric(
