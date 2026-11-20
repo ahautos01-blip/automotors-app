@@ -3,6 +3,31 @@ import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 
+Map<String, dynamic> listingMarketFacts(Map<String, dynamic> listing) {
+  final facts = listing['market_facts'] is Map
+      ? Map<String, dynamic>.from(listing['market_facts'])
+      : <String, dynamic>{};
+  if (listing.containsKey('seller_location')) {
+    facts.remove('locality');
+    final location = listing['seller_location'];
+    if (location is Map) {
+      final locality = MarketLocality.fromJson(location['locality']);
+      if (locality != null) facts['locality'] = locality.toJson();
+      final label = ['city', 'province']
+          .map((key) => location[key]?.toString().trim() ?? '')
+          .where((value) => value.isNotEmpty)
+          .join(', ');
+      if (label.isNotEmpty) facts['profile_location_label'] = label;
+    }
+  }
+  return facts;
+}
+
+String marketLocationLabel(Map<String, dynamic> facts) =>
+    facts['profile_location_label']?.toString() ??
+    MarketLocality.fromJson(facts['locality'])?.label ??
+    'No informado';
+
 class MarketLocality {
   final String id, label;
   final double lat, lon;

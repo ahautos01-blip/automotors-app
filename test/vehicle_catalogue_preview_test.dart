@@ -128,6 +128,17 @@ void main() {
         image.dispose();
       });
     }
+    await tester.scrollUntilVisible(find.byKey(const Key('home-publish-vehicle')), 400,
+      scrollable: find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    final publish = find.byKey(const Key('home-publish-vehicle'));
+    expect(publish.hitTestable(), findsOneWidget);
+    expect(tester.getBottomRight(publish).dy,
+      lessThan(tester.getTopLeft(find.byType(NavigationBar)).dy));
+    await tester.tap(publish);
+    await tester.pumpAndSettle();
+    expect(find.byType(PublishOptionsPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     await tester.runAsync(() => Supabase.instance.dispose());

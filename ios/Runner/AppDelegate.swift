@@ -1,10 +1,12 @@
 import Flutter
 import UIKit
 import UserNotifications
+import CoreLocation
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pushChannel: FlutterMethodChannel?
+  private let locationProvider = AutomotorsLocationProvider()
   private var dartReady = false
   private var deviceToken: String?
   private var pendingNotification: [String: Any]?
@@ -23,6 +25,11 @@ import UserNotifications
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AutomotorsPush") else { return }
     let channel = FlutterMethodChannel(name: "automotors/push", binaryMessenger: registrar.messenger())
     pushChannel = channel
+    let locationChannel = FlutterMethodChannel(name: "automotors/location", binaryMessenger: registrar.messenger())
+    locationChannel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "request" else { result(FlutterMethodNotImplemented); return }
+      self?.locationProvider.request(result)
+    }
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else { return }
       switch call.method {
@@ -88,6 +95,67 @@ import UserNotifications
       else { pendingNotification = route }
     }
     completionHandler()
+  }
+}
+
+/// Foreground, single-fix search only; precise coordinates never cross to Dart.
+private final class AutomotorsLocationProvider: NSObject, CLLocationManagerDelegate {
+  private let manager = CLLocationManager()
+  private var pending: FlutterResult?
+  private var timeout: DispatchWorkItem?
+  private var requestingFix = false
+
+  override init() {
+    super.init()
+    manager.delegate = self
+    manager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+  }
+
+  func request(_ result: @escaping FlutterResult) {
+    guard pending == nil else { result(["status": "busy"]); return }
+    pending = result
+    authorize()
+  }
+
+  private func authorize() {
+    guard pending != nil else { return }
+    switch manager.authorizationStatus {
+    case .notDetermined: manager.requestWhenInUseAuthorization()
+    case .authorizedWhenInUse, .authorizedAlways:
+      guard !requestingFix else { return }
+      requestingFix = true
+      let task = DispatchWorkItem { [weak self] in self?.finish(["status": "unavailable"]) }
+      timeout = task
+      DispatchQueue.main.asyncAfter(deadline: .now() + 25, execute: task)
+      manager.requestLocation()
+    default: finish(["status": "denied"])
+    }
+  }
+
+  func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) { authorize() }
+
+  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    guard let location = locations.last, location.horizontalAccuracy >= 0,
+          abs(location.timestamp.timeIntervalSinceNow) < 60 else {
+      finish(["status": "unavailable"]); return
+    }
+    let coordinate = location.coordinate
+    finish(["status": "ok", "lat": (coordinate.latitude * 100).rounded() / 100,
+            "lon": (coordinate.longitude * 100).rounded() / 100])
+  }
+
+  func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    finish(["status": "unavailable"])
+  }
+
+  private func finish(_ value: [String: Any]) {
+    timeout?.cancel()
+    timeout = nil
+    manager.stopUpdatingLocation()
+    requestingFix = false
+    let result = pending
+    pending = nil
+    result?(value)
   }
 }
 

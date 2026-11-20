@@ -20,6 +20,7 @@ for (const signature of ['private.record_client_error(text,text,integer)', 'priv
  assert.match((await db.query('select pg_get_functiondef($1::regprocedure) d',[signature])).rows[0].d,/53,54,55/);
 }
 await db.exec(await readFile(new URL('../supabase/migrations/20261120115756_whole_app_ios_build56.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261120122921_home_contact_fix_build57.sql',import.meta.url),'utf8'));
 for (const signature of ['private.record_client_error(text,text,integer)', 'private.record_market_usage(text,integer)']) {
  assert.match((await db.query('select pg_get_functiondef($1::regprocedure) d',[signature])).rows[0].d,/54,55,56/);
 }

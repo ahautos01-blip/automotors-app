@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:automotors_base/main.dart';
 import 'package:automotors_base/design/market_theme.dart';
+import 'package:automotors_base/design/whatsapp_mark.dart';
 import 'package:automotors_base/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -42,6 +43,7 @@ void main() {
             'account_type': 'empresa',
             'city': 'Mataró',
             'province': 'Barcelona',
+            'phone': '+34 600 000 000',
           };
         if (request.url.path.endsWith('/seller_about_profiles'))
           body = {'about_us': ''};
@@ -134,6 +136,7 @@ void main() {
       );
       expect(find.text('AUTOMOTORS'), findsOneWidget);
       expect(find.text('Mataró, Barcelona'), findsOneWidget);
+      expect(find.descendant(of:find.byTooltip('Abrir WhatsApp'), matching:find.byType(WhatsAppMark)), findsOneWidget);
       expect(
         find.text('Este vendedor no tiene anuncios disponibles.'),
         findsOneWidget,

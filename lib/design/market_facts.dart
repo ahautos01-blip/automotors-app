@@ -3,16 +3,20 @@ import 'package:http/http.dart' as http;
 
 import '../l10n/ui_text.dart';
 import '../services/market_facts.dart';
+import '../services/device_location.dart';
 import 'market_theme.dart';
 
-Future<MarketLocality?> chooseMarketLocality(BuildContext context) =>
-    showDialog<MarketLocality>(
-      context: context,
-      builder: (_) => const _LocalityDialog(),
-    );
+Future<MarketLocality?> chooseMarketLocality(
+  BuildContext context, {
+  String title = 'Localidad del vehículo',
+}) => showDialog<MarketLocality>(
+  context: context,
+  builder: (_) => _LocalityDialog(title: title),
+);
 
 class _LocalityDialog extends StatefulWidget {
-  const _LocalityDialog();
+  final String title;
+  const _LocalityDialog({required this.title});
   @override
   State<_LocalityDialog> createState() => _LocalityDialogState();
 }
@@ -51,7 +55,7 @@ class _LocalityDialogState extends State<_LocalityDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(uiText(context, 'Localidad del vehículo')),
+    title: Text(uiText(context, widget.title)),
     content: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -144,19 +148,39 @@ class MarketRadiusFilter extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton.icon(
-          icon: const Icon(Icons.location_on_outlined),
-          label: Text(
-            place?.label ?? uiText(context, 'Buscar por localidad y radio'),
-          ),
-          onPressed: () async {
-            final selected = await chooseMarketLocality(context);
-            if (selected != null)
-              onChanged({
-                'locality': selected.toJson(),
-                'radius_km': criteria['radius_km'] ?? 50,
-              });
-          },
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.location_on_outlined),
+                label: Text(
+                  place?.label ?? uiText(context, 'Buscar por localidad'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onPressed: () async {
+                  final selected = await chooseMarketLocality(context);
+                  if (selected != null)
+                    onChanged({
+                      'locality': selected.toJson(),
+                      'radius_km': criteria['radius_km'] ?? 50,
+                    });
+                },
+              ),
+            ),
+            IconButton(
+              tooltip: uiText(context, 'Usar mi ubicación'),
+              icon: const Icon(Icons.my_location),
+              onPressed: () async {
+                final selected = await DeviceLocation.request(context);
+                if (selected != null && context.mounted)
+                  onChanged({
+                    'locality': selected.toJson(),
+                    'radius_km': criteria['radius_km'] ?? 50,
+                  });
+              },
+            ),
+          ],
         ),
         if (place != null) ...[
           Row(
@@ -209,11 +233,13 @@ class MarketRadiusFilter extends StatelessWidget {
 }
 
 class MarketFactsForm extends StatefulWidget {
+  final Widget? profileLocation;
   final bool roadInspection;
   final Map<String, dynamic> value;
   final ValueChanged<Map<String, dynamic>> onChanged;
   const MarketFactsForm({
     super.key,
+    this.profileLocation,
     this.roadInspection = true,
     required this.value,
     required this.onChanged,
@@ -258,7 +284,7 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
     children: [
       for (final section in [
         ('maintenance', 'Mantenimiento', marketMaintenance),
-        if(widget.roadInspection) ('itv', 'ITV', marketItv),
+        if (widget.roadInspection) ('itv', 'ITV', marketItv),
         ('warranty', 'Garantía', marketWarranty),
       ])
         Padding(
@@ -279,23 +305,24 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
             onChanged: (v) => change(section.$1, v),
           ),
         ),
-      if(widget.roadInspection) TextFormField(
-        controller: date,
-        maxLength: 10,
-        decoration: InputDecoration(
-          labelText: uiText(context, 'Caducidad ITV (AAAA-MM-DD, opcional)'),
+      if (widget.roadInspection)
+        TextFormField(
+          controller: date,
+          maxLength: 10,
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Caducidad ITV (AAAA-MM-DD, opcional)'),
+          ),
+          validator: (text) {
+            if (text == null || text.trim().isEmpty) return null;
+            final d = DateTime.tryParse(text);
+            return d != null &&
+                    RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) &&
+                    d.toIso8601String().startsWith(text)
+                ? null
+                : uiText(context, 'Introduce una fecha válida');
+          },
+          onChanged: (v) => change('itv_until', v.trim()),
         ),
-        validator: (text) {
-          if (text == null || text.trim().isEmpty) return null;
-          final d = DateTime.tryParse(text);
-          return d != null &&
-                  RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) &&
-                  d.toIso8601String().startsWith(text)
-              ? null
-              : uiText(context, 'Introduce una fecha válida');
-        },
-        onChanged: (v) => change('itv_until', v.trim()),
-      ),
       TextFormField(
         controller: defects,
         maxLength: 1000,
@@ -308,18 +335,21 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
         ),
         onChanged: (v) => change('defects', v),
       ),
-      OutlinedButton.icon(
-        icon: const Icon(Icons.location_on_outlined),
-        label: Text(
-          MarketLocality.fromJson(value['locality'])?.label ??
-              uiText(context, 'Añadir localidad aproximada'),
+      if (widget.profileLocation != null)
+        widget.profileLocation!
+      else
+        OutlinedButton.icon(
+          icon: const Icon(Icons.location_on_outlined),
+          label: Text(
+            MarketLocality.fromJson(value['locality'])?.label ??
+                uiText(context, 'Añadir localidad aproximada'),
+          ),
+          onPressed: () async {
+            final selected = await chooseMarketLocality(context);
+            if (selected != null) change('locality', selected.toJson());
+          },
         ),
-        onPressed: () async {
-          final selected = await chooseMarketLocality(context);
-          if (selected != null) change('locality', selected.toJson());
-        },
-      ),
-      if (value['locality'] != null)
+      if (widget.profileLocation == null && value['locality'] != null)
         TextButton(
           onPressed: () => change('locality', null),
           child: Text(uiText(context, 'Quitar localidad')),
@@ -338,7 +368,11 @@ class _MarketFactsFormState extends State<MarketFactsForm> {
 class MarketFactsView extends StatelessWidget {
   final bool roadInspection;
   final Map<String, dynamic> facts;
-  const MarketFactsView({super.key, required this.facts, this.roadInspection = true});
+  const MarketFactsView({
+    super.key,
+    required this.facts,
+    this.roadInspection = true,
+  });
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.symmetric(vertical: 16),
@@ -360,13 +394,15 @@ class MarketFactsView extends StatelessWidget {
             'Mantenimiento',
             marketMaintenance[facts['maintenance']] ?? 'No informado',
           ),
-          if(roadInspection) ('ITV', marketItv[facts['itv']] ?? 'No informado'),
-          if(roadInspection) (
-            'Caducidad ITV',
-            facts['itv_until']?.toString().isNotEmpty == true
-                ? facts['itv_until'].toString()
-                : 'No informado',
-          ),
+          if (roadInspection)
+            ('ITV', marketItv[facts['itv']] ?? 'No informado'),
+          if (roadInspection)
+            (
+              'Caducidad ITV',
+              facts['itv_until']?.toString().isNotEmpty == true
+                  ? facts['itv_until'].toString()
+                  : 'No informado',
+            ),
           ('Garantía', marketWarranty[facts['warranty']] ?? 'No informado'),
           (
             'Defectos conocidos',
@@ -374,10 +410,7 @@ class MarketFactsView extends StatelessWidget {
                 ? facts['defects'].toString()
                 : 'No informado',
           ),
-          (
-            'Localidad',
-            MarketLocality.fromJson(facts['locality'])?.label ?? 'No informado',
-          ),
+          ('Localidad', marketLocationLabel(facts)),
         ])
           Padding(
             padding: const EdgeInsets.only(top: 12),
@@ -399,7 +432,9 @@ class MarketFactsView extends StatelessWidget {
         Text(
           uiText(
             context,
-            roadInspection ? 'Información declarada por el vendedor. Comprueba el historial, la ITV y las condiciones de garantía antes de comprar.' : 'Información declarada por el vendedor. Comprueba el historial, las inspecciones y las condiciones de garantía antes de comprar.',
+            roadInspection
+                ? 'Información declarada por el vendedor. Comprueba el historial, la ITV y las condiciones de garantía antes de comprar.'
+                : 'Información declarada por el vendedor. Comprueba el historial, las inspecciones y las condiciones de garantía antes de comprar.',
           ),
           style: Theme.of(context).textTheme.bodySmall,
         ),

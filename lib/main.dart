@@ -1,4 +1,5 @@
 import 'design/market_chrome.dart';
+import 'design/whatsapp_mark.dart';
 import 'design/market_identity.dart';
 import 'design/publication_design.dart';
 import 'services/vehicle_catalogue.dart';
@@ -102,7 +103,7 @@ const gold = marketGold;
 const black = marketPaper;
 const panel = marketSurface;
 
-const buyerListingProjection = 'vehicle_category,declared_brand,declared_model,category_details,market_facts, id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
+const buyerListingProjection = 'vehicle_category,declared_brand,declared_model,category_details,market_facts,seller_location, id, created_at, status, year, km, price, fuel, description, phone, matricula, vin, show_matricula_publicly, show_vin_publicly, cv, cilindrada_cc, etiqueta_medioambiental, version, transmission, body_type, doors, seats, color, torque_nm, acceleration_0_100, max_speed_kmh, consumption_l_100, emissions_standard, equipment, owner_id, vehicle_brands(name), vehicle_models(name), vehicle_photos(storage_path, position)';
 
 final _vehiclePhotoCache = ListingPhotoCache();
 final _localMarketState = LocalMarketState();
@@ -948,7 +949,7 @@ class Car {
         km: (raw['km'] as num?)?.toInt() ?? 0,
         price: (raw['price'] as num?)?.toDouble() ?? 0,
         fuel: raw['fuel']?.toString() ?? '',
-        marketFacts:raw['market_facts'] is Map ? Map<String,dynamic>.from(raw['market_facts']):{},
+        marketFacts:listingMarketFacts(raw),
         description: raw['description']?.toString() ?? '',
         phone: raw['phone']?.toString() ?? '',
         matricula: raw['show_matricula_publicly'] == true ? raw['matricula']?.toString() : null,
@@ -1231,7 +1232,7 @@ class VehicleComparisonPage extends StatelessWidget {
       ['Mantenimiento', ...cars.map((c) => marketMaintenance[c.marketFacts['maintenance']]??'No informado')],
       if(cars.every((c)=>c.category.isRoad)) ['ITV', ...cars.map((c) => marketItv[c.marketFacts['itv']]??'No informado')],
       ['Garantía', ...cars.map((c) => marketWarranty[c.marketFacts['warranty']]??'No informado')],
-      ['Localidad', ...cars.map((c) => MarketLocality.fromJson(c.marketFacts['locality'])?.label??'No informado')],
+      ['Localidad', ...cars.map((c) => marketLocationLabel(c.marketFacts))],
       if(cars.every((c)=>c.category.isRoad)) ['Cambio', ...cars.map((c) => _value(c.transmission))],
       if(cars.every((c)=>c.category.isRoad)) ['Carrocería', ...cars.map((c) => _value(c.bodyType))],
       if(cars.every((c)=>c.category.isRoad)) ['Etiqueta DGT', ...cars.map((c) => _value(c.etiquetaMedioambiental))],
@@ -2057,7 +2058,6 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
     ].where((active) => active).length;
 
     return Scaffold(
-      extendBody: true,
       appBar: MarketAppBar(
         backgroundColor: black,
         titleSpacing: 18,
@@ -2293,7 +2293,7 @@ class _HomePageState extends State<HomePage> with MarketRecentSearchState<HomePa
                 const SizedBox(height: 5),
                  Text(uiText(context, "Publica tu anuncio y conecta con compradores."), style: TextStyle(color: marketMuted)),
                 const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w700)))),
+                SizedBox(width: double.infinity, child: OutlinedButton.icon(key: const Key('home-publish-vehicle'), onPressed: openAddCar, icon: const Icon(Icons.arrow_forward_rounded), label:  Text(uiText(context, "Publicar mi vehículo")), style: OutlinedButton.styleFrom(foregroundColor: marketAccent, side: const BorderSide(color: marketAccent), padding: const EdgeInsets.symmetric(vertical: 13), textStyle: const TextStyle(fontWeight: FontWeight.w700)))),
               ]),
             ),
             const SizedBox(height: 12),
@@ -5334,7 +5334,7 @@ class _PublicSellerProfilePageState extends State<PublicSellerProfilePage> {
                           final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent('Hola, te contacto desde tu perfil de AUTOMOTORS.')}');
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
                         },
-                        icon: const Icon(Icons.chat, color: Colors.white, size: 25),
+                        icon: const WhatsAppMark(),
                         iconSize: 28,
                         padding: const EdgeInsets.all(13),
                       ),
@@ -6009,6 +6009,35 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
+class _ProfileListingLocationField extends StatefulWidget {
+  const _ProfileListingLocationField();
+  @override
+  State<_ProfileListingLocationField> createState() => _ProfileListingLocationFieldState();
+}
+
+class _ProfileListingLocationFieldState extends State<_ProfileListingLocationField> {
+  late Future<Map<String,dynamic>?> profile = load();
+  Future<Map<String,dynamic>?> load() async {
+    final db = Supabase.instance.client;
+    final id = db.auth.currentUser?.id;
+    if(id == null) return null;
+    return db.from('user_profiles').select('city,province').eq('id',id).maybeSingle();
+  }
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Map<String,dynamic>?>(
+    future:profile, builder:(context,snapshot) {
+      final location = ['city','province'].map((key)=>snapshot.data?[key]?.toString() ?? '').where((v)=>v.isNotEmpty).join(', ');
+      return ListTile(contentPadding:EdgeInsets.zero,
+        leading:const Icon(Icons.location_on_outlined),
+        title:Text(location.isEmpty ? 'Ubicación del perfil' : location),
+        subtitle:const Text('Todos tus anuncios usan la localidad de tu perfil.'),
+        trailing:IconButton(tooltip:'Editar ubicación del perfil',icon:const Icon(Icons.edit_location_alt_outlined),onPressed:() async {
+          await Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProfilePage()));
+          if(mounted) setState(()=>profile=load());
+        }));
+    });
+}
+
 class _ProfilePageState extends State<ProfilePage> {
   final supabase = Supabase.instance.client;
   final formKey = GlobalKey<FormState>();
@@ -6017,6 +6046,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final phone = TextEditingController();
   final city = TextEditingController();
   final province = TextEditingController();
+  MarketLocality? profileLocality;
+  String localityCity = '', localityProvince = '';
   final address = TextEditingController();
   final businessName = TextEditingController();
   final aboutUs = TextEditingController();
@@ -6105,6 +6136,8 @@ class _ProfilePageState extends State<ProfilePage> {
         phone.text = row['phone']?.toString() ?? '';
         city.text = row['city']?.toString() ?? '';
         province.text = row['province']?.toString() ?? '';
+        profileLocality = MarketLocality.fromJson(row['market_locality']);
+        localityCity = city.text.trim(); localityProvince = province.text.trim();
         address.text = row['address']?.toString() ?? '';
         businessName.text = row['business_name']?.toString() ?? '';
         final type = (row['account_type']?.toString() ?? 'particular').toLowerCase();
@@ -6175,6 +6208,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'phone': phone.text.trim(),
         'city': city.text.trim(),
         'province': province.text.trim(),
+        'market_locality': city.text.trim() == localityCity && province.text.trim() == localityProvince ? profileLocality?.toJson() : null,
         'business_name': isProfessional
             ? businessName.text.trim()
             : null,
@@ -6268,6 +6302,17 @@ class _ProfilePageState extends State<ProfilePage> {
             if (isProfessional) field('Razón social', businessName, requiredField: true),
             if (isProfessional) field('CIF/NIF o identificación fiscal', fiscalId, requiredField: true) else field('DNI/NIE (opcional)', fiscalId),
             field('Teléfono', phone, requiredField: true, keyboard: TextInputType.phone), field('Ciudad', city, requiredField: true), field('Provincia', province, requiredField: true),
+            OutlinedButton.icon(icon:const Icon(Icons.location_on_outlined),
+              label:Text(profileLocality?.label ?? 'Elegir municipio para búsquedas por distancia'),
+              onPressed:() async {
+                final selected = await chooseMarketLocality(context, title:'Localidad del perfil');
+                if(selected != null && mounted) setState(() {
+                  profileLocality=selected;
+                  city.text=selected.label.split(',').first.trim();
+                  localityCity=city.text.trim(); localityProvince=province.text.trim();
+                });
+              }),
+            const Text('La localidad del perfil se aplica a todos tus anuncios. Si la cambias, se actualizarán también los existentes. No se publica la dirección postal.'),
             if (isProfessional) ...[
               field(accountType == 'empresa' ? 'Dirección fiscal de la empresa' : 'Dirección fiscal o profesional', address, requiredField: true),
               Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(controller: aboutUs, maxLines: 5, maxLength: 2000, decoration:  InputDecoration(labelText: uiText(context, "Sobre nosotros"), hintText: uiText(context, "Presenta tu negocio, experiencia y servicios.")))),
@@ -6465,7 +6510,7 @@ class _EditListingPageState extends State<EditListingPage> {
     Text(uiText(context,'El texto y las fotografías del anuncio se analizarán con OpenAI para detectar contenido inapropiado antes de publicarlo. Si falla la comprobación, se conservará como borrador.')),
     const SupportLinks(),
     ListingPreparation(roadInspection:category.isRoad,photoCount:existingPhotoCount,description:description,hasEquipment:selectedEquipment.isNotEmpty,marketFacts:marketFacts),
-    MarketFactsForm(roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
+    MarketFactsForm(profileLocation:const _ProfileListingLocationField(),roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>setState(()=>marketFacts=v)),
     textField('Descripción', description, multiline: true), const SizedBox(height: 12), FilledButton.icon(onPressed: saving ? null : save, style: FilledButton.styleFrom(backgroundColor: marketInk, foregroundColor: Colors.white), icon: const Icon(Icons.save), label: Text(saving ? uiText(context, "Guardando...") : uiText(context, "Guardar cambios"))),
   ])));
 }
@@ -7855,7 +7900,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
       title:'${selectedBrand['name']} ${selectedModel['name']} ${version.text.trim()}'.trim(),price:'${priceValue.toStringAsFixed(priceValue==priceValue.roundToDouble()?0:2).replaceAll('.',',')} €',
       details:{'Categoría':category.label,...{for(final field in category.fields.entries) if(categoryDetails[field.key]!=null) field.value:'${categoryDetails[field.key]}'},'Año':'$yearValue',if(category.isRoad)'Kilómetros':'$kmValue','Combustible':fuel,if(category==VehicleCategory.car)'Cambio':transmission,if(category==VehicleCategory.car)'Carrocería':bodyType,if(category.isRoad)'Etiqueta medioambiental':etiquetaMedioambiental??'',
         'Color':color.text.trim(),'CV':cv.text.trim(),'Cilindrada (cc)':cilindradaCc.text.trim(),'Puertas':doors.text.trim(),'Plazas':seats.text.trim(),'Normativa de emisiones':emissionsStandard.text.trim(),
-        'Mantenimiento':marketMaintenance[marketFacts['maintenance']]??'No informado',if(category.isRoad)'ITV':marketItv[marketFacts['itv']]??'No informado','Garantía':marketWarranty[marketFacts['warranty']]??'No informado',if(category.isRoad)'Caducidad ITV':marketFacts['itv_until']?.toString()??'No informado','Defectos conocidos':marketFacts['defects']?.toString()??'No informado','Localidad':MarketLocality.fromJson(marketFacts['locality'])?.label??'No informado',
+        'Mantenimiento':marketMaintenance[marketFacts['maintenance']]??'No informado',if(category.isRoad)'ITV':marketItv[marketFacts['itv']]??'No informado','Garantía':marketWarranty[marketFacts['warranty']]??'No informado',if(category.isRoad)'Caducidad ITV':marketFacts['itv_until']?.toString()??'No informado','Defectos conocidos':marketFacts['defects']?.toString()??'No informado','Localidad':'Vinculada a la localidad del perfil',
         ...publicationIdentifiers(showPlate:showMatriculaPublicly,showVin:showVinPublicly,plate:matricula.text,vin:vin.text),if(phoneValue.isNotEmpty)'Teléfono':phoneValue},
       description:description.text.trim(),photos:List.of(photos),equipment:selectedEquipment.toList(),
     )));
@@ -7897,7 +7942,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
         'description': description.text.trim(),
         'owner_id': user.id,
         'status': 'draft',
-      }).select('id').single();
+      }).select('id,seller_location').single();
 
       listingId = listing['id'].toString();
       final photoRows = <Map<String, dynamic>>[];
@@ -7951,7 +7996,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
           km: kmValue,
           price: priceValue,
           fuel: fuel,
-          marketFacts:marketFacts,
+          marketFacts:listingMarketFacts({'market_facts':marketFacts,'seller_location':listing['seller_location']}),
           description: description.text.trim(),
           phone: phoneValue,
           matricula: matricula.text.trim().isEmpty ? null : matricula.text.trim().toUpperCase(),
@@ -8294,7 +8339,7 @@ class _AddCarPageState extends State<AddCarPage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 16),
             buildTextField('Teléfono (opcional; el chat funciona dentro de la app)', phone, numeric: true, requiredField: false),
-            MarketFactsForm(roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
+            MarketFactsForm(profileLocation:const _ProfileListingLocationField(),roadInspection:category.isRoad,value:marketFacts,onChanged:(v)=>_updatePublication(()=>marketFacts=v)),
             buildTextField('Descripción', description, requiredField: false, multiline: true),
 
             ])),
